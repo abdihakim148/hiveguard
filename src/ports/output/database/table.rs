@@ -1,14 +1,18 @@
+use std::hash::Hash;
 use crate::domain::types::Error;
 
 
 type Result<T> = std::result::Result<T, Error>;
 
 pub trait Table {
-    type Item;
-    type Id;
+    type Item: Clone + Hash + PartialEq;
+    type Id: Clone + Hash + PartialEq;
 
     async fn create(&self, item: &Self::Item) -> Result<Self::Id>;
     async fn read(&self, id: &Self::Id) -> Option<Self::Item>;
     async fn update(&self, item: &Self::Item) -> Result<Self::Id>;
     async fn delete(&self, id: &Self::Id) -> Result<Self::Id>;
+    async fn name(&self) -> T
+    where
+        T: Into<String> + Send;
 }
