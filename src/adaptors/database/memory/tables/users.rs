@@ -26,16 +26,15 @@ impl Table for Users {
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
         Ok(emails.contains_key(email))
     }
+    async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         if self.exists(&user.email).await? {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
         }
 
-        drop(emails); // Release the read lock before acquiring write locks
-
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
         let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
 
-        let id = ObjectId::new();        
+        let id = ObjectId::new();
         users.insert(id.clone(), user.clone());
         emails.insert(user.email.clone(), id.clone());
 
