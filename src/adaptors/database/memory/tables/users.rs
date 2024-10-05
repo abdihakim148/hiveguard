@@ -23,8 +23,8 @@ impl Table for Users {
     }
 
     async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
-        let mut users = self.users.write().unwrap();
-        let mut emails = self.emails.write().unwrap();
+        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
+        let mut emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
 
         if emails.contains_key(&user.email) {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
@@ -38,13 +38,13 @@ impl Table for Users {
     }
 
     async fn read(&self, id: &Self::Id) -> Option<Self::Item> {
-        let users = self.users.read().unwrap();
+        let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on users".into()))?;
         users.get(id).cloned()
     }
 
     async fn update(&self, user: &Self::Item) -> Result<Self::Id> {
-        let mut users = self.users.write().unwrap();
-        let mut emails = self.emails.write().unwrap();
+        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
+        let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
 
         if let Some(existing_id) = emails.get(&user.email) {
             if existing_id != &user.id {
@@ -59,8 +59,8 @@ impl Table for Users {
     }
 
     async fn delete(&self, id: &Self::Id) -> Result<Self::Id> {
-        let mut users = self.users.write().unwrap();
-        let mut emails = self.emails.write().unwrap();
+        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
+        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
 
         if let Some(user) = users.remove(id) {
             emails.remove(&user.email);
