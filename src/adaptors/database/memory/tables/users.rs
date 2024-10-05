@@ -173,11 +173,10 @@ impl Table for Users {
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
         let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
 
-        let id = ObjectId::new();
-        users.insert(id.clone(), user.clone());
-        emails.insert(user.email.clone(), id.clone());
+        users.insert(user.id.clone(), user.clone());
+        emails.insert(user.email.clone(), user.id.clone());
 
-        Ok(id)
+        Ok(user.id)
     }
 
     /// Reads a user by ID.
