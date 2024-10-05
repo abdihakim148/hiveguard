@@ -1,10 +1,11 @@
-use crate::ports::output::database::{Table, Result};
+use crate::ports::output::database::{Table, Result}; // Importing necessary traits and types
 use crate::domain::types::User;
 use std::collections::HashMap;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
 
 
+/// A struct representing a collection of users stored in memory.
 pub struct Users {
     emails: RwLock<HashMap<String, ObjectId>>,
     users: RwLock<HashMap<ObjectId, User>>,
@@ -12,6 +13,15 @@ pub struct Users {
 
 
 impl Users {
+    /// Checks if a user with the given email exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `email` - A string slice that holds the email to check.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<bool>` - Returns `Ok(true)` if the email exists, `Ok(false)` otherwise.
     async fn exists(&self, email: &str) -> Result<bool> {
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
         Ok(emails.contains_key(email))
@@ -26,6 +36,11 @@ impl Table for Users {
 
     const NAME: &'static str = "users";
 
+    /// Creates a new instance of `Users`.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self>` - Returns a new `Users` instance wrapped in a `Result`.
     async fn new() -> Result<Self> {
         Ok(Users {
             emails: RwLock::new(HashMap::new()),
@@ -34,6 +49,15 @@ impl Table for Users {
     }
 
 
+    /// Creates a new user.
+    ///
+    /// # Arguments
+    ///
+    /// * `user` - A reference to the user item to be created.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self::Id>` - Returns the ID of the created user wrapped in a `Result`.
     async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         if self.exists(&user.email).await? {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
@@ -49,11 +73,29 @@ impl Table for Users {
         Ok(id)
     }
 
+    /// Reads a user by ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A reference to the ID of the user to be read.
+    ///
+    /// # Returns
+    ///
+    /// * `Option<Self::Item>` - Returns the user item if found, otherwise `None`.
     async fn read(&self, id: &Self::Id) -> Option<Self::Item> {
         let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on users".into()))?;
         users.get(id).cloned()
     }
 
+    /// Updates an existing user.
+    ///
+    /// # Arguments
+    ///
+    /// * `user` - A reference to the user item to be updated.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self::Id>` - Returns the ID of the updated user wrapped in a `Result`.
     async fn update(&self, user: &Self::Item) -> Result<Self::Id> {
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
@@ -70,6 +112,15 @@ impl Table for Users {
         Ok(user.id.clone())
     }
 
+    /// Deletes a user by ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A reference to the ID of the user to be deleted.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self::Id>` - Returns the ID of the deleted user wrapped in a `Result`.
     async fn delete(&self, id: &Self::Id) -> Result<Self::Id> {
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
         let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
