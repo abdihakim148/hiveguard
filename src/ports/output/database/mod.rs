@@ -1,6 +1,6 @@
 mod table;
 
-pub use crate::domain::types::error::DatabaseError;
+pub use crate::domain::types::DatabaseError;
 pub use table::Table;
 
 type Result<T> = std::result::Result<T, DatabaseError>;
