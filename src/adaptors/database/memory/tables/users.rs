@@ -2,14 +2,13 @@ use crate::ports::output::database::{Table, Result};
 use crate::domain::types::User;
 use std::collections::HashMap;
 use bson::oid::ObjectId;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
 
 pub struct Users {
     emails: RwLock<HashMap<String, ObjectId>>,
     users: RwLock<HashMap<ObjectId, User>>,
 }
-#[async_trait::async_trait]
 impl Table for Users {
     type Item = User;
     type Id = ObjectId;
