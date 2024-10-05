@@ -213,8 +213,11 @@ impl Table for Users {
             }
         }
 
-        users.insert(user.id.clone(), user.clone());
-        emails.insert(user.email.clone(), user.id.clone());
+        if let Some(existing_user) = users.get_mut(&user.id) {
+            emails.remove(&existing_user.email);
+            *existing_user = user.clone();
+            emails.insert(user.email.clone(), user.id.clone());
+        }
 
         Ok(user.id.clone())
     }
