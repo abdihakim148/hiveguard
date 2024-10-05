@@ -22,17 +22,17 @@ impl Table for Users {
         })
     }
 
-    async fn create(&self, item: &Self::Item) -> Result<Self::Id> {
+    async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         let mut users = self.users.write().unwrap();
         let mut emails = self.emails.write().unwrap();
 
-        if emails.contains_key(&item.email) {
+        if emails.contains_key(&user.email) {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
         }
 
         let id = ObjectId::new();
-        users.insert(id.clone(), item.clone());
-        emails.insert(item.email.clone(), id.clone());
+        users.insert(id.clone(), user.clone());
+        emails.insert(user.email.clone(), id.clone());
 
         Ok(id)
     }
@@ -42,20 +42,20 @@ impl Table for Users {
         users.get(id).cloned()
     }
 
-    async fn update(&self, item: &Self::Item) -> Result<Self::Id> {
+    async fn update(&self, user: &Self::Item) -> Result<Self::Id> {
         let mut users = self.users.write().unwrap();
         let mut emails = self.emails.write().unwrap();
 
-        if let Some(existing_id) = emails.get(&item.email) {
-            if existing_id != &item.id {
+        if let Some(existing_id) = emails.get(&user.email) {
+            if existing_id != &user.id {
                 return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
             }
         }
 
-        users.insert(item.id.clone(), item.clone());
-        emails.insert(item.email.clone(), item.id.clone());
+        users.insert(user.id.clone(), user.clone());
+        emails.insert(user.email.clone(), user.id.clone());
 
-        Ok(item.id.clone())
+        Ok(user.id.clone())
     }
 
     async fn delete(&self, id: &Self::Id) -> Result<Self::Id> {
