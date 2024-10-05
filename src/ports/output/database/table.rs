@@ -12,7 +12,5 @@ pub trait Table {
     async fn read(&self, id: &Self::Id) -> Option<Self::Item>;
     async fn update(&self, item: &Self::Item) -> Result<Self::Id>;
     async fn delete(&self, id: &Self::Id) -> Result<Self::Id>;
-    async fn name(&self) -> T
-    where
-        T: Into<String> + Send;
+    const NAME: &'static str;
 }
