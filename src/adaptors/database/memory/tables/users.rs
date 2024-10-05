@@ -28,6 +28,15 @@ impl Users {
     }
 
 
+    /// Retrieves the email associated with a given user ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A reference to the ID of the user whose email is to be retrieved.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
     async fn email(&self, id: &ObjectId) -> Result<Option<String>> {
         let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
         match users.get(id) {
@@ -70,6 +79,12 @@ impl Table for Users {
     async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         if self.exists(&user.email).await? {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
+        }
+
+        if let Some(existing_email) = self.email(&user.id).await? {
+            if existing_email != user.email && self.exists(&user.email).await? {
+                return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
+            }
         }
 
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
