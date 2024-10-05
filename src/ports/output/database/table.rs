@@ -1,8 +1,5 @@
 use std::hash::Hash;
-use crate::domain::types::Error;
-
-
-type Result<T> = std::result::Result<T, Error>;
+use super::Result;
 
 /// A trait representing a database table.
 pub trait Table: Sized {

@@ -98,10 +98,10 @@ impl Table for Users {
     /// * `Result<Self::Id>` - Returns the ID of the updated user wrapped in a `Result`.
     async fn update(&self, user: &Self::Item) -> Result<Self::Id> {
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
-        let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
+        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
 
-        if let Some(existing_id) = emails.get(&user.email) {
-            if existing_id != &user.id {
+        if let Some(id) = emails.get(&user.email) {
+            if id != &user.id {
                 return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
             }
         }
