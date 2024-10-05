@@ -22,10 +22,11 @@ impl Table for Users {
         })
     }
 
-    async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
+    async fn exists(&self, email: &str) -> Result<bool> {
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
-
-        if emails.contains_key(&user.email) {
+        Ok(emails.contains_key(email))
+    }
+        if self.exists(&user.email).await? {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
         }
 
