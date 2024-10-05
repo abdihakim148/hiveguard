@@ -38,8 +38,8 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Option<Self::Item>` - Returns the item if found, otherwise `None`.
-    async fn read(&self, id: &Self::Id) -> Option<Self::Item>;
+    /// * `Result<Option<Self::Item>>` - Returns the item if found, otherwise `None`, wrapped in a `Result`.
+    async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>>;
     /// Updates an existing item in the table.
     ///
     /// # Arguments

@@ -81,10 +81,10 @@ impl Table for Users {
     ///
     /// # Returns
     ///
-    /// * `Option<Self::Item>` - Returns the user item if found, otherwise `None`.
-    async fn read(&self, id: &Self::Id) -> Option<Self::Item> {
+    /// * `Result<Option<Self::Item>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
+    async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>> {
         let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on users".into()))?;
-        users.get(id).cloned()
+        Ok(users.get(id).cloned())
     }
 
     /// Updates an existing user.
