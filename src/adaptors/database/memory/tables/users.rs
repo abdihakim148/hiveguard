@@ -9,6 +9,17 @@ pub struct Users {
     emails: RwLock<HashMap<String, ObjectId>>,
     users: RwLock<HashMap<ObjectId, User>>,
 }
+
+
+impl Users {
+    async fn exists(&self, email: &str) -> Result<bool> {
+        let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
+        Ok(emails.contains_key(email))
+    }
+}
+
+
+
 impl Table for Users {
     type Item = User;
     type Id = ObjectId;
@@ -22,10 +33,7 @@ impl Table for Users {
         })
     }
 
-    async fn exists(&self, email: &str) -> Result<bool> {
-        let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
-        Ok(emails.contains_key(email))
-    }
+
     async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         if self.exists(&user.email).await? {
             return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
