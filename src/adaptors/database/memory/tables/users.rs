@@ -26,6 +26,15 @@ impl Users {
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
         Ok(emails.contains_key(email))
     }
+
+
+    async fn email(&self, id: &ObjectId) -> Result<Option<String>> {
+        let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
+        match users.get(id) {
+            None => Ok(None),
+            Some(user) => Ok(Some(user.email.clone()))
+        }
+    }
 }
 
 
