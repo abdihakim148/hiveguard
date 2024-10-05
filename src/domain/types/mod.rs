@@ -1,2 +1,4 @@
-pub mod user;
-pub mod error;
+mod user;
+mod error;
+
+pub use error::Error;
