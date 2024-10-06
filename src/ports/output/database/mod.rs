@@ -8,5 +8,5 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Database: Sized {
     async fn new<T>(args: T) -> Result<Self>;
-    async fn table<'a, T: Table + 'a>(&'a self) -> Result<&'a T>;
+    async fn table<'a>(&'a self, name: &str) -> Result<&'a dyn Table>;
 }

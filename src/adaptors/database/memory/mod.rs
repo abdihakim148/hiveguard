@@ -15,13 +15,9 @@ impl Database for Memory {
         Ok(Memory { users })
     }
 
-    async fn table<'a, T: Table + 'a>(&'a self) -> Result<&'a T> {
-        if T::NAME == Users::NAME {
-            // SAFETY: We know that T is Users, so this cast is safe.
-            let users_ref: &Users = &self.users;
-            // SAFETY: We know that T is Users, so this cast is safe.
-            let table_ref: &T = unsafe { &*(users_ref as *const Users as *const T) };
-            Ok(table_ref)
+    async fn table<'a>(&'a self, name: &str) -> Result<&'a dyn Table> {
+        if name == Users::NAME {
+            Ok(&self.users)
         } else {
             Err(crate::domain::types::Error::Unknown("Table not found".into()))
         }
