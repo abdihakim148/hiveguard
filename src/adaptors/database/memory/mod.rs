@@ -19,7 +19,7 @@ impl Database for Memory {
         if name == Users::NAME {
             Ok(&self.users)
         } else {
-            Err(crate::domain::types::Error::Unknown("Table not found".into()))
+            Err(crate::domain::types::Error::TableNotFound)
         }
     }
 }

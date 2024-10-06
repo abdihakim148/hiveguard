@@ -11,6 +11,7 @@ pub enum Error {
     LockError(String),
     EmailAlreadyExists,
     UserNotFound,
+    TableNotFound,
     InvalidUserId,
     DatabaseConsistencyError,
     SerializationError(String),
