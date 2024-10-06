@@ -33,6 +33,7 @@ impl fmt::Display for Error {
             Error::EmailAlreadyExists => write!(f, "Email Already Exists"),
             Error::UserNotFound => write!(f, "User Not Found"),
             Error::InvalidUserId => write!(f, "Invalid User ID"),
+            Error::TableNotFound => write!(f, "Table Not Found"),
             Error::DatabaseConsistencyError => write!(f, "Database Consistency Error"),
             Error::SerializationError(msg) => write!(f, "Serialization Error: {}", msg),
         }

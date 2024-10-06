@@ -1,6 +1,7 @@
 mod tables;
 
 use crate::ports::output::database::{Database, Result};
+use crate::domain::types::Error;
 use tables::users::Users;
 use crate::ports::output::database::Table;
 
@@ -19,7 +20,7 @@ impl Database for Memory {
         if name == Users::NAME {
             Ok(&self.users)
         } else {
-            Err(crate::domain::types::Error::TableNotFound)
+            Err(Error::TableNotFound)
         }
     }
 }
