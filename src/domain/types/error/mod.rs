@@ -7,6 +7,12 @@ pub use database_error::DatabaseError;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     NotFound,
+    LockError(String),
+    EmailAlreadyExists,
+    UserNotFound,
+    InvalidUserId,
+    DatabaseConsistencyError,
+    SerializationError(String),
     InvalidInput(String),
     Database(DatabaseError),
     Unauthorized,
