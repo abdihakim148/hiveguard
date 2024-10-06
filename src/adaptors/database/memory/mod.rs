@@ -16,11 +16,4 @@ impl Database for Memory {
         Ok(Memory { users })
     }
 
-    async fn table<'a>(&'a self, name: &str) -> Result<&'a dyn Table> {
-        if name == Users::NAME {
-            Ok(&self.users)
-        } else {
-            Err(Error::TableNotFound)
-        }
-    }
 }
