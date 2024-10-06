@@ -27,6 +27,12 @@ impl fmt::Display for Error {
             Error::Database(err) => write!(f, "Database Error: {}", err),
             Error::Unauthorized => write!(f, "Unauthorized"),
             Error::Unknown(msg) => write!(f, "Unknown Error: {}", msg),
+            Error::LockError(msg) => write!(f, "Lock Error: {}", msg),
+            Error::EmailAlreadyExists => write!(f, "Email Already Exists"),
+            Error::UserNotFound => write!(f, "User Not Found"),
+            Error::InvalidUserId => write!(f, "Invalid User ID"),
+            Error::DatabaseConsistencyError => write!(f, "Database Consistency Error"),
+            Error::SerializationError(msg) => write!(f, "Serialization Error: {}", msg),
         }
     }
 }
