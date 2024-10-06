@@ -24,7 +24,7 @@ impl Users {
     ///
     /// * `Result<bool>` - Returns `Ok(true)` if the email exists, `Ok(false)` otherwise.
     async fn exists(&self, email: &str) -> Result<bool> {
-        let emails = self.emails.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
+        let emails = self.emails.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on emails".into()))?;
         Ok(emails.contains_key(email))
     }
 
@@ -39,7 +39,7 @@ impl Users {
     ///
     /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
     async fn email(&self, id: &ObjectId) -> Result<Option<String>> {
-        let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on emails".into()))?;
+        let users = self.users.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on users".into()))?;
         match users.get(id) {
             None => Ok(None),
             Some(user) => Ok(Some(user.email.clone()))
@@ -79,17 +79,17 @@ impl Table for Users {
     /// * `Result<Self::Id>` - Returns the ID of the created user wrapped in a `Result`.
     async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         if self.exists(&user.email).await? {
-            return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
+            return Err(crate::domain::types::Error::EmailAlreadyExists);
         }
 
         if let Some(existing_email) = self.email(&user.id).await? {
             if existing_email != user.email && self.exists(&user.email).await? {
-                return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
+                return Err(crate::domain::types::Error::EmailAlreadyExists);
             }
         }
 
-        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
-        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
+        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on users".into()))?;
+        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on emails".into()))?;
 
         users.insert(user.id.clone(), user.clone());
         emails.insert(user.email.clone(), user.id.clone());
@@ -121,12 +121,12 @@ impl Table for Users {
     ///
     /// * `Result<Self::Id>` - Returns the ID of the updated user wrapped in a `Result`.
     async fn update(&self, user: &Self::Item) -> Result<Self::Id> {
-        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
-        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
+        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on users".into()))?;
+        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on emails".into()))?;
 
         if let Some(id) = emails.get(&user.email) {
             if id != &user.id {
-                return Err(crate::domain::types::Error::InvalidInput("Email already exists".into()));
+                return Err(crate::domain::types::Error::EmailAlreadyExists);
             }
         }
 
@@ -156,7 +156,7 @@ impl Table for Users {
             emails.remove(&user.email);
             Ok(id.clone())
         } else {
-            Err(crate::domain::types::Error::NotFound)
+            Err(crate::domain::types::Error::UserNotFound)
         }
     }
 }
