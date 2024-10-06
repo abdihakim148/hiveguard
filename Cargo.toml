@@ -7,3 +7,6 @@ edition = "2021"
 bson = "2.0"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+mockall = "0.13.0"
