@@ -173,6 +173,55 @@ mod tests {
     use tokio;
 
     #[tokio::test]
+    async fn test_exists_user_email() {
+        let users = Users::new().await.unwrap();
+        let user = User {
+            id: ObjectId::new(),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            email: "test@example.com".to_string(),
+            password: "password".to_string(),
+        };
+
+        // Initially, the email should not exist
+        assert_eq!(users.exists(&user.email).await.unwrap(), false);
+
+        // Create the user
+        users.create(&user).await.unwrap();
+
+        // Now, the email should exist
+        assert_eq!(users.exists(&user.email).await.unwrap(), true);
+
+        // Test with a different email
+        assert_eq!(users.exists("nonexistent@example.com").await.unwrap(), false);
+    }
+
+    #[tokio::test]
+    async fn test_email_retrieval() {
+        let users = Users::new().await.unwrap();
+        let user = User {
+            id: ObjectId::new(),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            email: "test@example.com".to_string(),
+            password: "password".to_string(),
+        };
+
+        // Initially, retrieving email by ID should return None
+        assert_eq!(users.email(&user.id).await.unwrap(), None);
+
+        // Create the user
+        users.create(&user).await.unwrap();
+
+        // Now, retrieving email by ID should return the correct email
+        assert_eq!(users.email(&user.id).await.unwrap(), Some(user.email.clone()));
+
+        // Test with a different ID
+        let new_id = ObjectId::new();
+        assert_eq!(users.email(&new_id).await.unwrap(), None);
+    }
     async fn test_create_user() {
         let users = Users::new().await.unwrap();
         let user = User {
