@@ -222,6 +222,8 @@ mod tests {
         let new_id = ObjectId::new();
         assert_eq!(users.email(&new_id).await.unwrap(), None);
     }
+
+    #[tokio::test]
     async fn test_create_user() {
         let users = Users::new().await.unwrap();
         let user = User {
