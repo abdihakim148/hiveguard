@@ -1,8 +1,7 @@
 mod tables;
 
 use crate::ports::output::database::{Database, Result};
-use crate::domain::types::Error;
-use tables::users::Users;
+use tables::Users;
 use crate::ports::output::database::Table;
 
 /// A struct representing an in-memory database.
@@ -11,9 +10,14 @@ pub struct Memory {
 }
 
 impl Database for Memory {
+    type Users = Users;
+
     async fn new<T>(_args: T) -> Result<Self> {
         let users = Users::new().await?;
         Ok(Memory { users })
     }
 
+    async fn users<'a>(&'a self) -> &'a Self::Users {
+        &self.users
+    }
 }

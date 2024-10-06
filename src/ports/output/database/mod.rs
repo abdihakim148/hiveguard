@@ -7,6 +7,7 @@ pub use table::Table;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Database: Sized {
-    async fn new<T>(args: T) -> Result<Self>;
-    async fn users<'a, T: Table>(&'a self) -> Result<&'a T>;
+    type Users: Table;
+    async fn new<T>(config: T) -> Result<Self>;
+    async fn users<'a>(&'a self) -> &'a Self::Users;
 }
