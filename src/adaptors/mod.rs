@@ -1,2 +1,1 @@
-/// Module for database adaptors.
-pub mod database;
+pub mod outputs;

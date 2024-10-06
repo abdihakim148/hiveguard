@@ -28,8 +28,8 @@ impl Crud for User {
 #[cfg(test)]
 mod tests {
     use super::User;
-    use crate::adaptors::database::Users;
-    use crate::ports::output::database::Table;
+    use crate::adaptors::outputs::database::Users;
+    use crate::ports::outputs::database::Table;
     use crate::domain::services::Crud;
     use bson::oid::ObjectId;
     use tokio;

@@ -1,4 +1,4 @@
-use crate::ports::output::database::{Table, Result}; // Importing necessary traits and types
+use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
 use crate::domain::types::User;
 use std::collections::HashMap;
 use bson::oid::ObjectId;
@@ -168,7 +168,7 @@ impl Table for Users {
 mod tests {
     use super::Users;
     use crate::domain::types::User;
-    use crate::ports::output::database::Table;
+    use crate::ports::outputs::database::Table;
     use bson::oid::ObjectId;
     use tokio;
 

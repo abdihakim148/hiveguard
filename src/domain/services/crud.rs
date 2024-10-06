@@ -1,5 +1,5 @@
 #![allow(unused)]
-use crate::ports::output::database::Table;
+use crate::ports::outputs::database::Table;
 
 type Result<T> = std::result::Result<T, crate::domain::types::Error>;
 

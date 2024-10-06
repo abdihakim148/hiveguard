@@ -1,4 +1,4 @@
 /// Module for input ports.
-pub mod input;
+pub mod inputs;
 /// Module for output ports.
-pub mod output;
+pub mod outputs;

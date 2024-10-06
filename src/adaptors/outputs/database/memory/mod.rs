@@ -1,8 +1,8 @@
 mod tables;
 
-use crate::ports::output::database::{Database, Result};
+use crate::ports::outputs::database::{Database, Result};
 pub use tables::*;
-use crate::ports::output::database::Table;
+use crate::ports::outputs::database::Table;
 
 /// A struct representing an in-memory database.
 /// A struct representing an in-memory database.
