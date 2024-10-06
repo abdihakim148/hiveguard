@@ -28,7 +28,8 @@ impl Crud for User {
 #[cfg(test)]
 mod tests {
     use super::User;
-    use crate::adaptors::database::memory::tables::Users;
+    use crate::adaptors::database::Users;
+    use crate::ports::output::database::Table;
     use crate::domain::services::Crud;
     use bson::oid::ObjectId;
     use tokio;
@@ -106,5 +107,4 @@ mod tests {
         let deleted_user = User::read(&users, &id).await.unwrap();
         assert!(deleted_user.is_none());
     }
-}
 }
