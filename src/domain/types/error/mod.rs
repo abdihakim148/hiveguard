@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::fmt;
 use std::error::Error as StdError;
 mod database_error;

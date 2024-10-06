@@ -1,3 +1,4 @@
+#![allow(unused)]
 mod table;
 
 pub use crate::domain::types::Error;
