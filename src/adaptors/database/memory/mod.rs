@@ -5,6 +5,7 @@ use tables::Users;
 use crate::ports::output::database::Table;
 
 /// A struct representing an in-memory database.
+/// A struct representing an in-memory database.
 pub struct Memory {
     users: Users,
 }
