@@ -16,6 +16,7 @@ pub enum Error {
     DatabaseConsistencyError,
     SerializationError(String),
     InvalidInput(String),
+    ConversionError(String),
     Database(DatabaseError),
     Unauthorized,
     Unknown(String),
