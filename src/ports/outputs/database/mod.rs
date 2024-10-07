@@ -1,10 +1,8 @@
 #![allow(unused)]
 mod table;
 
-pub use crate::domain::types::Error;
+pub use crate::domain::types::{Result, Error};
 pub use table::Table;
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 /// A trait representing a database with user-related operations.
 pub trait Database: Sized {

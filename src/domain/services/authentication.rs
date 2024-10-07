@@ -1,8 +1,7 @@
-use async_trait::async_trait;
+#![allow(unused)]
 use crate::domain::types::Result;
 
-#[async_trait]
-pub trait Authentication {
+pub trait Authentication : Sized {
     type Id;
     type Value;
     type Token;

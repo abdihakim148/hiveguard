@@ -100,7 +100,7 @@ impl TryFrom<Value> for HashMap<String, Value> {
     }
 }
 
-impl<T: TryFrom<Value>> TryFrom<Value> for Vec<T> {
+impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
     type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
@@ -118,7 +118,7 @@ impl<T: TryFrom<Value>> TryFrom<Value> for Vec<T> {
     }
 }
 
-impl<T: TryFrom<Number>> TryFrom<Value> for (T,) {
+impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
     type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
