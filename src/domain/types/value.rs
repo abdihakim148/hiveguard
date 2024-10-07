@@ -13,11 +13,6 @@ pub enum Value {
     Object(HashMap<String, Value>),
     Vec(Vec<Value>),
 }
-impl From<()> for Value {
-    fn from(_: ()) -> Self {
-        Value::None
-    }
-}
 
 impl From<bool> for Value {
     fn from(value: bool) -> Self {
@@ -49,9 +44,14 @@ impl From<HashMap<String, Value>> for Value {
     }
 }
 
-impl From<Vec<Value>> for Value {
-    fn from(value: Vec<Value>) -> Self {
-        Value::Vec(value)
+impl<T: Into<Value>> From<Vec<T>> for Value {
+    fn from(value: Vec<T>) -> Self {
+        let mut array = Vec::new();
+        let mut iter = value.into_iter();
+        while let Some(value) = iter.next() {
+            array.push(value.into());
+        }
+        Value::Vec(array)
     }
 }
 
@@ -99,23 +99,31 @@ impl TryFrom<Value> for HashMap<String, Value> {
     }
 }
 
-impl TryFrom<Value> for Vec<Value> {
+impl<T: TryFrom<Value>> TryFrom<Value> for Vec<T> {
     type Error = &'static str;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
-            Value::Vec(v) => Ok(v),
+            Value::Vec(value) => {
+                let mut array = Vec::new();
+                let mut iter = value.into_iter();
+                while let Some(value) = iter.next() {
+                    ///// this if statement has to be replaced with propper error handling.
+                    if let Ok(value) = value.try_into() {array.push(value);}
+                }
+                Ok(array)
+            },
             _ => Err("Invalid conversion to Vec<Value>"),
         }
     }
 }
 
-impl<T: TryFrom<Number>> TryFrom<Value> for T {
+impl<T: TryFrom<Number>> TryFrom<Value> for (T,) {
     type Error = &'static str;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
-            Value::Number(n) => n.try_into(),
+            Value::Number(_) => todo!(),
             _ => Err("Invalid conversion from Value"),
         }
     }
