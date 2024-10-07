@@ -1,7 +1,13 @@
 #![allow(unused)]
 use crate::domain::types::Result;
 
-pub trait Authentication : Sized {
+/**
+ * A trait representing authentication operations.
+ *
+ * This trait provides methods for registering, authenticating, deauthenticating,
+ * verifying, updating credentials, resetting credentials, and retrieving entity details.
+ */
+pub trait Authentication: Sized {
     type Id;
     type Value;
     type Token;

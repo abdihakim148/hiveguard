@@ -1,6 +1,7 @@
 #![allow(unused)]
 use crate::ports::outputs::database::Table;
 
+/// A type alias for results returned by CRUD operations, using the custom `Error` type.
 type Result<T> = std::result::Result<T, crate::domain::types::Error>;
 
 /// A trait providing CRUD operations for types with a corresponding database table.

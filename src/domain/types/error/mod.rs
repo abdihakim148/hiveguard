@@ -1,6 +1,7 @@
 #![allow(unused)]
 use std::fmt;
 use std::error::Error as StdError;
+/// Module for database-related errors.
 mod database_error;
 
 pub use database_error::DatabaseError;

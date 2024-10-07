@@ -15,6 +15,7 @@ pub enum Value {
     Vec(Vec<Value>),
 }
 
+/// Converts a `bool` into a `Value`.
 impl From<bool> for Value {
     fn from(value: bool) -> Self {
         Value::Bool(value)

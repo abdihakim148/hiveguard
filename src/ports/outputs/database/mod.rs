@@ -1,4 +1,5 @@
 #![allow(unused)]
+/// Module for database table operations.
 mod table;
 
 pub use crate::domain::types::{Result, Error};

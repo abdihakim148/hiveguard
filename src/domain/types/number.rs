@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::TryFrom; // Importing TryFrom trait for conversions
 use crate::domain::types::Error;
 use serde::{Serialize, Deserialize};
 

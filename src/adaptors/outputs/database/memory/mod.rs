@@ -1,3 +1,4 @@
+/// Module for database tables.
 mod tables;
 
 use crate::ports::outputs::database::{Database, Result};
