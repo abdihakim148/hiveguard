@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use crate::domain::types::Error;
 use serde::{Serialize, Deserialize};
 
 /// Enum representing various numerical types.
@@ -30,13 +31,13 @@ macro_rules! impl_from_for_number {
             }
 
             impl TryFrom<Number> for $t {
-                type Error = &'static str;
+                type Error = Error;
 
                 fn try_from(number: Number) -> Result<Self, Self::Error> {
                     if let Number::$variant(value) = number {
                         Ok(value)
                     } else {
-                        Err("Invalid conversion from Number")
+                        Err(Error::ConversionError("Invalid conversion from Number".into()))
                     }
                 }
             }
