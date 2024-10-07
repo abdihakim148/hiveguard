@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use serde::{Serialize, Deserialize};
 
 /// Enum representing various numerical types.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Number {
     U8(u8),
     I8(i8),
