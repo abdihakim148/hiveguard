@@ -2,6 +2,7 @@
 mod user;
 /// Module for error-related types.
 mod error;
+mod number;
 
 /// Re-exporting error types for external access.
 pub use error::*;
