@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 macro_rules! impl_from_for_number {
     ($($t:ty => $variant:ident),*) => {
@@ -9,12 +9,14 @@ macro_rules! impl_from_for_number {
                 }
             }
 
-            impl From<Number> for $t {
-                fn from(number: Number) -> Self {
+            impl TryFrom<Number> for $t {
+                type Error = &'static str;
+
+                fn try_from(number: Number) -> Result<Self, Self::Error> {
                     if let Number::$variant(value) = number {
-                        value
+                        Ok(value)
                     } else {
-                        panic!("Invalid conversion from Number to {}", stringify!($t));
+                        Err("Invalid conversion from Number")
                     }
                 }
             }
