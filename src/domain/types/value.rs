@@ -109,10 +109,7 @@ impl<T: TryFrom<Value>> TryFrom<Value> for Vec<T> {
                 let mut array = Vec::new();
                 let mut iter = value.into_iter();
                 while let Some(value) = iter.next() {
-                    match value.try_into() {
-                        Ok(value) => array.push(value),
-                        Err(e) => return Err(Error::ConversionError(format!("Failed to convert Vec element: {}", e))),
-                    }
+                    array.push(value.try_into().map_err(|e| Error::ConversionError(format!("Failed to convert Vec element: {}", e)))?);
                 }
                 Ok(array)
             },
@@ -126,7 +123,7 @@ impl<T: TryFrom<Number>> TryFrom<Value> for (T,) {
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
-            Value::Number(_) => todo!(),
+            Value::Number(n) => Ok((n.try_into()?,)),
             _ => Err(Error::ConversionError("Invalid conversion from Value".into())),
         }
     }
