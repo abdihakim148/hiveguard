@@ -37,6 +37,7 @@ impl fmt::Display for Error {
             Error::TableNotFound => write!(f, "Table Not Found"),
             Error::DatabaseConsistencyError => write!(f, "Database Consistency Error"),
             Error::SerializationError(msg) => write!(f, "Serialization Error: {}", msg),
+            Error::ConversionError(msg) => write!(f, "Conversion Error: {}", msg),
         }
     }
 }
