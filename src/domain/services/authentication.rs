@@ -1,16 +1,17 @@
 use async_trait::async_trait;
-use crate::domain::types::{Credentials, SessionToken, Result};
+use crate::domain::types::Result;
 
 #[async_trait]
 pub trait Authentication {
     type Id;
-    type Details;
+    type Value;
+    type Token;
 
-    async fn register<E: Entity>(&self, entity: &E) -> Result<Self::Id>;
-    async fn authenticate<E: Entity>(&self, credentials: &Credentials) -> Result<SessionToken>;
-    async fn deauthenticate(&self, token: &SessionToken) -> Result<()>;
-    async fn verify(&self, token: &SessionToken) -> Result<bool>;
-    async fn update_credentials<E: Entity>(&self, entity_id: &E::Id, new_credentials: &Credentials) -> Result<()>;
+    async fn register(&self) -> Result<Self::Id>;
+    async fn authenticate(&self, value: &Self::Value) -> Result<Self::Token>;
+    async fn deauthenticate(&self, token: &Self::Token) -> Result<()>;
+    async fn verify(&self, token: &Self::Token) -> Result<bool>;
+    async fn update_credentials(&self, entity_id: &Self::Id, new_value: &Self::Value) -> Result<()>;
     async fn reset_credentials(&self, identifier: &str) -> Result<()>;
-    async fn get_entity_details<E: Entity>(&self, token: &SessionToken) -> Result<E::Details>;
+    async fn get_entity_details(&self, token: &Self::Token) -> Result<Self>;
 }
