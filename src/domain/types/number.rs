@@ -58,3 +58,43 @@ impl_from_for_number!(
     f32 => F32,
     f64 => F64
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+
+    #[test]
+    fn test_from_primitive_to_number() {
+        let num_u8: Number = 42u8.into();
+        assert_eq!(num_u8, Number::U8(42));
+
+        let num_i32: Number = (-42i32).into();
+        assert_eq!(num_i32, Number::I32(-42));
+
+        let num_f64: Number = 42.0f64.into();
+        assert_eq!(num_f64, Number::F64(42.0));
+    }
+
+    #[test]
+    fn test_try_from_number_to_primitive() {
+        let num = Number::U8(42);
+        let result: Result<u8, _> = u8::try_from(num);
+        assert_eq!(result, Ok(42));
+
+        let num = Number::I32(-42);
+        let result: Result<i32, _> = i32::try_from(num);
+        assert_eq!(result, Ok(-42));
+
+        let num = Number::F64(42.0);
+        let result: Result<f64, _> = f64::try_from(num);
+        assert_eq!(result, Ok(42.0));
+    }
+
+    #[test]
+    fn test_invalid_try_from_number() {
+        let num = Number::U8(42);
+        let result: Result<i32, _> = i32::try_from(num);
+        assert!(result.is_err());
+    }
+}
