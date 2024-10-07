@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use serde::{Serialize, Deserialize};
 use super::number::Number;
+use crate::domain::types::Error;
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -56,51 +57,51 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
 }
 
 impl TryFrom<Value> for () {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::None => Ok(()),
-            _ => Err("Invalid conversion to ()"),
+            _ => Err(Error::ConversionError("Invalid conversion to ()".into())),
         }
     }
 }
 
 impl TryFrom<Value> for bool {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Bool(b) => Ok(b),
-            _ => Err("Invalid conversion to bool"),
+            _ => Err(Error::ConversionError("Invalid conversion to bool".into())),
         }
     }
 }
 
 impl TryFrom<Value> for String {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(s) => Ok(s),
-            _ => Err("Invalid conversion to String"),
+            _ => Err(Error::ConversionError("Invalid conversion to String".into())),
         }
     }
 }
 
 impl TryFrom<Value> for HashMap<String, Value> {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Object(o) => Ok(o),
-            _ => Err("Invalid conversion to HashMap<String, Value>"),
+            _ => Err(Error::ConversionError("Invalid conversion to HashMap<String, Value>".into())),
         }
     }
 }
 
 impl<T: TryFrom<Value>> TryFrom<Value> for Vec<T> {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
@@ -108,23 +109,25 @@ impl<T: TryFrom<Value>> TryFrom<Value> for Vec<T> {
                 let mut array = Vec::new();
                 let mut iter = value.into_iter();
                 while let Some(value) = iter.next() {
-                    ///// this if statement has to be replaced with propper error handling.
-                    if let Ok(value) = value.try_into() {array.push(value);}
+                    match value.try_into() {
+                        Ok(value) => array.push(value),
+                        Err(e) => return Err(Error::ConversionError(format!("Failed to convert Vec element: {}", e))),
+                    }
                 }
                 Ok(array)
             },
-            _ => Err("Invalid conversion to Vec<Value>"),
+            _ => Err(Error::ConversionError("Invalid conversion to Vec<Value>".into())),
         }
     }
 }
 
 impl<T: TryFrom<Number>> TryFrom<Value> for (T,) {
-    type Error = &'static str;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Number(_) => todo!(),
-            _ => Err("Invalid conversion from Value"),
+            _ => Err(Error::ConversionError("Invalid conversion from Value".into())),
         }
     }
 }
