@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use serde::{Serialize, Deserialize};
 
 /// Enum representing various numerical types.
