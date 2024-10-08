@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_try_from_number_to_primitive() {
-        let num = Number::U8(42);
+        let num = Number::U8(256); // 256 is out of range for u8
         let result: Result<u8, _> = u8::try_from(num);
         assert_eq!(result, Ok(42));
 

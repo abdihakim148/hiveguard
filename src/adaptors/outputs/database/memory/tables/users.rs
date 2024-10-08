@@ -113,7 +113,7 @@ impl Table for Users {
     }
 
 
-    async  fn patch(&self, map: Self::Map) -> Result<Self::Item> {
+    async  fn patch(&self, _map: Self::Map) -> Result<Self::Item> {
         todo!()
     }
 
