@@ -64,7 +64,7 @@ impl TryFrom<Value> for () {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::None => Ok(()),
-            _ => Err(Error::ConversionError("Invalid conversion to ()".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion to (): found {:?}", other))),
         }
     }
 }
@@ -75,7 +75,7 @@ impl TryFrom<Value> for bool {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Bool(b) => Ok(b),
-            _ => Err(Error::ConversionError("Invalid conversion to bool".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion to bool: found {:?}", other))),
         }
     }
 }
@@ -86,7 +86,7 @@ impl TryFrom<Value> for String {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(s) => Ok(s),
-            _ => Err(Error::ConversionError("Invalid conversion to String".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion to String: found {:?}", other))),
         }
     }
 }
@@ -97,7 +97,7 @@ impl TryFrom<Value> for HashMap<String, Value> {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Object(o) => Ok(o),
-            _ => Err(Error::ConversionError("Invalid conversion to HashMap<String, Value>".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion to HashMap<String, Value>: found {:?}", other))),
         }
     }
 }
@@ -115,7 +115,7 @@ impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
                 }
                 Ok(array)
             },
-            _ => Err(Error::ConversionError("Invalid conversion to Vec<Value>".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion to Vec<Value>: found {:?}", other))),
         }
     }
 }
@@ -126,7 +126,7 @@ impl TryFrom<Value> for ObjectId {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(s) => ObjectId::parse_str(&s).map_err(|_| Error::ConversionError("Invalid conversion to ObjectId".into())),
-            _ => Err(Error::ConversionError("Invalid conversion to ObjectId".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion to ObjectId: found {:?}", other))),
         }
     }
 }
@@ -137,7 +137,7 @@ impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Number(n) => Ok((n.try_into()?,)),
-            _ => Err(Error::ConversionError("Invalid conversion from Value".into())),
+            other => Err(Error::ConversionError(format!("Invalid conversion from Value to tuple: found {:?}", other))),
         }
     }
 }
