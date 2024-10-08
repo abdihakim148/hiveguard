@@ -1,5 +1,5 @@
 use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
-use crate::domain::types::User;
+use crate::domain::types::{User, Value};
 use std::collections::HashMap;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
@@ -52,6 +52,7 @@ impl Users {
 impl Table for Users {
     type Item = User;
     type Id = ObjectId;
+    type Map = HashMap<String, Value>;
 
     const NAME: &'static str = "users";
 
@@ -111,6 +112,11 @@ impl Table for Users {
         Ok(users.get(id).cloned())
     }
 
+
+    async  fn patch(&self, map: Self::Map) -> Result<Self::Item> {
+        todo!()
+    }
+
     /// Updates an existing user.
     ///
     /// # Arguments
@@ -120,7 +126,7 @@ impl Table for Users {
     /// # Returns
     ///
     /// * `Result<Self::Id>` - Returns the ID of the updated user wrapped in a `Result`.
-    async fn update(&self, user: &Self::Item) -> Result<Self::Id> {
+    async fn update(&self, user: &Self::Item) -> Result<()> {
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on users".into()))?;
         let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on emails".into()))?;
 
@@ -136,7 +142,7 @@ impl Table for Users {
             emails.insert(user.email.clone(), user.id.clone());
         }
 
-        Ok(user.id.clone())
+        Ok(())
     }
 
     /// Deletes a user by ID.
@@ -148,13 +154,13 @@ impl Table for Users {
     /// # Returns
     ///
     /// * `Result<Self::Id>` - Returns the ID of the deleted user wrapped in a `Result`.
-    async fn delete(&self, id: &Self::Id) -> Result<Self::Id> {
+    async fn delete(&self, id: &Self::Id) -> Result<()> {
         let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
         let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
 
         if let Some(user) = users.remove(id) {
             emails.remove(&user.email);
-            Ok(id.clone())
+            Ok(())
         } else {
             Err(crate::domain::types::Error::UserNotFound)
         }

@@ -8,7 +8,7 @@ pub trait Table: Sized {
     /// The type of the identifier for items in the table.
     type Id: Clone + Hash + PartialEq;
 
-    type Value;
+    type Map;
 
     /// The name of the table.
     const NAME: &'static str;
@@ -41,7 +41,7 @@ pub trait Table: Sized {
     async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>>;
 
 
-    async fn patch(&self, value: Self::Value) -> Result<Self::Item>;
+    async fn patch(&self, map: Self::Map) -> Result<Self::Item>;
     /// Updates an existing item in the table.
     ///
     /// # Arguments
@@ -51,7 +51,7 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<Self::Id>` - Returns the ID of the updated item wrapped in a `Result`.
-    async fn update(&self, item: &Self::Item) -> Result<Self::Item>;
+    async fn update(&self, item: &Self::Item) -> Result<()>;
     /// Deletes an item by ID from the table.
     ///
     /// # Arguments
