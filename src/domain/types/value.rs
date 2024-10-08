@@ -120,6 +120,17 @@ impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
     }
 }
 
+impl TryFrom<Value> for ObjectId {
+    type Error = Error;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(s) => ObjectId::parse_str(&s).map_err(|_| Error::ConversionError("Invalid conversion to ObjectId".into())),
+            _ => Err(Error::ConversionError("Invalid conversion to ObjectId".into())),
+        }
+    }
+}
+
 impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
     type Error = Error;
 
