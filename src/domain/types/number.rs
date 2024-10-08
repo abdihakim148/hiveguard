@@ -1,4 +1,5 @@
 use std::convert::TryFrom; // Importing TryFrom trait for conversions
+use std::fmt;
 use crate::domain::types::Error;
 use serde::{Serialize, Deserialize};
 
@@ -48,7 +49,7 @@ macro_rules! impl_from_for_number {
                         Number::I128(value) if value >= 0 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= 0.0 && value <= <$t>::MAX as f32 => Ok(value as $t),
                         Number::F64(value) if value >= 0.0 && value <= <$t>::MAX as f64 => Ok(value as $t),
-                        _ => Err(Error::ConversionError(format!("Expected {}, found {} of {:?}", stringify!($t), stringify!(number), number))),
+                        _ => Err(Error::ConversionError(format!("Expected {}, found {} of {}", stringify!($t), stringify!(number), number))),
                     }
                 }
             }
@@ -71,7 +72,24 @@ impl_from_for_number!(
     f64 => F64
 );
 
-#[cfg(test)]
+impl fmt::Display for Number {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Number::U8(value) => write!(f, "{}", value),
+            Number::I8(value) => write!(f, "{}", value),
+            Number::U16(value) => write!(f, "{}", value),
+            Number::I16(value) => write!(f, "{}", value),
+            Number::U32(value) => write!(f, "{}", value),
+            Number::I32(value) => write!(f, "{}", value),
+            Number::U64(value) => write!(f, "{}", value),
+            Number::I64(value) => write!(f, "{}", value),
+            Number::U128(value) => write!(f, "{}", value),
+            Number::I128(value) => write!(f, "{}", value),
+            Number::F32(value) => write!(f, "{}", value),
+            Number::F64(value) => write!(f, "{}", value),
+        }
+    }
+}
 mod tests {
     use super::*;
     use std::convert::TryFrom;
