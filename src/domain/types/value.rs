@@ -64,7 +64,11 @@ impl TryFrom<Value> for () {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::None => Ok(()),
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected () but found {:?}", other))),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected () but found Bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected () but found Number".into())),
+            Value::String(_) => Err(Error::ConversionError("Invalid conversion. Expected () but found String".into())),
+            Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected () but found Object".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected () but found Vec".into())),
         }
     }
 }
@@ -75,7 +79,11 @@ impl TryFrom<Value> for bool {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Bool(b) => Ok(b),
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected bool but found {:?}", other))),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected bool but found None".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected bool but found Number".into())),
+            Value::String(_) => Err(Error::ConversionError("Invalid conversion. Expected bool but found String".into())),
+            Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected bool but found Object".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected bool but found Vec".into())),
         }
     }
 }
@@ -86,7 +94,11 @@ impl TryFrom<Value> for String {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(s) => Ok(s),
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected String but found {:?}", other))),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected String but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected String but found Bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected String but found Number".into())),
+            Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected String but found Object".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected String but found Vec".into())),
         }
     }
 }
@@ -97,7 +109,11 @@ impl TryFrom<Value> for HashMap<String, Value> {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Object(o) => Ok(o),
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected HashMap<String, Value> but found {:?}", other))),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected HashMap<String, Value> but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected HashMap<String, Value> but found Bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected HashMap<String, Value> but found Number".into())),
+            Value::String(_) => Err(Error::ConversionError("Invalid conversion. Expected HashMap<String, Value> but found String".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected HashMap<String, Value> but found Vec".into())),
         }
     }
 }
@@ -115,7 +131,11 @@ impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
                 }
                 Ok(array)
             },
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected Vec<Value> but found {:?}", other))),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected Vec<Value> but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected Vec<Value> but found Bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected Vec<Value> but found Number".into())),
+            Value::String(_) => Err(Error::ConversionError("Invalid conversion. Expected Vec<Value> but found String".into())),
+            Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected Vec<Value> but found Object".into())),
         }
     }
 }
@@ -126,7 +146,11 @@ impl TryFrom<Value> for ObjectId {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(s) => ObjectId::parse_str(&s).map_err(|_| Error::ConversionError("Invalid conversion to ObjectId".into())),
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected ObjectId but found {:?}", other))),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected ObjectId but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected ObjectId but found Bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected ObjectId but found Number".into())),
+            Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected ObjectId but found Object".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected ObjectId but found Vec".into())),
         }
     }
 }
@@ -137,7 +161,11 @@ impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Number(n) => Ok((n.try_into()?,)),
-            other => Err(Error::ConversionError(format!("Invalid conversion. Expected tuple but found {:?}", other))),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected tuple but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found Bool".into())),
+            Value::String(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found String".into())),
+            Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found Object".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found Vec".into())),
         }
     }
 }
