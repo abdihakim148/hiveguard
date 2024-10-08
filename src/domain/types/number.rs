@@ -90,6 +90,9 @@ impl fmt::Display for Number {
         }
     }
 }
+
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::convert::TryFrom;
