@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
+use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::number::Number;
 use crate::domain::types::Error;
