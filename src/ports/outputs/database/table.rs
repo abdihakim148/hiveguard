@@ -61,5 +61,5 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<Self::Id>` - Returns the ID of the deleted item wrapped in a `Result`.
-    async fn delete(&self, id: &Self::Id) -> Result<Self::Item>;
+    async fn delete(&self, id: &Self::Id) -> Result<()>;
 }
