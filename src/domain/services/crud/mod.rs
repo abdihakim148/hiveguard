@@ -1,3 +1,5 @@
+mod user;
+
 use crate::domain::types::{Result, Value};
 use std::collections::HashMap;
 
