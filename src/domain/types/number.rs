@@ -123,8 +123,8 @@ mod tests {
 
     #[test]
     fn test_invalid_try_from_number() {
-        let num = Number::U8(42);
-        let result: Result<i32, _> = i32::try_from(num);
+        let num = Number::U32(1024);
+        let result: Result<i8, _> = i8::try_from(num);
         assert!(result.is_err());
     }
 }
