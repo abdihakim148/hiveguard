@@ -195,7 +195,7 @@ impl Table for Users {
 #[cfg(test)]
 mod tests {
     use super::Users;
-    use crate::domain::types::{User, Value};
+    use crate::domain::types::{User, Value, Email};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
     use bson::oid::ObjectId;
@@ -234,7 +234,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -260,7 +260,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -276,7 +276,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -293,7 +293,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -303,14 +303,14 @@ mod tests {
         // Prepare a map with changes
         let mut changes = HashMap::new();
         changes.insert("username".to_string(), Value::String("updateduser".to_string()));
-        changes.insert("email".to_string(), Value::String(Email::new("updated@example.com").unwrap()));
+        changes.insert("email".to_string(), Value::String("updated@example.com".to_string()));
 
         // Patch the user
         let patched_user = users.patch(&user.id, changes).await.unwrap();
 
         // Verify the changes
         assert_eq!(patched_user.username, "updateduser");
-        assert_eq!(patched_user.email, "updated@example.com");
+        assert_eq!(patched_user.email, Email::new("updated@example.com").unwrap());
     }
 
     #[tokio::test]
@@ -321,7 +321,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -342,7 +342,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
