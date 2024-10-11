@@ -41,7 +41,7 @@ pub trait Table: Sized {
     async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>>;
 
 
-    async fn patch(&self, map: Self::Map) -> Result<Self::Item>;
+    async fn patch(&self, id: &Self::Id, map: Self::Map) -> Result<Self::Item>;
     /// Updates an existing item in the table.
     ///
     /// # Arguments

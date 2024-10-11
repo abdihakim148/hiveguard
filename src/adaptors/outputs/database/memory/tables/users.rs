@@ -1,5 +1,5 @@
 use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
-use crate::domain::types::{User, Value};
+use crate::domain::types::{User, Value, Error};
 use std::collections::HashMap;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
@@ -113,8 +113,19 @@ impl Table for Users {
     }
 
 
-    async  fn patch(&self, _map: Self::Map) -> Result<Self::Item> {
-        todo!()
+    async  fn patch(&self, id: &Self::Id, mut map: Self::Map) -> Result<Self::Item> {
+        if let Some(user) = self.read(id).await? {
+            let id = *id;
+            let username: String = match map.remove("username") {Some(name) => name.try_into()?, None => user.username};
+            let first_name: String = match map.remove("first_name") {Some(name) => name.try_into()?, None => user.first_name};
+            let last_name: String = match map.remove("last_name") {Some(name) => name.try_into()?, None => user.last_name};
+            let email: String = match map.remove("email") {Some(name) => name.try_into()?, None => user.email};
+            let password: String = match map.remove("password") {Some(name) => name.try_into()?, None => user.password};
+            let user = User{id, username, first_name, last_name, email,password};
+            let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on users".into()))?;
+            users.insert(id, user);
+        }
+        Err(Error::UserNotFound)
     }
 
     /// Updates an existing user.
