@@ -70,6 +70,7 @@ dependencies = [
  "bson",
  "mockall",
  "serde",
+ "serde_json",
  "tokio",
 ]
 

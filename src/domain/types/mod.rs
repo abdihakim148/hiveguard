@@ -4,6 +4,7 @@ mod user;
 mod error;
 mod number;
 mod value;
+mod email;
 
 /// Re-exporting error types for external access.
 pub use error::*;
