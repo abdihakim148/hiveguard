@@ -303,7 +303,7 @@ mod tests {
         // Prepare a map with changes
         let mut changes = HashMap::new();
         changes.insert("username".to_string(), Value::String("updateduser".to_string()));
-        changes.insert("email".to_string(), Value::String("updated@example.com".to_string()));
+        changes.insert("email".to_string(), Value::String(Email::new("updated@example.com").unwrap()));
 
         // Patch the user
         let patched_user = users.patch(&user.id, changes).await.unwrap();
