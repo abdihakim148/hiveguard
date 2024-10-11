@@ -12,7 +12,7 @@ pub enum Email {
 }
 
 impl Email {
-    /// Validates the email address format.
+    /// Creates a new Email instance after validating the email address format.
     ///
     /// # Arguments
     ///
@@ -21,7 +21,7 @@ impl Email {
     /// # Returns
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
-    fn validate(email: &str) -> Result<Self, Error> {
+    fn new(email: &str) -> Result<Self, Error> {
         if email.contains('@') && email.contains('.') {
             Ok(Email::New(email.to_string()))
         } else {
@@ -29,6 +29,8 @@ impl Email {
         }
     }
 }
+
+impl Serialize for Email {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -63,7 +65,7 @@ impl<'de> Deserialize<'de> for Email {
             where
                 E: de::Error,
             {
-                Email::validate(value)
+                Email::new(value)
                     .map_err(|_| de::Error::custom("Invalid email address"))
             }
 
