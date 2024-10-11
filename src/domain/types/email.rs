@@ -66,7 +66,7 @@ impl<'de> Deserialize<'de> for Email {
                 E: de::Error,
             {
                 Email::new(value)
-                    .map_err(|_| de::Error::custom("Invalid email address"))
+                    .map_err(|_| de::Error::custom(Error::InvalidEmail.to_string()))
             }
 
             fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
