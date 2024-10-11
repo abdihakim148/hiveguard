@@ -25,6 +25,14 @@ mod tests {
     }
 
     #[test]
+    fn test_deserialize_invalid_email() {
+        let data = "\"invalid-email\"";
+        let result: Result<Email, _> = serde_json::from_str(data);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), Error::InvalidEmail.to_string());
+    }
+
+    #[test]
     fn test_email_new_invalid() {
         let email = "invalid-email";
         let result = Email::new(email);
