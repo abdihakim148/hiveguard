@@ -195,8 +195,9 @@ impl Table for Users {
 #[cfg(test)]
 mod tests {
     use super::Users;
-    use crate::domain::types::User;
+    use crate::domain::types::{User, Value};
     use crate::ports::outputs::database::Table;
+    use std::collections::HashMap;
     use bson::oid::ObjectId;
     use tokio;
 
