@@ -223,7 +223,7 @@ mod tests {
         assert_eq!(users.exists(&user.email).await.unwrap(), true);
 
         // Test with a different email
-        assert_eq!(users.exists("nonexistent@example.com").await.unwrap(), false);
+        assert_eq!(users.exists(&Email::new("nonexistent@example.com").unwrap()).await.unwrap(), false);
     }
 
     #[tokio::test]
@@ -326,7 +326,7 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        user.email = "newemail@example.com".to_string();
+        user.email = Email::new("newemail@example.com").unwrap();
         let update_result = users.update(&user).await;
         assert!(update_result.is_ok());
 
