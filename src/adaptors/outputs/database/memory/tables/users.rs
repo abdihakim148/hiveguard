@@ -28,6 +28,34 @@ impl Users {
         Ok(emails.contains_key(email))
     }
 
+    #[tokio::test]
+    async fn test_patch_user() {
+        let users = Users::new().await.unwrap();
+        let user = User {
+            id: ObjectId::new(),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            email: "test@example.com".to_string(),
+            password: "password".to_string(),
+        };
+
+        // Create the user
+        users.create(&user).await.unwrap();
+
+        // Prepare a map with changes
+        let mut changes = HashMap::new();
+        changes.insert("username".to_string(), Value::String("updateduser".to_string()));
+        changes.insert("email".to_string(), Value::String("updated@example.com".to_string()));
+
+        // Patch the user
+        let patched_user = users.patch(&user.id, changes).await.unwrap();
+
+        // Verify the changes
+        assert_eq!(patched_user.username, "updateduser");
+        assert_eq!(patched_user.email, "updated@example.com");
+    }
+
 
     /// Retrieves the email associated with a given user ID.
     ///
@@ -113,7 +141,17 @@ impl Table for Users {
     }
 
 
-    async  fn patch(&self, id: &Self::Id, mut map: Self::Map) -> Result<Self::Item> {
+    /// Patches an existing user with the provided map of changes.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A reference to the ID of the user to be patched.
+    /// * `map` - A map containing the fields to be updated and their new values.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self::Item>` - Returns the updated user item wrapped in a `Result`.
+    async fn patch(&self, id: &Self::Id, mut map: Self::Map) -> Result<Self::Item> {
         if let Some(user) = self.read(id).await? {
             let id = *id;
             let username: String = match map.remove("username") {Some(name) => name.try_into()?, None => user.username};
@@ -122,8 +160,9 @@ impl Table for Users {
             let email: String = match map.remove("email") {Some(name) => name.try_into()?, None => user.email};
             let password: String = match map.remove("password") {Some(name) => name.try_into()?, None => user.password};
             let user = User{id, username, first_name, last_name, email,password};
-            let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on users".into()))?;
+            let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
             users.insert(id, user);
+            return Ok(user);
         }
         Err(Error::UserNotFound)
     }
