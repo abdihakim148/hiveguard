@@ -11,6 +11,7 @@ pub use error::*;
 /// Re-exporting user types for external access.
 pub use user::*;
 pub use value::*;
+pub use email::*;
 
 
 pub type Result<T> = std::result::Result<T, Error>;

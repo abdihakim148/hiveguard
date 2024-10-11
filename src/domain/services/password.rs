@@ -11,12 +11,12 @@ pub struct Password;
 
 
 impl Password {
-    fn hash(password: &str) -> Result<String> {
+    pub fn hash(password: &str) -> Result<String> {
         let salt = SaltString::generate(OsRng);
         let hash = ARGON.hash_password(password.as_bytes(), &salt)?.to_string();
         Ok(hash)
     }
-    fn verify(password: &str, hash: &str) -> Result<()> {
+    pub fn verify(password: &str, hash: &str) -> Result<()> {
         let hash = PasswordHash::new(hash)?;
         Ok(ARGON.verify_password(password.as_bytes(), &hash)?)
     }

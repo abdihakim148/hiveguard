@@ -3,7 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::number::Number;
-use crate::domain::types::Error;
+use crate::domain::types::{Error, Email};
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -166,6 +166,34 @@ impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
             Value::String(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found String".into())),
             Value::Object(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found Object".into())),
             Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected tuple but found Vec".into())),
+        }
+    }
+}
+
+
+
+
+impl TryFrom<Value> for Email {
+    
+    type Error = Error;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(string) => Ok(Email::new(&string)?),
+            Value::Object(mut map) => {
+                if let Some(email) = map.remove("email") {
+                    let verified = match map.remove("verified") {Some(value) => value.try_into()?, None => false};
+                    return match verified {
+                        true => Ok(Email::Verified(email.try_into()?)),
+                        false => Email::new(&TryInto::<String>::try_into(email)?)
+                    }
+                }
+                Err(Error::ConversionError("Invalid conversion. Expected an Email but found a object that does not have the email field".into()))
+            },
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected an Email but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected an Email but found a bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected an Email but found a Number".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected an Email but found a Vec".into())),
         }
     }
 }

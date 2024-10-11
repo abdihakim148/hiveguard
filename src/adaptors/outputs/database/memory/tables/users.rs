@@ -1,5 +1,5 @@
 use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
-use crate::domain::types::{User, Value, Error};
+use crate::domain::types::{User, Value, Error, Email};
 use std::collections::HashMap;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
@@ -7,7 +7,7 @@ use std::sync::RwLock;
 
 /// A struct representing a collection of users stored in memory.
 pub struct Users {
-    emails: RwLock<HashMap<String, ObjectId>>,
+    emails: RwLock<HashMap<Email, ObjectId>>,
     users: RwLock<HashMap<ObjectId, User>>,
 }
 
@@ -23,7 +23,7 @@ impl Users {
     /// # Returns
     ///
     /// * `Result<bool>` - Returns `Ok(true)` if the email exists, `Ok(false)` otherwise.
-    async fn exists(&self, email: &str) -> Result<bool> {
+    async fn exists(&self, email: &Email) -> Result<bool> {
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on emails".into()))?;
         Ok(emails.contains_key(email))
     }
@@ -38,7 +38,7 @@ impl Users {
     /// # Returns
     ///
     /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
-    async fn email(&self, id: &ObjectId) -> Result<Option<String>> {
+    async fn email(&self, id: &ObjectId) -> Result<Option<Email>> {
         let users = self.users.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on users".into()))?;
         match users.get(id) {
             None => Ok(None),

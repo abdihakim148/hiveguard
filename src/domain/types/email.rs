@@ -5,7 +5,7 @@ use serde::de::{self, MapAccess, Visitor};
 use std::fmt;
 
 /// An enum representing the state of an email.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Email {
     New(String),
     Verified(String),
@@ -21,7 +21,7 @@ impl Email {
     /// # Returns
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
-    fn new(email: &str) -> Result<Self, Error> {
+    pub fn new(email: &str) -> Result<Self, Error> {
         if email.contains('@') && email.contains('.') {
             Ok(Email::New(email.to_string()))
         } else {
