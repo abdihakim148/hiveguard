@@ -1,3 +1,4 @@
+use crate::domain::types::Error;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self, MapAccess, Visitor};
@@ -10,7 +11,24 @@ pub enum Email {
     Verified(String),
 }
 
-impl Serialize for Email {
+impl Email {
+    /// Validates the email address format.
+    ///
+    /// # Arguments
+    ///
+    /// * `email` - A string slice that holds the email to validate.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
+    fn validate(email: &str) -> Result<Self, Error> {
+        if email.contains('@') && email.contains('.') {
+            Ok(Email::New(email.to_string()))
+        } else {
+            Err(Error::InvalidInput("Invalid email address".into()))
+        }
+    }
+}
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -45,7 +63,8 @@ impl<'de> Deserialize<'de> for Email {
             where
                 E: de::Error,
             {
-                Ok(Email::New(value.to_string()))
+                Email::validate(value)
+                    .map_err(|_| de::Error::custom("Invalid email address"))
             }
 
             fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
