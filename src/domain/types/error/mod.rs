@@ -1,6 +1,8 @@
 #![allow(unused)]
 use std::fmt;
 use std::error::Error as StdError;
+use argon2::password_hash::errors::Error as HashError;
+
 /// Module for database-related errors.
 mod database_error;
 
@@ -21,6 +23,7 @@ pub enum Error {
     InvalidEmail,
     Database(DatabaseError),
     Unauthorized,
+    HashingError(HashError),
     Unknown(String),
 }
 
@@ -40,6 +43,7 @@ impl fmt::Display for Error {
             Error::DatabaseConsistencyError => write!(f, "Database Consistency Error"),
             Error::SerializationError(msg) => write!(f, "Serialization Error: {}", msg),
             Error::ConversionError(msg) => write!(f, "Conversion Error: {}", msg),
+            Error::HashingError(err) => write!(f, "hashing error: {}", err),
             Error::InvalidEmail => write!(f, "Invalid Email"),
         } 
     }
@@ -50,5 +54,12 @@ impl StdError for Error {}
 impl From<DatabaseError> for Error {
     fn from(error: DatabaseError) -> Self {
         Error::Database(error)
+    }
+}
+
+
+impl From<HashError> for Error {
+    fn from(err: HashError) -> Self {
+        Self::HashingError(err)
     }
 }
