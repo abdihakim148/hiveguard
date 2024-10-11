@@ -108,7 +108,7 @@ impl Table for Users {
     ///
     /// * `Result<Option<Self::Item>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
     async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>> {
-        let users = self.users.read().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire read lock on users".into()))?;
+        let users = self.users.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on users".into()))?;
         Ok(users.get(id).cloned())
     }
 
@@ -132,7 +132,7 @@ impl Table for Users {
             let email = match map.remove("email") {Some(name) => name.try_into()?, None => user.email};
             let password = match map.remove("password") {Some(name) => name.try_into()?, None => user.password};
             let user = User{id, username, first_name, last_name, email,password};
-            let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
+            let mut users = self.users.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on users".into()))?;
             users.insert(id, user.clone());
             return Ok(user);
         }
@@ -177,8 +177,8 @@ impl Table for Users {
     ///
     /// * `Result<Self::Id>` - Returns the ID of the deleted user wrapped in a `Result`.
     async fn delete(&self, id: &Self::Id) -> Result<()> {
-        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on users".into()))?;
-        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::Unknown("Failed to acquire write lock on emails".into()))?;
+        let mut users = self.users.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on users".into()))?;
+        let mut emails = self.emails.write().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire write lock on emails".into()))?;
 
         if let Some(user) = users.remove(id) {
             emails.remove(&user.email);
