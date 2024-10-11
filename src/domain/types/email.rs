@@ -17,9 +17,9 @@ impl Serialize for Email {
         match self {
             Email::New(email) => serializer.serialize_str(email),
             Email::Verified(email) => {
-                let mut state = serializer.serialize_map(Some(2))?;
-                state.serialize_entry("email", email)?;
-                state.serialize_entry("verified", &true)?;
+                let mut state = serializer.serialize_struct("Email", 2)?;
+                state.serialize_field("email", email)?;
+                state.serialize_field("verified", &true)?;
                 state.end()
             }
         }
