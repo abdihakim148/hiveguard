@@ -18,6 +18,7 @@ pub enum Error {
     SerializationError(String),
     InvalidInput(String),
     ConversionError(String),
+    InvalidEmail,
     Database(DatabaseError),
     Unauthorized,
     Unknown(String),
@@ -39,7 +40,8 @@ impl fmt::Display for Error {
             Error::DatabaseConsistencyError => write!(f, "Database Consistency Error"),
             Error::SerializationError(msg) => write!(f, "Serialization Error: {}", msg),
             Error::ConversionError(msg) => write!(f, "Conversion Error: {}", msg),
-        }
+            Error::InvalidEmail => write!(f, "Invalid Email"),
+        } 
     }
 }
 

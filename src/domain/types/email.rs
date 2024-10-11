@@ -25,7 +25,7 @@ impl Email {
         if email.contains('@') && email.contains('.') {
             Ok(Email::New(email.to_string()))
         } else {
-            Err(Error::InvalidInput("Invalid email address".into()))
+            Err(Error::InvalidEmail)
         }
     }
 }
