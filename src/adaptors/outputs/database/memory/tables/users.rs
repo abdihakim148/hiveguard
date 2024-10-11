@@ -209,7 +209,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: "test@example.com".to_string(),
+            email: Email::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
