@@ -28,6 +28,34 @@ impl Users {
         Ok(emails.contains_key(email))
     }
 
+    #[tokio::test]
+    async fn test_patch_user() {
+        let users = Users::new().await.unwrap();
+        let user = User {
+            id: ObjectId::new(),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            email: "test@example.com".to_string(),
+            password: "password".to_string(),
+        };
+
+        // Create the user
+        users.create(&user).await.unwrap();
+
+        // Prepare a map with changes
+        let mut changes = HashMap::new();
+        changes.insert("username".to_string(), Value::String("updateduser".to_string()));
+        changes.insert("email".to_string(), Value::String("updated@example.com".to_string()));
+
+        // Patch the user
+        let patched_user = users.patch(&user.id, changes).await.unwrap();
+
+        // Verify the changes
+        assert_eq!(patched_user.username, "updateduser");
+        assert_eq!(patched_user.email, "updated@example.com");
+    }
+
     /// Retrieves the email associated with a given user ID.
     ///
     /// # Arguments
