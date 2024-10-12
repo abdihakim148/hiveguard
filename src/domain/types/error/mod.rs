@@ -2,6 +2,7 @@
 use std::fmt;
 use std::error::Error as StdError;
 use argon2::password_hash::errors::Error as HashError;
+use actix_web::{http::StatusCode, ResponseError};
 
 /// Module for database-related errors.
 mod database_error;
@@ -61,5 +62,19 @@ impl From<DatabaseError> for Error {
 impl From<HashError> for Error {
     fn from(err: HashError) -> Self {
         Self::HashingError(err)
+    }
+}
+
+
+impl ResponseError for Error {
+    fn status_code(&self) -> StatusCode {
+        use Error::*;
+        match self {
+            NotFound | UserNotFound => StatusCode::NOT_FOUND,
+            InvalidInput(_) | InvalidUserId | InvalidEmail | SerializationError(_) | ConversionError(_) => StatusCode::BAD_REQUEST,
+            Unauthorized => StatusCode::UNAUTHORIZED,
+            Database(_) | Unknown(_) | LockError(_) | TableNotFound | DatabaseConsistencyError | SerializationError(_) | HashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            EmailAlreadyExists => StatusCode::CONFLICT,
+        }
     }
 }
