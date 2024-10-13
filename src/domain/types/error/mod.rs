@@ -3,6 +3,7 @@ use std::fmt;
 use std::error::Error as StdError;
 use argon2::password_hash::errors::Error as HashError;
 use actix_web::{http::StatusCode, ResponseError};
+use serde_json::Error as JsonError;
 
 /// Module for database-related errors.
 mod database_error;
@@ -76,5 +77,12 @@ impl ResponseError for Error {
             Database(_) | Unknown(_) | LockError(_) | TableNotFound | DatabaseConsistencyError | SerializationError(_) | HashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             EmailAlreadyExists => StatusCode::CONFLICT,
         }
+    }
+}
+
+
+impl From<JsonError> for Error {
+    fn from(value: JsonError) -> Self {
+        Error::SerializationError(format!("{}", value))
     }
 }
