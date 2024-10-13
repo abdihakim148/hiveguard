@@ -6,6 +6,7 @@ use super::Email;
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct User {
     /// The unique identifier for the user.
+    #[serde(default)]
     pub id: ObjectId,
     /// The username of the user.
     pub username: String,
@@ -16,5 +17,11 @@ pub struct User {
     /// The email address of the user.
     pub email: Email,
     /// The password of the user.
+    #[serde(skip_serializing_if = "is_default")]
     pub password: String,
+}
+
+
+fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    value == &T::default()
 }
