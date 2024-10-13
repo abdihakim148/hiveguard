@@ -26,6 +26,7 @@ impl Registration for User {
         let password = Password::hash(&self.password)?;
         let mut user = Self{id, username, first_name, last_name, email, password};
         user.id = table.create(&user).await?;
+        user.password = Default::default();
         Ok(user)
     }
 }
