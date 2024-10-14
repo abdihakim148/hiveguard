@@ -13,8 +13,9 @@ pub struct Memory {
 
 impl Database for Memory {
     type Users = Users;
+    type Config = ();
 
-    async fn new<T>(_args: T) -> Result<Self> {
+    async fn new(_config: ()) -> Result<Self> {
         let users = Users::new().await?;
         Ok(Memory { users })
     }
