@@ -1,13 +1,8 @@
 use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
 use crate::domain::types::{User, Value, Error, Email};
 use std::collections::HashMap;
-use tokio::sync::OnceCell;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
-
-
-// #[dynamic]
-pub static USERS: OnceCell<Users> = OnceCell::const_new();
 
 
 /// A struct representing a collection of users stored in memory.

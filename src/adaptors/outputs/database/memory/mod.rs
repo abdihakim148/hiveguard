@@ -2,8 +2,12 @@
 mod tables;
 
 use crate::ports::outputs::database::{Database, Result};
-pub use tables::*;
 use crate::ports::outputs::database::Table;
+use tokio::sync::OnceCell;
+pub use tables::*;
+
+
+pub static MEMORY: OnceCell<Memory> = OnceCell::const_new();
 
 /// A struct representing an in-memory database.
 /// A struct representing an in-memory database.
@@ -20,7 +24,7 @@ impl Database for Memory {
         Ok(Memory { users })
     }
 
-    async fn users<'a>(&'a self) -> &'a Self::Users {
-        &self.users
+    async fn users<'a>(&'a self) -> Result<&'a Self::Users> {
+        Ok(&self.users)
     }
 }

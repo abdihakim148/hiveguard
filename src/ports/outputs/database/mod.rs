@@ -10,5 +10,5 @@ pub trait Database: Sized {
     type Users: Table;
     type Config;
     async fn new(config: Self::Config) -> Result<Self>;
-    async fn users<'a>(&'a self) -> &'a Self::Users;
+    async fn users<'a>(&'a self) -> Result<&'a Self::Users>;
 }
