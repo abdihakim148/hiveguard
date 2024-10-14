@@ -1,3 +1,7 @@
+#![allow(unused)]
+use crate::domain::types::Result;
+
+
 pub trait Mailer: Sized {
     type Config;
     type Mail;
