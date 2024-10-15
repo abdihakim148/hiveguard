@@ -14,7 +14,7 @@ pub use database_error::DatabaseError;
 pub enum Error {
     NotFound,
     LockError(String),
-    EmailAlreadyExists,
+    EmailAddressAlreadyExists,
     UserNotFound,
     TableNotFound,
     InvalidUserId,
@@ -22,7 +22,7 @@ pub enum Error {
     SerializationError(String),
     InvalidInput(String),
     ConversionError(String),
-    InvalidEmail,
+    InvalidEmailAddress,
     Database(DatabaseError),
     Unauthorized,
     HashingError(HashError),
@@ -38,7 +38,7 @@ impl fmt::Display for Error {
             Error::Unauthorized => write!(f, "Unauthorized"),
             Error::Unknown(msg) => write!(f, "Unknown Error: {}", msg),
             Error::LockError(msg) => write!(f, "Lock Error: {}", msg),
-            Error::EmailAlreadyExists => write!(f, "Email Already Exists"),
+            Error::EmailAddressAlreadyExists => write!(f, "EmailAddress Already Exists"),
             Error::UserNotFound => write!(f, "User Not Found"),
             Error::InvalidUserId => write!(f, "Invalid User ID"),
             Error::TableNotFound => write!(f, "Table Not Found"),
@@ -46,7 +46,7 @@ impl fmt::Display for Error {
             Error::SerializationError(msg) => write!(f, "Serialization Error: {}", msg),
             Error::ConversionError(msg) => write!(f, "Conversion Error: {}", msg),
             Error::HashingError(err) => write!(f, "hashing error: {}", err),
-            Error::InvalidEmail => write!(f, "Invalid Email"),
+            Error::InvalidEmailAddress => write!(f, "Invalid EmailAddress"),
         } 
     }
 }
@@ -72,10 +72,10 @@ impl ResponseError for Error {
         use Error::*;
         match self {
             NotFound | UserNotFound => StatusCode::NOT_FOUND,
-            InvalidInput(_) | InvalidUserId | InvalidEmail | SerializationError(_) | ConversionError(_) => StatusCode::BAD_REQUEST,
+            InvalidInput(_) | InvalidUserId | InvalidEmailAddress | SerializationError(_) | ConversionError(_) => StatusCode::BAD_REQUEST,
             Unauthorized => StatusCode::UNAUTHORIZED,
             Database(_) | Unknown(_) | LockError(_) | TableNotFound | DatabaseConsistencyError | SerializationError(_) | HashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            EmailAlreadyExists => StatusCode::CONFLICT,
+            EmailAddressAlreadyExists => StatusCode::CONFLICT,
         }
     }
 }

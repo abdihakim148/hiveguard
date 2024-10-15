@@ -3,7 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::number::Number;
-use crate::domain::types::{Error, Email};
+use crate::domain::types::{Error, EmailAddress};
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -173,27 +173,27 @@ impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
 
 
 
-impl TryFrom<Value> for Email {
+impl TryFrom<Value> for EmailAddress {
     
     type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
-            Value::String(string) => Ok(Email::new(&string)?),
+            Value::String(string) => Ok(EmailAddress::new(&string)?),
             Value::Object(mut map) => {
                 if let Some(email) = map.remove("email") {
                     let verified = match map.remove("verified") {Some(value) => value.try_into()?, None => false};
                     return match verified {
-                        true => Ok(Email::Verified(email.try_into()?)),
-                        false => Email::new(&TryInto::<String>::try_into(email)?)
+                        true => Ok(EmailAddress::Verified(email.try_into()?)),
+                        false => EmailAddress::new(&TryInto::<String>::try_into(email)?)
                     }
                 }
-                Err(Error::ConversionError("Invalid conversion. Expected an Email but found a object that does not have the email field".into()))
+                Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a object that does not have the email field".into()))
             },
-            Value::None => Err(Error::ConversionError("Invalid conversion. Expected an Email but found None".into())),
-            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected an Email but found a bool".into())),
-            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected an Email but found a Number".into())),
-            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected an Email but found a Vec".into())),
+            Value::None => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found None".into())),
+            Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a bool".into())),
+            Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a Number".into())),
+            Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a Vec".into())),
         }
     }
 }

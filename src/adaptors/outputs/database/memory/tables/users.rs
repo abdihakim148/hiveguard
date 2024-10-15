@@ -1,5 +1,5 @@
 use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
-use crate::domain::types::{User, Value, Error, Email};
+use crate::domain::types::{User, Value, Error, EmailAddress};
 use std::collections::HashMap;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
@@ -8,7 +8,7 @@ use std::sync::RwLock;
 /// A struct representing a collection of users stored in memory.
 // #[derive(Clone)]
 pub struct Users {
-    emails: RwLock<HashMap<Email, ObjectId>>,
+    emails: RwLock<HashMap<EmailAddress, ObjectId>>,
     users: RwLock<HashMap<ObjectId, User>>,
 }
 
@@ -24,7 +24,7 @@ impl Users {
     /// # Returns
     ///
     /// * `Result<bool>` - Returns `Ok(true)` if the email exists, `Ok(false)` otherwise.
-    async fn exists(&self, email: &Email) -> Result<bool> {
+    async fn exists(&self, email: &EmailAddress) -> Result<bool> {
         let emails = self.emails.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on emails".into()))?;
         Ok(emails.contains_key(email))
     }
@@ -39,7 +39,7 @@ impl Users {
     /// # Returns
     ///
     /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
-    async fn email(&self, id: &ObjectId) -> Result<Option<Email>> {
+    async fn email(&self, id: &ObjectId) -> Result<Option<EmailAddress>> {
         let users = self.users.read().map_err(|_| crate::domain::types::Error::LockError("Failed to acquire read lock on users".into()))?;
         match users.get(id) {
             None => Ok(None),
@@ -81,12 +81,12 @@ impl Table for Users {
     /// * `Result<Self::Id>` - Returns the ID of the created user wrapped in a `Result`.
     async fn create(&self, user: &Self::Item) -> Result<Self::Id> {
         if self.exists(&user.email).await? {
-            return Err(crate::domain::types::Error::EmailAlreadyExists);
+            return Err(crate::domain::types::Error::EmailAddressAlreadyExists);
         }
 
         if let Some(existing_email) = self.email(&user.id).await? {
             if existing_email != user.email && self.exists(&user.email).await? {
-                return Err(crate::domain::types::Error::EmailAlreadyExists);
+                return Err(crate::domain::types::Error::EmailAddressAlreadyExists);
             }
         }
 
@@ -155,7 +155,7 @@ impl Table for Users {
 
         if let Some(id) = emails.get(&user.email) {
             if id != &user.id {
-                return Err(crate::domain::types::Error::EmailAlreadyExists);
+                return Err(crate::domain::types::Error::EmailAddressAlreadyExists);
             }
         }
 
@@ -196,7 +196,7 @@ impl Table for Users {
 #[cfg(test)]
 mod tests {
     use super::Users;
-    use crate::domain::types::{User, Value, Email};
+    use crate::domain::types::{User, Value, EmailAddress};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
     use bson::oid::ObjectId;
@@ -210,7 +210,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(users.exists(&user.email).await.unwrap(), true);
 
         // Test with a different email
-        assert_eq!(users.exists(&Email::new("nonexistent@example.com").unwrap()).await.unwrap(), false);
+        assert_eq!(users.exists(&EmailAddress::new("nonexistent@example.com").unwrap()).await.unwrap(), false);
     }
 
     #[tokio::test]
@@ -235,7 +235,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -261,7 +261,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -277,7 +277,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -294,7 +294,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
@@ -311,7 +311,7 @@ mod tests {
 
         // Verify the changes
         assert_eq!(patched_user.username, "updateduser");
-        assert_eq!(patched_user.email, Email::new("updated@example.com").unwrap());
+        assert_eq!(patched_user.email, EmailAddress::new("updated@example.com").unwrap());
     }
 
     #[tokio::test]
@@ -322,12 +322,12 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 
         let id = users.create(&user).await.unwrap();
-        user.email = Email::new("newemail@example.com").unwrap();
+        user.email = EmailAddress::new("newemail@example.com").unwrap();
         let update_result = users.update(&user).await;
         assert!(update_result.is_ok());
 
@@ -343,7 +343,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: Email::new("test@example.com").unwrap(),
+            email: EmailAddress::new("test@example.com").unwrap(),
             password: "password".to_string(),
         };
 

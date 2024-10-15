@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use bson::oid::ObjectId;
-use super::Email;
+use super::EmailAddress;
 
 /// A struct representing a user.
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
@@ -15,7 +15,7 @@ pub struct User {
     /// The last name of the user.
     pub last_name: String,
     /// The email address of the user.
-    pub email: Email,
+    pub email: EmailAddress,
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
