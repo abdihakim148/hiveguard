@@ -12,21 +12,8 @@ pub use database_error::DatabaseError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
-    NotFound,
-    LockError(String),
-    EmailAddressAlreadyExists,
-    UserNotFound,
-    TableNotFound,
-    InvalidUserId,
-    DatabaseConsistencyError,
-    SerializationError(String),
-    InvalidInput(String),
     ConversionError(String),
-    InvalidEmailAddress,
-    Database(DatabaseError),
-    Unauthorized,
     HashingError(HashError),
-    Unknown(String),
 }
 
 impl fmt::Display for Error {
