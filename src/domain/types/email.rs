@@ -35,10 +35,10 @@ impl Serialize for EmailAddress {
         S: Serializer,
     {
         match self {
-            EmailAddress::New(email) => serializer.serialize_str(email.as_str()),
+            EmailAddress::New(email) => email.serialize(serializer),
             EmailAddress::Verified(email) => {
                 let mut state = serializer.serialize_struct("EmailAddress", 2)?;
-                state.serialize_field("email", email.as_str())?;
+                state.serialize_field("email", email)?;
                 state.serialize_field("verified", &true)?;
                 state.end()
             }
