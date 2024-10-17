@@ -21,7 +21,10 @@ pub enum Error<T: DebugTrait = Value> {
     #[error("domain: hashing_error: {0}")]
     HashingError(HashError),
     #[error("domain: email_error: {0}")]
-    EmailError(EmailError)
+    EmailError(EmailError),
+    LockError(String),
+    EmailAddressAlreadyExists,
+    UserNotFound,
 }
 
 

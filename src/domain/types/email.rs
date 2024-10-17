@@ -1,5 +1,4 @@
 use crate::domain::types::{Error, Value, ConversionError, Type};
-use lettre::address::Address;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self, MapAccess, Visitor};
@@ -24,7 +23,7 @@ impl EmailAddress {
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
     pub fn new(email: &str) -> Result<Self, Error> {
-        let address: Address = email.parse()?;
+        let address: Address = email.parse().map_err(Error::EmailError)?;
         Ok(EmailAddress::New(address))
     }
 }
@@ -35,7 +34,7 @@ impl Serialize for EmailAddress {
         S: Serializer,
     {
         match self {
-            EmailAddress::New(email) => email.serialize(serializer),
+            EmailAddress::New(email) => serializer.serialize_str(email.as_str()),
             EmailAddress::Verified(email) => {
                 let mut state = serializer.serialize_struct("EmailAddress", 2)?;
                 state.serialize_field("email", email)?;
@@ -64,7 +63,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
             where
                 E: de::Error,
             {
-                Ok(EmailAddress::new(value)?)
+                EmailAddress::new(value).map_err(de::Error::custom)
             }
 
             fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -94,7 +93,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
                 }
                 let email: String = email.ok_or_else(|| de::Error::missing_field("email"))?;
                 let verified: bool = verified.unwrap_or(false);
-                let address: Address = email.parse()?;
+                let address: Address = email.parse().map_err(de::Error::custom)?;
                 if verified {
                     Ok(EmailAddress::Verified(address))
                 } else {
@@ -115,7 +114,7 @@ impl TryFrom<Value> for EmailAddress {
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
         match &mut value {
             Value::String(string) => {
-                let address: Address = string.parse()?;
+                let address: Address = string.parse().map_err(Error::EmailError)?;
                 Ok(EmailAddress::New(address))
             }
             Value::Object(ref mut map) => {
@@ -125,7 +124,7 @@ impl TryFrom<Value> for EmailAddress {
                         None => false,
                     };
                     let email_str: String = email.try_into()?;
-                    let address: Address = email_str.parse()?;
+                    let address: Address = email_str.parse().map_err(Error::EmailError)?;
                     return match verified {
                         true => Ok(EmailAddress::Verified(address)),
                         false => Ok(EmailAddress::New(address)),
