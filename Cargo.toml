@@ -16,3 +16,10 @@ thiserror = "1.0.64"
 
 [dev-dependencies]
 mockall = "0.13.0"
+
+
+
+[features]
+actix = []
+
+default = ["actix"]
