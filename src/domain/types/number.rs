@@ -1,6 +1,6 @@
 use std::convert::TryFrom; // Importing TryFrom trait for conversions
 use std::fmt;
-use crate::domain::types::Error;
+use crate::domain::types::{Error, ConversionError, Type};
 use serde::{Serialize, Deserialize};
 
 /// Enum representing various numerical types.
