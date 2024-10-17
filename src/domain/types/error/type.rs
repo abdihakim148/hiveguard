@@ -20,7 +20,8 @@ pub enum Type {
     String,
     Vec(Box<Type>),
     Object(Box<(Type, Type)>),
-    Option(Box<Type>)
+    Option(Box<Type>),
+    Unknown
 }
 
 
@@ -43,7 +44,8 @@ impl Display for Type {
             String => write!(f, "String"),
             Vec(value) => write!(f, "Vec<{value}>"),
             Object(value) => write!(f, "Object<{}, {}>", value.0, value.1),
-            Option(value) => write!(f, "Option<{value}>")
+            Option(value) => write!(f, "Option<{value}>"),
+            Unknown => write!(f, "null")
         }
     }
 }

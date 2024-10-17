@@ -49,7 +49,7 @@ macro_rules! impl_from_for_number {
                         Number::I128(value) if value >= <$t>::MIN as i128 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= <$t>::MIN as f32 && value <= <$t>::MAX as f32 => Ok(value as $t),
                         Number::F64(value) if value >= <$t>::MIN as f64 && value <= <$t>::MAX as f64 => Ok(value as $t),
-                        _ => Err(Error::<Number>::ConversionError(ConversionError::new(Type::from(number), Type::$variant, number))),
+                        _ => Err(Error::<Number>::ConversionError(ConversionError::new(Type::from(&number), Type::$variant, number))),
                     }
                 }
             }
@@ -91,8 +91,8 @@ impl fmt::Display for Number {
     }
 }
 
-impl From<Number> for Type {
-    fn from(number: Number) -> Self {
+impl From<&Number> for Type {
+    fn from(number: &Number) -> Self {
         match number {
             Number::U8(_) => Type::U8,
             Number::I8(_) => Type::I8,

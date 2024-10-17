@@ -3,7 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::number::Number;
-use crate::domain::types::{Error, EmailAddress};
+use crate::domain::types::{Error, EmailAddress, Type};
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -194,6 +194,29 @@ impl TryFrom<Value> for EmailAddress {
             Value::Bool(_) => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a bool".into())),
             Value::Number(_) => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a Number".into())),
             Value::Vec(_) => Err(Error::ConversionError("Invalid conversion. Expected an EmailAddress but found a Vec".into())),
+        }
+    }
+}
+
+
+impl From<&Value> for Type {
+    fn from(value: &Value) -> Self {
+        match value {
+            Value::None => Type::Unknown,
+            Value::Bool(_) => Type::Bool,
+            Value::Number(number) => Type::from(number),
+            Value::String(_) => Type::String,
+            Value::Object(map) => {
+                if let Some((_, value)) = map.iter().next() {
+                    Type::Object(Box::new((Type::String, Type::from(value))))
+                }else {
+                    Type::Unknown
+                }
+            }, 
+            Value::Vec(array) => {
+                let ty = if let Some(value) = array.first() {Type::from(value)} else {Type::Unknown};
+                Type::Vec(Box::new(ty))
+            },
         }
     }
 }
