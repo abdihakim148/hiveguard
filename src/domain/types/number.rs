@@ -49,7 +49,7 @@ macro_rules! impl_from_for_number {
                         Number::I128(value) if value >= <$t>::MIN as i128 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= <$t>::MIN as f32 && value <= <$t>::MAX as f32 => Ok(value as $t),
                         Number::F64(value) if value >= <$t>::MIN as f64 && value <= <$t>::MAX as f64 => Ok(value as $t),
-                        _ => Err(Error::ConversionError(format!("Expected {}, found {} of {}", stringify!($t), stringify!(number), number))),
+                        _ => Err(Error::ConversionError(ConversionError::new(Type::from(number), Type::$variant, value))),
                     }
                 }
             }
