@@ -3,7 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::number::Number;
-use crate::domain::types::{Error, EmailAddress, Type, ConversionError};
+use crate::domain::types::{Error, Type, ConversionError};
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
