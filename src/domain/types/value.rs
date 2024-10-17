@@ -65,7 +65,7 @@ impl TryFrom<Value> for () {
         if let Value::None = value {
             Ok(())
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::Unknown, value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<()>()), value)))
         }
     }
 }
@@ -77,7 +77,7 @@ impl TryFrom<Value> for bool {
         if let Value::Bool(b) = value {
             Ok(b)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::Bool, value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<bool>()), value)))
         }
     }
 }
@@ -89,7 +89,7 @@ impl TryFrom<Value> for String {
         if let Value::String(s) = value {
             Ok(s)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::String, value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<String>()), value)))
         }
     }
 }
@@ -101,7 +101,7 @@ impl TryFrom<Value> for HashMap<String, Value> {
         if let Value::Object(o) = value {
             Ok(o)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::Object(Box::new((Type::String, Type::Unknown))), value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<HashMap<String, Value>>()), value)))
         }
     }
 }
@@ -118,7 +118,7 @@ impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
             }
             Ok(array)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::Vec(Box::new(Type::Unknown)), value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<Vec<T>>()), value)))
         }
     }
 }
@@ -130,7 +130,7 @@ impl TryFrom<Value> for ObjectId {
         if let Value::String(s) = value {
             ObjectId::parse_str(&s).map_err(|_| Error::ConversionError(ConversionError::new(Type::String, Type::Unknown, Value::String(s))))
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::String, value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<ObjectId>()), value)))
         }
     }
 }
@@ -142,7 +142,7 @@ impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
         if let Value::Number(n) = value {
             Ok((n.try_into()?,))
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::Unknown, value)))
+            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<(T,)>()), value)))
         }
     }
 }
@@ -167,9 +167,9 @@ impl TryFrom<Value> for EmailAddress {
                         false => EmailAddress::new(&TryInto::<String>::try_into(email)?),
                     };
                 }
-                Err(Error::ConversionError(ConversionError::new(Type::Object(Box::new((Type::String, Type::Unknown))), Type::Unknown, value)))
+                Err(Error::ConversionError(ConversionError::new(Type::Object(Box::new((Type::String, Type::Unknown))), Type::New(std::any::TypeId::of::<EmailAddress>()), value)))
             }
-            _ => Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::String, value))),
+            _ => Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<EmailAddress>()), value))),
         }
     }
 }
