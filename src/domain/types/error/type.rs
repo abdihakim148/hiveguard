@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter, Result};
+use std::any::TypeId;
 use Type::*;
 
 
@@ -21,6 +22,7 @@ pub enum Type {
     Vec(Box<Type>),
     Object(Box<(Type, Type)>),
     Option(Box<Type>),
+    New(TypeId),
     Unknown
 }
 
@@ -45,6 +47,7 @@ impl Display for Type {
             Vec(value) => write!(f, "Vec<{value}>"),
             Object(value) => write!(f, "Object<{}, {}>", value.0, value.1),
             Option(value) => write!(f, "Option<{value}>"),
+            New(ty) => write!(f, "New<{ty:?}>"),
             Unknown => write!(f, "null")
         }
     }
