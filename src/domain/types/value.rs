@@ -148,33 +148,6 @@ impl<T: TryFrom<Number, Error = Error> + 'static> TryFrom<Value> for (T,) {
 }
 
 
-
-
-impl TryFrom<Value> for EmailAddress {
-    type Error = Error<Value>;
-
-    fn try_from(mut value: Value) -> Result<Self, Self::Error> {
-        match &mut value {
-            Value::String(string) => Ok(EmailAddress::new(&string)?),
-            Value::Object(ref mut map) => {
-                if let Some(email) = map.remove("email") {
-                    let verified = match map.remove("verified") {
-                        Some(value) => value.try_into()?,
-                        None => false,
-                    };
-                    return match verified {
-                        true => Ok(EmailAddress::Verified(email.try_into()?)),
-                        false => EmailAddress::new(&TryInto::<String>::try_into(email)?),
-                    };
-                }
-                Err(Error::ConversionError(ConversionError::new(Type::Object(Box::new((Type::String, Type::Unknown))), Type::New(std::any::TypeId::of::<EmailAddress>()), value)))
-            }
-            _ => Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<EmailAddress>()), value))),
-        }
-    }
-}
-
-
 impl From<&Value> for Type {
     fn from(value: &Value) -> Self {
         match value {
