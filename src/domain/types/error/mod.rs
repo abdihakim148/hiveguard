@@ -2,7 +2,7 @@
 mod conversion;
 mod r#type;
 
-use std::fmt;
+use std::fmt::{self, Debug as DebugTrait};
 use thiserror::Error as ThisError;
 use std::error::Error as StdError;
 use argon2::password_hash::errors::Error as HashError;
@@ -10,11 +10,12 @@ use actix_web::{http::StatusCode, ResponseError};
 use serde_json::Error as JsonError;
 pub use conversion::ConversionError;
 pub use r#type::*;
+use super::Value;
 
 #[derive(Debug, Clone, PartialEq, ThisError)]
-pub enum Error {
+pub enum Error<T: DebugTrait = Value> {
     #[error("domain: conversion_error: {0}")]
-    ConversionError(ConversionError),
+    ConversionError(ConversionError<T>),
     #[error("domain: hashing_error: {0}")]
     HashingError(HashError),
 }
