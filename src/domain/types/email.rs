@@ -24,7 +24,7 @@ impl EmailAddress {
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
     pub fn new(email: &str) -> Result<Self, Error> {
-        let address = Address::new(email)?;
+        let address: Address = email.parse()?;
         Ok(EmailAddress::New(address))
     }
 }
@@ -94,7 +94,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
                 }
                 let email: String = email.ok_or_else(|| de::Error::missing_field("email"))?;
                 let verified: bool = verified.unwrap_or(false);
-                let address = Address::new(&email)?;
+                let address: Address = email.parse()?;
                 if verified {
                     Ok(EmailAddress::Verified(address))
                 } else {
@@ -115,7 +115,7 @@ impl TryFrom<Value> for EmailAddress {
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
         match &mut value {
             Value::String(string) => {
-                let address = Address::new(string)?;
+                let address: Address = string.parse()?;
                 Ok(EmailAddress::New(address))
             }
             Value::Object(ref mut map) => {
@@ -125,7 +125,7 @@ impl TryFrom<Value> for EmailAddress {
                         None => false,
                     };
                     let email_str: String = email.try_into()?;
-                    let address = Address::new(&email_str)?;
+                    let address: Address = email_str.parse()?;
                     return match verified {
                         true => Ok(EmailAddress::Verified(address)),
                         false => Ok(EmailAddress::New(address)),
