@@ -91,6 +91,25 @@ impl fmt::Display for Number {
     }
 }
 
+impl From<Number> for Type {
+    fn from(number: Number) -> Self {
+        match number {
+            Number::U8(_) => Type::U8,
+            Number::I8(_) => Type::I8,
+            Number::U16(_) => Type::U16,
+            Number::I16(_) => Type::I16,
+            Number::U32(_) => Type::U32,
+            Number::I32(_) => Type::I32,
+            Number::U64(_) => Type::U64,
+            Number::I64(_) => Type::I64,
+            Number::U128(_) => Type::U128,
+            Number::I128(_) => Type::I128,
+            Number::F32(_) => Type::F32,
+            Number::F64(_) => Type::F64,
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
