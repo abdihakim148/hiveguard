@@ -3,7 +3,7 @@ use std::convert::{TryFrom, TryInto};
 use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::number::Number;
-use crate::domain::types::{Error, EmailAddress, Type};
+use crate::domain::types::{Error, EmailAddress, Type, ConversionError};
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -59,7 +59,7 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
 }
 
 impl TryFrom<Value> for () {
-    type Error = Error;
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::None = value {
@@ -71,7 +71,7 @@ impl TryFrom<Value> for () {
 }
 
 impl TryFrom<Value> for bool {
-    type Error = Error;
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Bool(b) = value {
@@ -83,7 +83,7 @@ impl TryFrom<Value> for bool {
 }
 
 impl TryFrom<Value> for String {
-    type Error = Error;
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::String(s) = value {
@@ -95,7 +95,7 @@ impl TryFrom<Value> for String {
 }
 
 impl TryFrom<Value> for HashMap<String, Value> {
-    type Error = Error;
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Object(o) = value {
@@ -106,15 +106,15 @@ impl TryFrom<Value> for HashMap<String, Value> {
     }
 }
 
-impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
-    type Error = Error;
+impl<T: TryFrom<Value, Error = Error<Value>> + 'static> TryFrom<Value> for Vec<T> {
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Vec(value) = value {
             let mut array = Vec::new();
             let mut iter = value.into_iter();
             while let Some(value) = iter.next() {
-                array.push(value.try_into().map_err(|e| Error::ConversionError(format!("Failed to convert Vec element: {}", e)))?);
+                array.push(value.try_into()?);
             }
             Ok(array)
         } else {
@@ -124,7 +124,7 @@ impl<T: TryFrom<Value, Error: std::fmt::Display>> TryFrom<Value> for Vec<T> {
 }
 
 impl TryFrom<Value> for ObjectId {
-    type Error = Error;
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::String(s) = value {
@@ -135,8 +135,8 @@ impl TryFrom<Value> for ObjectId {
     }
 }
 
-impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
-    type Error = Error;
+impl<T: TryFrom<Number, Error = Error> + 'static> TryFrom<Value> for (T,) {
+    type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Number(n) = value {
@@ -151,12 +151,12 @@ impl<T: TryFrom<Number, Error = Error>> TryFrom<Value> for (T,) {
 
 
 impl TryFrom<Value> for EmailAddress {
-    type Error = Error;
+    type Error = Error<Value>;
 
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        match value {
+    fn try_from(mut value: Value) -> Result<Self, Self::Error> {
+        match &mut value {
             Value::String(string) => Ok(EmailAddress::new(&string)?),
-            Value::Object(mut map) => {
+            Value::Object(ref mut map) => {
                 if let Some(email) = map.remove("email") {
                     let verified = match map.remove("verified") {
                         Some(value) => value.try_into()?,
