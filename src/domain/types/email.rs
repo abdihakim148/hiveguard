@@ -2,6 +2,7 @@ use crate::domain::types::{Error, Value, ConversionError, Type};
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self, MapAccess, Visitor};
+use lettre::address::Address;
 use std::fmt;
 
 /// An enum representing the state of an email.

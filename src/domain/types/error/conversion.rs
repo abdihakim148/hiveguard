@@ -33,7 +33,12 @@ impl Display for ConversionError {
 
 impl StdError for ConversionError {}
 
+
+#[cfg(feature = "actix")]
 impl ResponseError for ConversionError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::BAD_REQUEST
+    }
     fn error_response(&self) -> Response<BoxBody> {
         let error = format!("{{\"error\": \"{self}\"}}");
         let res = Response::new(self.status_code());

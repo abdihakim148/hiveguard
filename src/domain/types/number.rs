@@ -132,15 +132,15 @@ mod tests {
     fn test_try_from_number_to_primitive() {
         let num = Number::U8(42); // Use a valid value for u8
         let result: Result<u8, _> = u8::try_from(num);
-        assert_eq!(result, Ok(42));
+        assert_eq!(result.unwrap(), 42);
 
         let num = Number::I32(-42);
         let result: Result<i32, _> = i32::try_from(num);
-        assert_eq!(result, Ok(-42));
+        assert_eq!(result.unwrap(), -42);
 
         let num = Number::F64(42.0);
         let result: Result<f64, _> = f64::try_from(num);
-        assert_eq!(result, Ok(42.0));
+        assert_eq!(result.unwrap(), 42.0);
     }
 
     #[test]
