@@ -24,9 +24,8 @@ impl EmailAddress {
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
     pub fn new(email: &str) -> Result<Self, Error> {
-        Address::new(email)
-            .map(EmailAddress::New)
-            .map_err(|_| Error::InvalidEmailAddress)
+        let address = Address::new(email)?;
+        Ok(EmailAddress::New(address))
     }
 }
 
@@ -65,8 +64,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
             where
                 E: de::Error,
             {
-                EmailAddress::new(value)
-                    .map_err(|_| de::Error::custom(Error::InvalidEmailAddress.to_string()))
+                Ok(EmailAddress::new(value)?)
             }
 
             fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -96,7 +94,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
                 }
                 let email: String = email.ok_or_else(|| de::Error::missing_field("email"))?;
                 let verified: bool = verified.unwrap_or(false);
-                let address = Address::new(&email).map_err(|_| de::Error::custom(Error::InvalidEmailAddress.to_string()))?;
+                let address = Address::new(&email)?;
                 if verified {
                     Ok(EmailAddress::Verified(address))
                 } else {
@@ -117,9 +115,8 @@ impl TryFrom<Value> for EmailAddress {
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
         match &mut value {
             Value::String(string) => {
-                Address::new(string)
-                    .map(EmailAddress::New)
-                    .map_err(|_| Error::ConversionError(ConversionError::new(Type::String, Type::New(std::any::TypeId::of::<EmailAddress>()), value)))
+                let address = Address::new(string)?;
+                Ok(EmailAddress::New(address))
             }
             Value::Object(ref mut map) => {
                 if let Some(email) = map.remove("email") {
@@ -128,7 +125,7 @@ impl TryFrom<Value> for EmailAddress {
                         None => false,
                     };
                     let email_str: String = email.try_into()?;
-                    let address = Address::new(&email_str).map_err(|_| Error::ConversionError(ConversionError::new(Type::String, Type::New(std::any::TypeId::of::<EmailAddress>()), value)))?;
+                    let address = Address::new(&email_str)?;
                     return match verified {
                         true => Ok(EmailAddress::Verified(address)),
                         false => Ok(EmailAddress::New(address)),
