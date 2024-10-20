@@ -1,4 +1,4 @@
-use crate::ports::ErrorTrait;
+use crate::ports::{ErrorTrait, Error};
 use std::hash::Hash;
 
 /// A trait representing a database table.
@@ -10,7 +10,7 @@ pub trait Table: Sized {
 
     type Map;
 
-    type Error: ErrorTrait;
+    type Error: ErrorTrait + Into<Error>;
 
     /// The name of the table.
     const NAME: &'static str;
