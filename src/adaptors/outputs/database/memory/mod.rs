@@ -1,10 +1,12 @@
 /// Module for database tables.
 mod tables;
+mod error;
 
 use crate::ports::{outputs::database::Database, Result};
 use crate::ports::outputs::database::Table;
 use tokio::sync::OnceCell;
 pub use tables::*;
+pub use error::*;
 
 
 pub static MEMORY: OnceCell<Memory> = OnceCell::const_new();
