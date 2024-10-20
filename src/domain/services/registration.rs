@@ -1,6 +1,6 @@
 /// A trait representing the registration process.
-use crate::domain::types::{User, Error, Result};
-use crate::ports::outputs::database::Table;
+use crate::domain::types::{User, Error};
+use crate::ports::{Result, outputs::database::Table};
 use bson::oid::ObjectId;
 
 use super::Password;

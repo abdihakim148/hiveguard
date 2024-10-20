@@ -1,4 +1,4 @@
-use crate::ports::outputs::database::{Table, Result}; // Importing necessary traits and types
+use crate::ports::{outputs::database::Table, Result}; // Importing necessary traits and types
 use crate::domain::types::{User, Value, Error, EmailAddress};
 use std::collections::HashMap;
 use bson::oid::ObjectId;

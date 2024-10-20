@@ -3,13 +3,12 @@
 mod table;
 
 pub use table::Table;
-use crate::ports::traits::Error;
+use crate::ports::Result;
 
 /// A trait representing a database with user-related operations.
 pub trait Database: Sized {
     type Users: Table;
     type Config;
-    type Error: Error;
-    async fn new(config: Self::Config) -> Result<Self, Self::Error>;
-    async fn users<'a>(&'a self) -> Result<&'a Self::Users, Self::Error>;
+    async fn new(config: Self::Config) -> Result<Self>;
+    async fn users<'a>(&'a self) -> Result<&'a Self::Users>;
 }

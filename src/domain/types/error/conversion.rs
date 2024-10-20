@@ -1,7 +1,6 @@
 #[cfg(feature = "actix")]
 use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response, body::BoxBody};
 use std::fmt::{Display, Debug as DebugTrait, Formatter, Result};
-use crate::ports::traits::Error;
 use std::error::Error as StdError;
 use crate::domain::types::Value;
 use super::r#type::Type;
@@ -23,7 +22,7 @@ impl<T: DebugTrait> ConversionError<T> {
 }
 
 
-impl Display for ConversionError {
+impl<T: DebugTrait> Display for ConversionError<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "expected: {}. but found: {} of {:?}", self.expected, self.found, self.value)
     }
@@ -45,5 +44,3 @@ impl ResponseError for ConversionError {
         res.set_body(BoxBody::new(error))
     }
 }
-
-impl Error for ConversionError {}

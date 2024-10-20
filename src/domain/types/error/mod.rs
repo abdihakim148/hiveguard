@@ -5,6 +5,7 @@ mod r#type;
 use std::fmt::{self, Debug as DebugTrait, Display, Result};
 use thiserror::Error as ThisError;
 use std::error::Error as StdError;
+use crate::ports::Error as GlobalError;
 use argon2::password_hash::errors::Error as HashError;
 use serde_json::Error as JsonError;
 pub use conversion::ConversionError;
@@ -21,26 +22,46 @@ pub enum Error<T: DebugTrait = Value> {
     #[error("domain: hashing_error: {0}")]
     HashingError(HashError),
     #[error("domain: email_error: {0}")]
-    EmailAddressError(EmailAddressError)
+    EmailAddressError(EmailAddressError),
+    #[error("{0}")]
+    New(GlobalError)
 }
 
 
-impl From<HashError> for Error {
+impl<T: DebugTrait> From<HashError> for Error<T> {
     fn from(err: HashError) -> Self {
         Self::HashingError(err)
     }
 }
 
 
-impl From<EmailAddressError> for Error {
+impl<T: DebugTrait> From<EmailAddressError> for Error<T> {
     fn from(err: EmailAddressError) -> Self {
         Self::EmailAddressError(err)
     }
 }
 
+
+impl From<Error> for GlobalError {
+    fn from(err: Error) -> Self {
+        GlobalError::new(err)
+    }
+}
+
+impl From<GlobalError> for Error {
+    fn from(err: GlobalError) -> Self {
+        Self::New(err)
+    }
+}
+
+
 #[cfg(feature = "actix")]
-impl ResponseError for Error {
+impl<T: DebugTrait> ResponseError for Error<T> {
     fn status_code(&self) -> StatusCode {
-        StatusCode::BAD_REQUEST
+        match self {
+            Self::ConversionError(_) | Self::EmailAddressError(_) => StatusCode::BAD_REQUEST,
+            Self::HashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::New(err) => err.status_code() 
+        }
     }
 }

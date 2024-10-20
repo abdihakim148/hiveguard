@@ -1,7 +1,7 @@
 /// Module for database tables.
 mod tables;
 
-use crate::ports::outputs::database::{Database, Result};
+use crate::ports::{outputs::database::Database, Result};
 use crate::ports::outputs::database::Table;
 use tokio::sync::OnceCell;
 pub use tables::*;

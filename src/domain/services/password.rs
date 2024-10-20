@@ -1,6 +1,9 @@
 use argon2::{password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString}, Argon2};
-use crate::domain::types::Result;
 use static_init::dynamic;
+use super::super::types::Error;
+
+
+type Result<T> = std::result::Result<T, Error>;
 
 
 #[dynamic]

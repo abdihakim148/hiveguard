@@ -12,6 +12,7 @@ pub use error::*;
 pub use user::*;
 pub use value::*;
 pub use email::*;
+use std::error::Error as StdError;
 
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error<Box<dyn StdError + 'static>>>;

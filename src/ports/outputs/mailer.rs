@@ -1,11 +1,10 @@
 #![allow(unused)]
-use crate::ports::traits::Error;
+use crate::ports::Result;
 
 
 pub trait Mailer: Sized {
     type Config;
     type Mail;
-    type Error: Error;
 
     /// Creates a new instance of the mailer with the given configuration.
     ///
@@ -16,7 +15,7 @@ pub trait Mailer: Sized {
     /// # Returns
     ///
     /// * `Result<Self>` - Returns a new instance of the mailer wrapped in a `Result`.
-    async fn new(config: Self::Config) -> Result<Self, Self::Error>;
+    async fn new(config: Self::Config) -> Result<Self>;
 
     /// Sends an email.
     ///
@@ -27,5 +26,5 @@ pub trait Mailer: Sized {
     /// # Returns
     ///
     /// * `Result<()>` - Returns `Ok(())` if the email is sent successfully, or an error otherwise.
-    async fn send(&self, mail: Self::Mail) -> Result<(), Self::Error>;
+    async fn send(&self, mail: Self::Mail) -> Result<()>;
 }
