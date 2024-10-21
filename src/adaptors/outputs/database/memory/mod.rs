@@ -2,7 +2,7 @@
 mod tables;
 mod error;
 
-use crate::ports::{outputs::database::Database, Result};
+use crate::ports::outputs::database::Database;
 use crate::ports::outputs::database::Table;
 use tokio::sync::OnceCell;
 pub use tables::*;
@@ -20,13 +20,14 @@ pub struct Memory {
 impl Database for Memory {
     type Users = Users;
     type Config = ();
+    type Error = Error;
 
-    async fn new(_config: ()) -> Result<Self> {
+    async fn new(_config: ()) -> Result<Self, Self::Error> {
         let users = Users::new().await?;
         Ok(Memory { users })
     }
 
-    async fn users<'a>(&'a self) -> Result<&'a Self::Users> {
+    async fn users<'a>(&'a self) -> Result<&'a Self::Users, Self::Error> {
         Ok(&self.users)
     }
 }

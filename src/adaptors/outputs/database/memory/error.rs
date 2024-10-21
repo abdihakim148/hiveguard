@@ -1,6 +1,7 @@
-use crate::ports::Error as GlobalError;
-use std::sync::PoisonError;
+use crate::ports::{ErrorTrait, Error as GlobalError};
 use thiserror::Error as ThisError;
+use crate::domain::types::Error as DomainError;
+use std::sync::PoisonError;
 #[cfg(feature = "actix")]
 use actix_web::{ResponseError, http::StatusCode, body::BoxBody, HttpResponse};
 
@@ -15,6 +16,8 @@ pub enum Error {
     NotFound(&'static str),
     #[error("data inconsistency")]
     InconsistentData,
+    #[error("{0}")]
+    New(Box<dyn ErrorTrait>)
 }
 
 
@@ -25,6 +28,7 @@ impl ResponseError for Error {
             Self::LockPoisoned | Self::InconsistentData => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UserWithEmailExists => StatusCode::CONFLICT,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
+            Self::New(err) => err.status_code(),
         }
     }
 
@@ -32,7 +36,8 @@ impl ResponseError for Error {
         let status = self.status_code();
         match self {
             Self::LockPoisoned | Self::InconsistentData => HttpResponse::with_body(status, BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}",))),
-            Self::NotFound(_) | Self::UserWithEmailExists => HttpResponse::with_body(status, BoxBody::new(format!("{{\"error\": \"{self}\"}}")))
+            Self::NotFound(_) | Self::UserWithEmailExists => HttpResponse::with_body(status, BoxBody::new(format!("{{\"error\": \"{self}\"}}"))),
+            Self::New(err) => err.error_response()
         }
     }
 }
@@ -47,5 +52,18 @@ impl From<Error> for GlobalError {
 impl<T> From<PoisonError<T>> for Error {
     fn from(_: PoisonError<T>) -> Self {
         Self::LockPoisoned
+    }
+}
+
+impl From<DomainError> for Error {
+    fn from(err: DomainError) -> Self {
+        Self::New(Box::new(err))
+    }
+}
+
+
+impl From<Error> for DomainError {
+    fn from(err: Error) -> Self {
+        DomainError::New(err.into())
     }
 }

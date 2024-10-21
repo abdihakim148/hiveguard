@@ -3,7 +3,7 @@ use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response
 use std::fmt::{Display, Debug as DebugTrait, Formatter, Result};
 use std::error::Error as StdError;
 use crate::domain::types::Value;
-use super::r#type::Type;
+use super::{r#type::Type, GlobalError};
 use serde_json::json;
 
 
@@ -42,5 +42,12 @@ impl ResponseError for ConversionError {
         let error = format!("{{\"error\": \"{self}\"}}");
         let res = Response::new(self.status_code());
         res.set_body(BoxBody::new(error))
+    }
+}
+
+
+impl From<ConversionError> for GlobalError {
+    fn from(err: ConversionError) -> Self {
+        GlobalError::new(err)
     }
 }
