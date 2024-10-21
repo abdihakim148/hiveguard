@@ -13,7 +13,7 @@ use lettre::address::AddressError as EmailAddressError;
 pub use r#type::*;
 use super::Value;
 #[cfg(feature = "actix")]
-use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response, body::BoxBody};
+use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response, body::BoxBody, HttpResponseBuilder as ResponseBuilder};
 
 #[derive(Debug, ThisError)]
 pub enum Error<T: DebugTrait = Value> {
@@ -63,5 +63,17 @@ impl<T: DebugTrait> ResponseError for Error<T> {
             Self::HashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::New(err) => err.status_code() 
         }
+    }
+
+    fn error_response(&self) -> Response<BoxBody> {
+        let status = self.status_code();
+        let mut builder = ResponseBuilder::new(status);
+        builder.content_type("application/json");
+        let body = match self {
+            Self::ConversionError(_) | Self::EmailAddressError(_) => BoxBody::new(format!("{{\"error\": \"{self}\"}}")),
+            Self::HashingError(_) => BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}")),
+            Self::New(err) => err.error_response().into_body()
+        };
+        builder.body(body)
     }
 }

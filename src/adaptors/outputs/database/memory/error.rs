@@ -3,7 +3,7 @@ use thiserror::Error as ThisError;
 use crate::domain::types::Error as DomainError;
 use std::sync::PoisonError;
 #[cfg(feature = "actix")]
-use actix_web::{ResponseError, http::StatusCode, body::BoxBody, HttpResponse};
+use actix_web::{ResponseError, http::StatusCode, body::BoxBody, HttpResponse, HttpResponseBuilder as ResponseBuilder};
 
 
 #[derive(ThisError, Debug)]
@@ -34,11 +34,14 @@ impl ResponseError for Error {
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
         let status = self.status_code();
-        match self {
-            Self::LockPoisoned | Self::InconsistentData => HttpResponse::with_body(status, BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}",))),
-            Self::NotFound(_) | Self::UserWithEmailExists => HttpResponse::with_body(status, BoxBody::new(format!("{{\"error\": \"{self}\"}}"))),
-            Self::New(err) => err.error_response()
-        }
+        let mut builder = ResponseBuilder::new(status);
+        builder.content_type("application/json");
+        let body = match self {
+            Self::LockPoisoned | Self::InconsistentData => BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}",)),
+            Self::NotFound(_) | Self::UserWithEmailExists => BoxBody::new(format!("{{\"error\": \"{self}\"}}")),
+            Self::New(err) => err.error_response().into_body()
+        };
+        builder.body(body)
     }
 }
 

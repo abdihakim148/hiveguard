@@ -1,12 +1,13 @@
 use actix_web::{get, post, web, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode, HttpResponse};
 use crate::adaptors::outputs::database::memory::{MEMORY, Memory};
+use crate::ports::Error;
 use crate::ports::outputs::database::Database;
 use serde_json::to_string;
 use crate::domain::services::Registration;
 use crate::domain::types::User;
 
 
-type Response = Result<HttpResponse, Box<dyn std::error::Error + 'static>>;
+type Response = Result<HttpResponse, Error>;
 
 
 pub struct Actix;
