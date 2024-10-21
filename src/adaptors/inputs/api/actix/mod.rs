@@ -1,6 +1,6 @@
 use actix_web::{get, post, web, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode, HttpResponse};
 use crate::adaptors::outputs::database::memory::{MEMORY, Memory};
-use crate::ports::{Error, outputs::database::Database};
+use crate::ports::outputs::database::Database;
 use serde_json::to_string;
 use crate::domain::services::Registration;
 use crate::domain::types::User;

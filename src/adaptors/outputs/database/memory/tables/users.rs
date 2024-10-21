@@ -1,6 +1,5 @@
 use crate::ports::outputs::database::Table; // Importing necessary traits and types
 use crate::domain::types::{User, Value, EmailAddress};
-use crate::ports::Error as GlobalError;
 use super::super::Error;
 use std::collections::HashMap;
 use bson::oid::ObjectId;
