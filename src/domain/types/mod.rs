@@ -7,6 +7,7 @@ mod value;
 mod email;
 mod permission;
 mod resource;
+mod role;
 
 /// Re-exporting error types for external access.
 pub use error::*;
@@ -14,3 +15,5 @@ pub use error::*;
 pub use user::*;
 pub use value::*;
 pub use email::*;
+pub use resource::*;
+pub use permission::*;
