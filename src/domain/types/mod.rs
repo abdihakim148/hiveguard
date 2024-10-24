@@ -11,9 +11,8 @@ mod role;
 mod organisation;
 mod member;
 
-/// Re-exporting error types for external access.
+/// Re-exporting types for external access.
 pub use error::*;
-/// Re-exporting user types for external access.
 pub use user::*;
 pub use value::*;
 pub use email::*;
