@@ -8,6 +8,7 @@ mod email;
 mod permission;
 mod resource;
 mod role;
+mod organisation;
 
 /// Re-exporting error types for external access.
 pub use error::*;
