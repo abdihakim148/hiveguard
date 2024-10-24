@@ -9,6 +9,7 @@ mod permission;
 mod resource;
 mod role;
 mod organisation;
+mod member;
 
 /// Re-exporting error types for external access.
 pub use error::*;
