@@ -1,6 +1,5 @@
 use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
-use uri::URI;
 
 /// A struct representing a resource.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -10,5 +9,5 @@ pub struct Resource {
     /// The name of the resource.
     pub name: String,
     /// The URL of the resource, if available.
-    pub url: Option<URI>,
+    pub url: Option<String>,
 }
