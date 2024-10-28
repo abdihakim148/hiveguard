@@ -6,7 +6,7 @@
 ![Contributors](https://img.shields.io/github/contributors/Abdulhakim-rustacian/beekeeper)
 ![Issues](https://img.shields.io/github/issues/Abdulhakim-rustacian/beekeeper)
 
-![Beekeeper Logo](logo.png)
+![Logo](logo.svg)
 
 ## Overview
 
