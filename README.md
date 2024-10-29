@@ -6,7 +6,7 @@
 ![Contributors](https://img.shields.io/github/contributors/abdihakim148/beekeeper)
 ![Issues](https://img.shields.io/github/issues/abdihakim148/beekeeper)
 
-![Logo](./logo.svg)
+![Logo](logo.png)
 
 ## Overview
 
