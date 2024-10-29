@@ -1,4 +1,4 @@
-# Beekeeper
+# Beekeeper ![Logo](logo.png)
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/abdihakim148/beekeeper/ci.yml)
@@ -6,7 +6,7 @@
 ![Contributors](https://img.shields.io/github/contributors/abdihakim148/beekeeper)
 ![Issues](https://img.shields.io/github/issues/abdihakim148/beekeeper)
 
-![Logo](logo.png)
+<!-- ![Logo](logo.png) -->
 
 ## Overview
 
