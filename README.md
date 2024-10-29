@@ -1,7 +1,9 @@
-<div style="display: flex; align-items: center; justify-content: center; height: 150px;">
-  <img src="logo.png" alt="Logo" style="margin-right: 20px;">
-  <h1 style="font-size: 3em; font-weight: 100; font-family: 'Nunito', sans-serif; margin: 0; text-decoration: none !important;">Beekeeper</h1>
-</div>
+<table>
+  <tr>
+    <td><img src="logo.png" alt="Logo" style="width: 100px;"></td>
+    <td><h1 style="font-size: 2em; font-family: 'Nunito', sans-serif; margin: 0;">Beekeeper</h1></td>
+  </tr>
+</table>
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Contributors](https://img.shields.io/github/contributors/abdihakim148/beekeeper)
