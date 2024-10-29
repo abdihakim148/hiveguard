@@ -1,12 +1,12 @@
 # Beekeeper
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Build Status](https://img.shields.io/github/actions/workflow/status/Abdulhakim-rustacian/beekeeper/ci.yml)
-![Coverage](https://img.shields.io/codecov/c/github/Abdulhakim-rustacian/beekeeper)
-![Contributors](https://img.shields.io/github/contributors/Abdulhakim-rustacian/beekeeper)
-![Issues](https://img.shields.io/github/issues/Abdulhakim-rustacian/beekeeper)
+![Build Status](https://img.shields.io/github/actions/workflow/status/abdihakim148/beekeeper/ci.yml)
+![Coverage](https://img.shields.io/codecov/c/github/abdihakim148/beekeeper)
+![Contributors](https://img.shields.io/github/contributors/abdihakim148/beekeeper)
+![Issues](https://img.shields.io/github/issues/abdihakim148/beekeeper)
 
-![Logo](logo.svg)
+![Logo](./logo.svg)
 
 ## Overview
 
