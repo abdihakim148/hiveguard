@@ -1,4 +1,7 @@
-# Beekeeper ![Logo](logo.png)
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 150px;">
+  <img src="logo.png" alt="Logo" style="margin-bottom: 10px;">
+  <h1>Beekeeper</h1>
+</div>
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/abdihakim148/beekeeper/ci.yml)
