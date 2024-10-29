@@ -1,6 +1,6 @@
 <div style="display: flex; align-items: center; justify-content: center; height: 150px;">
   <img src="logo.png" alt="Logo" style="margin-right: 20px;">
-  <h1 style="font-size: 3em; font-weight: 100; font-family: 'Nunito', sans-serif; margin: 0; text-decoration: none;">Beekeeper</h1>
+  <h1 style="font-size: 3em; font-weight: 100; font-family: 'Nunito', sans-serif; margin: 0; text-decoration: none !important;">Beekeeper</h1>
 </div>
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
