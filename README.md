@@ -1,15 +1,11 @@
-<table>
-  <tr>
-    <td><img src="logo.png" alt="Logo" style="width: 100px;"></td>
-    <td><h1 style="font-size: 2em; font-family: 'Nunito', sans-serif; margin: 0;">Beekeeper</h1></td>
-  </tr>
-</table>
+<div align="center">
+<img src="logo.png">
+</div>
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Contributors](https://img.shields.io/github/contributors/abdihakim148/beekeeper)
 ![Issues](https://img.shields.io/github/issues/abdihakim148/beekeeper)
 
-<!-- ![Logo](logo.png) -->
 
 ## Overview
 
