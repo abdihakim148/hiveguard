@@ -2,9 +2,14 @@
 <img src="logo.png">
 </div>
 
+<div align="center">
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Contributors](https://img.shields.io/github/contributors/abdihakim148/beekeeper)
 ![Issues](https://img.shields.io/github/issues/abdihakim148/beekeeper)
+
+</div>
+
 
 
 ## Overview
@@ -51,5 +56,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For questions or suggestions, please open an issue or contact the maintainers.
 
 ---
-
-*Note: Ensure the badge URLs point to the correct paths for your repository.*
