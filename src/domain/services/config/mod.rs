@@ -1,4 +1,4 @@
 mod password;
 
 
-use password::*;
+pub use password::*;

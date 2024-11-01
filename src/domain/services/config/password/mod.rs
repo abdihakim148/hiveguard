@@ -15,4 +15,4 @@ use argon2::Argon2;
 
 
 #[dynamic]
-static ARGON2: Argon2<'static> = Argon::default().try_into().unwrap();
+pub static ARGON2: Argon2<'static> = Argon::default().try_into().unwrap();
