@@ -18,7 +18,7 @@ Beekeeper is an open-source Authentication, Authorization, and User Management s
 
 ## Features
 
-- **Security**: Utilizes Argon2 for password hashing and Paseto for token management.
+- **Security**: Utilizes Argon2 for password hashing and JWT for token management. Initially, we will use JWT due to the lack of good Rust libraries for PASETO. We may consider implementing our own PASETO solution in the future.
 - **Flexible Architecture**: Hexagonal architecture for easy integration and adaptability.
 
 ### Features to be Implemented
