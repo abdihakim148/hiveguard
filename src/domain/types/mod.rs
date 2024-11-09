@@ -10,6 +10,7 @@ mod resource;
 mod role;
 mod organisation;
 mod member;
+mod r#type;
 
 /// Re-exporting types for external access.
 pub use error::*;
@@ -19,3 +20,4 @@ pub use email::*;
 pub use resource::*;
 pub use permission::*;
 pub use number::*;
+pub use r#type::*;

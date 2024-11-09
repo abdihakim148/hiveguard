@@ -3,7 +3,7 @@ use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response
 use std::fmt::{Display, Debug as DebugTrait, Formatter, Result};
 use std::error::Error as StdError;
 use crate::domain::types::Value;
-use super::{r#type::Type, GlobalError};
+use super::{super::r#type::Type, GlobalError};
 use serde_json::json;
 
 
