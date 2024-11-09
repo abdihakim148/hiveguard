@@ -18,3 +18,4 @@ pub use value::*;
 pub use email::*;
 pub use resource::*;
 pub use permission::*;
+pub use number::*;
