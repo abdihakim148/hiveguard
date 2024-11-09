@@ -38,7 +38,6 @@ macro_rules! impl_from_for_number {
 
                 fn try_from(number: Number) -> Result<Self, Self::Error> {
                     match number {
-                        Number::$variant(value) if value >= <$t>::MIN as _ && value <= <$t>::MAX as _ => Ok(value as $t),
                         Number::U8(value) if value >= <$t>::MIN as u8 && value <= <$t>::MAX as u8 => Ok(value as $t),
                         Number::I8(value) if value >= <$t>::MIN as i8 && value <= <$t>::MAX as i8 => Ok(value as $t),
                         Number::U16(value) if value >= <$t>::MIN as u16 && value <= <$t>::MAX as u16 => Ok(value as $t),
@@ -47,6 +46,8 @@ macro_rules! impl_from_for_number {
                         Number::I32(value) if value >= <$t>::MIN as i32 && value <= <$t>::MAX as i32 => Ok(value as $t),
                         Number::U64(value) if value >= <$t>::MIN as u64 && value <= <$t>::MAX as u64 => Ok(value as $t),
                         Number::I64(value) if value >= <$t>::MIN as i64 && value <= <$t>::MAX as i64 => Ok(value as $t),
+                        Number::Usize(value) if value >= <$t>::MIN as usize && value <= <$t>::MAX as usize => Ok(value as $t),
+                        Number::Isize(value) if value >= <$t>::MIN as isize && value <= <$t>::MAX as isize => Ok(value as $t),
                         Number::U128(value) if value >= <$t>::MIN as u128 && value <= <$t>::MAX as u128 => Ok(value as $t),
                         Number::I128(value) if value >= <$t>::MIN as i128 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= <$t>::MIN as f32 && value <= <$t>::MAX as f32 => Ok(value as $t),
