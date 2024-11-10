@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
-use bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
-use super::number::Number;
 use crate::domain::types::{Error, Type, ConversionError};
+use std::convert::{TryFrom, TryInto};
+use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use super::number::Number;
+use bson::oid::ObjectId;
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
