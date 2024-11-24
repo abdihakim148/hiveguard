@@ -10,7 +10,7 @@ use serde_json::Error as JsonError;
 pub use conversion::ConversionError;
 use lettre::address::AddressError as EmailAddressError;
 pub use super::r#type::*;
-use super::Value;
+use super::{Value, Number};
 #[cfg(feature = "actix")]
 use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response, body::BoxBody, HttpResponseBuilder as ResponseBuilder};
 
@@ -50,6 +50,17 @@ impl From<Error> for GlobalError {
 impl From<GlobalError> for Error {
     fn from(err: GlobalError) -> Self {
         Self::New(err)
+    }
+}
+
+impl From<Error<Number>> for Error<Value> {
+    fn from(err: Error<Number>) -> Self {
+        match err {
+            Error::ConversionError(err) => Error::ConversionError(ConversionError{expected: err.expected, found: err.found, value: Value::Number(err.value)}),
+            Error::HashingError(err) => Error::HashingError(err),
+            Error::EmailAddressError(err) => Error::EmailAddressError(err),
+            Error::New(err) => Error::New(err)
+        }
     }
 }
 
