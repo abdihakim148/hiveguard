@@ -2,16 +2,16 @@
 use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response, body::BoxBody};
 use std::fmt::{Display, Debug as DebugTrait, Formatter, Result};
 use std::error::Error as StdError;
-use crate::domain::types::Value;
+use crate::domain::types::{Value, Number};
 use super::{super::r#type::Type, GlobalError};
 use serde_json::json;
 
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConversionError<T: DebugTrait = Value> {
-    expected: Type,
-    found: Type,
-    value: T,
+    pub expected: Type,
+    pub found: Type,
+    pub value: T,
 }
 
 
@@ -49,5 +49,15 @@ impl ResponseError for ConversionError {
 impl From<ConversionError> for GlobalError {
     fn from(err: ConversionError) -> Self {
         GlobalError::new(err)
+    }
+}
+
+
+impl From<ConversionError<Number>> for ConversionError<Value> {
+    fn from(err: ConversionError<Number>) -> Self {
+        let value = err.value.into();
+        let expected = err.expected;
+        let found = err.found;
+        ConversionError{expected, found, value}
     }
 }
