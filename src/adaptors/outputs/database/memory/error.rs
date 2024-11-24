@@ -1,6 +1,6 @@
 use crate::ports::{ErrorTrait, Error as GlobalError};
 use thiserror::Error as ThisError;
-use crate::domain::types::Error as DomainError;
+use crate::domain::Error as DomainError;
 use std::sync::PoisonError;
 #[cfg(feature = "actix")]
 use actix_web::{ResponseError, http::StatusCode, body::BoxBody, HttpResponse, HttpResponseBuilder as ResponseBuilder};

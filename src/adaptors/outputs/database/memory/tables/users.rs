@@ -1,5 +1,5 @@
 use crate::ports::outputs::database::Table; // Importing necessary traits and types
-use crate::domain::types::{User, Value, EmailAddress};
+use crate::domain::{User, Value, EmailAddress};
 use super::super::Error;
 use std::collections::HashMap;
 use bson::oid::ObjectId;
@@ -199,7 +199,7 @@ impl Table for Users {
 #[cfg(test)]
 mod tests {
     use super::Users;
-    use crate::domain::types::{User, Value, EmailAddress};
+    use crate::domain::{User, Value, EmailAddress};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
     use bson::oid::ObjectId;
