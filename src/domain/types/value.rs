@@ -135,7 +135,7 @@ impl TryFrom<Value> for ObjectId {
     }
 }
 
-impl<T: TryFrom<Number, Error = Error> + 'static> TryFrom<Value> for (T,) {
+impl<T: TryFrom<Number, Error = Error<Number>> + 'static> TryFrom<Value> for (T,) {
     type Error = Error<Value>;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
