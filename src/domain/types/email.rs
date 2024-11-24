@@ -23,7 +23,7 @@ impl EmailAddress {
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
     pub fn new(email: &str) -> Result<Self, Error> {
-        let address: Address = email.parse().map_err(Error::EmailAddressError)?;
+        let address: Address = email.parse().map_err(Error::<Value>::EmailAddressError)?;
         Ok(EmailAddress::New(address))
     }
 }
@@ -114,7 +114,7 @@ impl TryFrom<Value> for EmailAddress {
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
         match &mut value {
             Value::String(string) => {
-                let address: Address = string.parse().map_err(Error::EmailAddressError)?;
+                let address: Address = string.parse().map_err(Error::<Value>::EmailAddressError)?;
                 Ok(EmailAddress::New(address))
             }
             Value::Object(ref mut map) => {
@@ -124,7 +124,7 @@ impl TryFrom<Value> for EmailAddress {
                         None => false,
                     };
                     let email_str: String = email.try_into()?;
-                    let address: Address = email_str.parse().map_err(Error::EmailAddressError)?;
+                    let address: Address = email_str.parse().map_err(Error::<Value>::EmailAddressError)?;
                     return match verified {
                         true => Ok(EmailAddress::Verified(address)),
                         false => Ok(EmailAddress::New(address)),
