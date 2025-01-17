@@ -4,15 +4,18 @@ use super::{Uuid, Id, Value};
 use chrono::{Utc, DateTime};
 
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 #[serde(untagged)]
 pub enum Audience {
+    #[default]
+    None,
     One(String),
     Many(Vec<String>)
 }
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct Token<T = HashMap<String, Value>> {
     #[serde(rename = "jti")]
     pub id: Uuid,
@@ -20,7 +23,7 @@ pub struct Token<T = HashMap<String, Value>> {
     pub issuer: String,
     #[serde(rename = "sub")]
     pub subject: Id,
-    #[serde(rename = "aud")]
+    #[serde(rename = "aud", skip_serializing_if = "Audience::is_empty")]
     pub audience: Audience,
     #[serde(rename = "exp")]
     pub expiration: Option<DateTime<Utc>>,
@@ -36,6 +39,7 @@ pub struct Token<T = HashMap<String, Value>> {
 impl Audience {
     pub fn is_empty(&self) -> bool {
         match self {
+            Audience::None => true,
             Audience::One(aud) => aud.is_empty(),
             Audience::Many(aud) => aud.is_empty()
         }
