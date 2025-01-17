@@ -3,13 +3,14 @@
 mod table;
 mod item;
 
+use crate::ports::{ErrorTrait, Error};
+use crate::domain::types::User;
 pub use table::Table;
 pub use item::Item;
-use crate::ports::{ErrorTrait, Error};
 
 /// A trait representing a database with user-related operations.
 pub trait Database: Sized {
-    type Users: Table;
+    type Users: Table<User>;
     type Config;
     type Error: ErrorTrait + Into<Error>;
     async fn new(config: Self::Config) -> Result<Self, Self::Error>;

@@ -4,7 +4,7 @@ use crate::ports::Error;
 use crate::ports::outputs::database::Database;
 use serde_json::to_string;
 use crate::domain::services::Registration;
-use crate::domain::User;
+use crate::domain::types::User;
 
 
 type Response = Result<HttpResponse, Error>;

@@ -1,7 +1,7 @@
-use crate::ports::outputs::database::Table; // Importing necessary traits and types
-use crate::domain::{User, Value, EmailAddress};
-use super::super::Error;
+use crate::domain::types::{User, Value, EmailAddress, Either};
+use crate::ports::outputs::database::{Table, Item}; // Importing necessary traits and types
 use std::collections::HashMap;
+use super::super::Error;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
 
@@ -52,9 +52,7 @@ impl Users {
 
 
 
-impl Table for Users {
-    type Item = User;
-    type Id = ObjectId;
+impl Table<User> for Users {
     type Map = HashMap<String, Value>;
     type Error = Error;
 
@@ -81,8 +79,8 @@ impl Table for Users {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Id>` - Returns the ID of the created user wrapped in a `Result`.
-    async fn create(&self, user: &Self::Item) -> Result<Self::Id, Self::Error> {
+    /// * `Result<<User as Item>::PK>` - Returns the ID of the created user wrapped in a `Result`.
+    async fn create(&self, user: &User) -> Result<<User as Item>::PK, Self::Error> {
         if self.exists(&user.email).await? {
             return Err(Error::UserWithEmailExists);
         }
@@ -110,10 +108,24 @@ impl Table for Users {
     ///
     /// # Returns
     ///
-    /// * `Result<Option<Self::Item>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
-    async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>, Self::Error> {
-        let users = self.users.read().map_err(|_| Error::LockPoisoned)?;
-        Ok(users.get(id).cloned())
+    /// * `Result<Option<User>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
+    async fn get(&self, key: Either<&<User as Item>::PK, &<User as Item>::SK>) -> Result<Option<User>, Self::Error> {
+        match key {
+            Either::Left(id) => {
+                let users = self.users.read().map_err(|_| Error::LockPoisoned)?;
+                Ok(users.get(id).cloned())
+            },
+            Either::Right(email) => {
+                let emails = self.emails.read().map_err(|_|Error::LockPoisoned)?;
+                match emails.get(email) {
+                    Some(id) => {
+                        let users = self.users.read().map_err(|_| Error::LockPoisoned)?;
+                        Ok(users.get(id).cloned())
+                    },
+                    None => Ok(None)
+                }
+            }
+        }
     }
 
 
@@ -126,9 +138,10 @@ impl Table for Users {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Item>` - Returns the updated user item wrapped in a `Result`.
-    async fn patch(&self, id: &Self::Id, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
-        if let Some(user) = self.read(id).await? {
+    /// * `Result<User>` - Returns the updated user item wrapped in a `Result`.
+    async fn patch(&self, id: &<User as Item>::PK, mut map: Self::Map) -> Result<User, Self::Error> {
+        let key = Either::Left(id);
+        if let Some(user) = self.get(key).await? {
             let id = *id;
             let username = match map.remove("username") {Some(name) => name.try_into()?, None => user.username};
             let first_name = match map.remove("first_name") {Some(first_name) => first_name.try_into()?, None => user.first_name};
@@ -151,8 +164,8 @@ impl Table for Users {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Id>` - Returns the ID of the updated user wrapped in a `Result`.
-    async fn update(&self, user: &Self::Item) -> Result<(), Self::Error> {
+    /// * `Result<<User as Item>::PK>` - Returns the ID of the updated user wrapped in a `Result`.
+    async fn update(&self, user: &User) -> Result<(), Self::Error> {
         let mut users = self.users.write().map_err(|_| Error::LockPoisoned)?;
         let mut emails = self.emails.write().map_err(|_| Error::LockPoisoned)?;
 
@@ -179,8 +192,8 @@ impl Table for Users {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Id>` - Returns the ID of the deleted user wrapped in a `Result`.
-    async fn delete(&self, id: &Self::Id) -> Result<(), Self::Error> {
+    /// * `Result<<User as Item>::PK>` - Returns the ID of the deleted user wrapped in a `Result`.
+    async fn delete(&self, id: &<User as Item>::PK) -> Result<(), Self::Error> {
         let mut users = self.users.write().map_err(|_| Error::LockPoisoned)?;
         let mut emails = self.emails.write().map_err(|_| Error::LockPoisoned)?;
 
@@ -199,7 +212,7 @@ impl Table for Users {
 #[cfg(test)]
 mod tests {
     use super::Users;
-    use crate::domain::{User, Value, EmailAddress};
+    use crate::domain::types::{User, Value, EmailAddress, Either};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
     use bson::oid::ObjectId;
@@ -285,7 +298,8 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let read_user = users.read(&id).await.unwrap();
+        let key = Either::Left(&id);
+        let read_user = users.get(key).await.unwrap();
         assert_eq!(Some(user), read_user);
     }
 
@@ -330,11 +344,12 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
+        let key = Either::Left(&id);
         user.email = EmailAddress::new("newemail@example.com").unwrap();
         let update_result = users.update(&user).await;
         assert!(update_result.is_ok());
 
-        let updated_user = users.read(&id).await.unwrap();
+        let updated_user = users.get(key).await.unwrap();
         assert_eq!(Some(user), updated_user);
     }
 
@@ -351,10 +366,11 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
+        let key = Either::Left(&id);
         let delete_result = users.delete(&id).await;
         assert!(delete_result.is_ok());
 
-        let deleted_user = users.read(&id).await.unwrap();
+        let deleted_user = users.get(key).await.unwrap();
         assert!(deleted_user.is_none());
     }
 }

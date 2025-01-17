@@ -1,6 +1,6 @@
 use argon2::{password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString}, Argon2};
 use super::super::types::Error;
-use super::ARGON2;
+use super::types::ARGON2;
 use static_init::dynamic;
 
 

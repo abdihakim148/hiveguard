@@ -1,11 +1,12 @@
 /// A trait representing the registration process.
-use crate::domain::types::{User, Error};
 use crate::ports::outputs::database::Table;
+use crate::ports::outputs::database::Item;
+use crate::domain::types::{User, Error};
 use bson::oid::ObjectId;
 
 use super::Password;
 
-pub trait Registration: Sized {
+pub trait Registration: Sized + Item {
     type Id;
     type Error;
     /// Registers a new entity.
@@ -13,13 +14,13 @@ pub trait Registration: Sized {
     /// # Returns
     ///
     /// * `Result<Self::Id>` - Returns the ID of the registered entity wrapped in a `Result`.
-    async fn register<T: Table<Item = Self, Id = Self::Id, Error: Into<Self::Error>>>(&self, table: &T) -> Result<Self, Self::Error>;
+    async fn register<T: Table<Self, Error: Into<Self::Error>>>(&self, table: &T) -> Result<Self, Self::Error>;
 }
 
 impl Registration for User {
     type Id = ObjectId;
     type Error = Error;
-    async fn register<T: Table<Item = User, Id = ObjectId, Error: Into<Self::Error>>>(&self, table: &T) -> Result<Self, Self::Error> {
+    async fn register<T: Table<User, Error: Into<Self::Error>>>(&self, table: &T) -> Result<Self, Self::Error> {
         let id = self.id;
         let username = self.username.clone();
         let first_name = self.first_name.clone();
