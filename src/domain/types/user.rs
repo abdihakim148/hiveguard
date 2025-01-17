@@ -1,3 +1,4 @@
+use crate::ports::outputs::database::Item;
 use serde::{Deserialize, Serialize};
 use bson::oid::ObjectId;
 use super::EmailAddress;
@@ -24,4 +25,10 @@ pub struct User {
 
 fn is_default<T: Default + PartialEq>(value: &T) -> bool {
     value == &T::default()
+}
+
+
+impl Item for User {
+    type PK = ObjectId;
+    type SK = EmailAddress;
 }
