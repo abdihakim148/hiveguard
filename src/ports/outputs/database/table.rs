@@ -1,12 +1,10 @@
 use crate::ports::{ErrorTrait, Error};
+use crate::domain::types::Either;
+use super::Item as ItemTrait;
 use std::hash::Hash;
 
 /// A trait representing a database table.
-pub trait Table: Sized {
-    /// The type of item stored in the table.
-    type Item: Clone + PartialEq;
-    /// The type of the identifier for items in the table.
-    type Id: Clone + Hash + PartialEq;
+pub trait Table<Item: Clone + PartialEq + ItemTrait>: Sized {
 
     type Map;
 
@@ -29,8 +27,8 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Id>` - Returns the ID of the created item wrapped in a `Result`.
-    async fn create(&self, item: &Self::Item) -> Result<Self::Id, Self::Error>;
+    /// * `Result<Item::PK>` - Returns the ID of the created item wrapped in a `Result`.
+    async fn create(&self, item: &Item) -> Result<Item::PK, Self::Error>;
     /// Reads an item by ID from the table.
     ///
     /// # Arguments
@@ -39,11 +37,11 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Option<Self::Item>>` - Returns the item if found, otherwise `None`, wrapped in a `Result`.
-    async fn read(&self, id: &Self::Id) -> Result<Option<Self::Item>, Self::Error>;
+    /// * `Result<Option<Item>>` - Returns the item if found, otherwise `None`, wrapped in a `Result`.
+    async fn get(&self, key: Either<&Item::PK, &Item::SK>) -> Result<Option<Item>, Self::Error>;
 
 
-    async fn patch(&self, id: &Self::Id, map: Self::Map) -> Result<Self::Item, Self::Error>;
+    async fn patch(&self, id: &Item::PK, map: Self::Map) -> Result<Item, Self::Error>;
     /// Updates an existing item in the table.
     ///
     /// # Arguments
@@ -52,8 +50,8 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Id>` - Returns the ID of the updated item wrapped in a `Result`.
-    async fn update(&self, item: &Self::Item) -> Result<(), Self::Error>;
+    /// * `Result<Item::PK>` - Returns the ID of the updated item wrapped in a `Result`.
+    async fn update(&self, item: &Item) -> Result<(), Self::Error>;
     /// Deletes an item by ID from the table.
     ///
     /// # Arguments
@@ -62,6 +60,6 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Id>` - Returns the ID of the deleted item wrapped in a `Result`.
-    async fn delete(&self, id: &Self::Id) -> Result<(), Self::Error>;
+    /// * `Result<Item::PK>` - Returns the ID of the deleted item wrapped in a `Result`.
+    async fn delete(&self, id: &Item::PK) -> Result<(), Self::Error>;
 }
