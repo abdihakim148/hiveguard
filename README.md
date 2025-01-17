@@ -17,8 +17,7 @@
 Beekeeper is an open-source Authentication, Authorization, and User Management system. It supports both third-party and custom OAuth2.0 and OpenID Connect (OpenIDC) implementations. Built with Rust, it leverages the hexagonal architecture to allow easy swapping of adaptors, databases, and input methods.
 
 ## Features
-
-- **Security**: Utilizes Argon2 for password hashing and JWT for token management. Initially, we will use JWT due to the lack of good Rust libraries for PASETO. We may consider implementing our own PASETO solution in the future.
+- **Security**: This system uses Argon2 to securely hash passwords and PASETO (Platform-Agnostic Security Tokens) for creating and managing secure tokens.
 - **Flexible Architecture**: Hexagonal architecture for easy integration and adaptability.
 
 ### Features to be Implemented
