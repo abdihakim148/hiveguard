@@ -14,7 +14,7 @@ pub enum Audience {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
 pub struct Token<T = HashMap<String, Value>> {
     #[serde(rename = "jti")]
