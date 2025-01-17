@@ -1,8 +1,10 @@
 #![allow(unused)]
 /// Module for database table operations.
 mod table;
+mod item;
 
 pub use table::Table;
+pub use item::Item;
 use crate::ports::{ErrorTrait, Error};
 
 /// A trait representing a database with user-related operations.
