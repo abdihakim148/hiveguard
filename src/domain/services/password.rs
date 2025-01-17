@@ -13,13 +13,13 @@ pub struct Password;
 
 
 impl Password {
-    pub fn hash(password: &str) -> Result<String> {
+    pub fn hash(password: &str, argon2: &Argon2<'_>) -> Result<String> {
         let salt = SaltString::generate(OsRng);
-        let hash = ARGON2.read().hash_password(password.as_bytes(), &salt)?.to_string();
+        let hash = argon2.hash_password(password.as_bytes(), &salt)?.to_string();
         Ok(hash)
     }
-    pub fn verify(password: &str, hash: &str) -> Result<()> {
+    pub fn verify(password: &str, hash: &str, argon2: &Argon2<'_>) -> Result<()> {
         let hash = PasswordHash::new(hash)?;
-        Ok(ARGON2.read().verify_password(password.as_bytes(), &hash)?)
+        Ok(argon2.verify_password(password.as_bytes(), &hash)?)
     }
 }

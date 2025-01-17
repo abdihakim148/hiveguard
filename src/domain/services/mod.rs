@@ -1,7 +1,7 @@
 #![allow(unused)]
-mod password;
 mod registration;
+mod password;
 
+pub use registration::Registration;
 pub use password::Password;
 use super::*;
-pub use registration::Registration;
