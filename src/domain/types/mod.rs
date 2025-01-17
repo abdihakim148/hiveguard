@@ -12,6 +12,7 @@ mod email;
 mod token;
 mod user;
 mod role;
+mod id;
 
 /// Re-exporting types for external access.
 pub use permission::*;
@@ -24,3 +25,4 @@ pub use value::*;
 pub use email::*;
 pub use token::*;
 pub use user::*;
+pub use id::*;
