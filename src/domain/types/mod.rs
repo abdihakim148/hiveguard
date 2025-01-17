@@ -1,4 +1,5 @@
 mod organisation;
+mod paseto_keys;
 mod permission;
 mod resource;
 mod number;
@@ -16,6 +17,7 @@ mod uuid;
 mod id;
 
 /// Re-exporting types for external access.
+pub use paseto_keys::*;
 pub use permission::*;
 pub use resource::*;
 pub use either::*;
