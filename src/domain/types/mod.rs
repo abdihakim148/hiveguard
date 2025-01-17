@@ -9,6 +9,7 @@ mod config;
 mod error;
 mod value;
 mod email;
+mod token;
 mod user;
 mod role;
 
@@ -21,4 +22,5 @@ pub use config::*;
 pub use error::*;
 pub use value::*;
 pub use email::*;
+pub use token::*;
 pub use user::*;
