@@ -16,6 +16,7 @@ thiserror = "1.0.64"
 lettre = "0.11.9"
 uuid = { version = "1.12.0", features = ["v4"] }
 chrono = { version = "0.4.39", features = ["serde"] }
+rusty_paseto = { version = "0.7.2", features = ["core"] }
 
 [dev-dependencies]
 mockall = "0.13.0"
