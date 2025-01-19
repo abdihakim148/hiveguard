@@ -1,4 +1,5 @@
 mod password;
+mod argon;
 
 
 use super::*;
