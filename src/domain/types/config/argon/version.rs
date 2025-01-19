@@ -1,5 +1,5 @@
-use argon2::Version as ArgonVersion;
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
+use argon2::Version as ArgonVersion;
 use serde::de::{self, Visitor};
 use std::fmt;
 
