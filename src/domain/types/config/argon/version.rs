@@ -4,7 +4,7 @@ use serde::de::{self, Visitor};
 use std::fmt;
 
 
-#[derive(Copy, Clone, Default, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[repr(u8)]
 pub enum Version {
     V0x10 = 16,
