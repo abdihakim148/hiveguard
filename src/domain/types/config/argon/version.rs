@@ -35,11 +35,7 @@ impl<'de> Visitor<'de> for VersionVisitor {
     where
         E: de::Error,
     {
-        match value {
-            16 => Ok(Version::V0x10),
-            19 => Ok(Version::V0x13),
-            _ => Err(de::Error::custom("unknown version")),
-        }
+        Ok(value.into())
     }
 }
 
