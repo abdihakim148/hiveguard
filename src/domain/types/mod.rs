@@ -22,6 +22,7 @@ pub use permission::*;
 pub use resource::*;
 pub use either::*;
 pub use number::*;
+#[allow(unused)]
 pub use config::*;
 pub use error::*;
 pub use value::*;
