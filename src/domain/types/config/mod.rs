@@ -1,11 +1,8 @@
-mod password;
 mod argon;
 
 use std::error::Error as StdError;
 use std::env::var;
-use super::*;
-
-pub use password::*;
+// use super::*;
 
 #[allow(unused)]
 pub trait Secret: Sized {
