@@ -8,7 +8,7 @@ use chrono::Duration; // Importing Duration for handling time intervals.
 /// The duration for which the PASETO keys are valid.
 const PASETO_KEYS_DURATION: Duration = Duration::days(90);
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)] // Deriving traits for PasetoKeys struct.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)] // Deriving traits for PasetoKeys struct.
 /// A struct representing the PASETO keys.
 ///
 /// This struct holds the private and public keys used for PASETO operations,

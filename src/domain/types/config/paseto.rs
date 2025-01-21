@@ -9,7 +9,7 @@ use super::super::PasetoKeys; // Importing PasetoKeys for key management
 const DEFAULT_PATH: &'static str = "paseto_keys.json";
 
 
-#[derive(Debug, Clone, Serialize)] // Paseto struct with serialization capabilities
+#[derive(Debug, Clone, Serialize, PartialEq)] // Paseto struct with serialization capabilities
 pub struct Paseto {
     /// File path for storing keys
     path: String,
