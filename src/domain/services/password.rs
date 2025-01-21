@@ -1,24 +1,79 @@
-use argon2::{password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString}, Argon2};
-use super::super::types::Error;
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+use super::super::types::Error; // Importing custom error type
 use static_init::dynamic;
 
 
-type Result<T> = std::result::Result<T, Error>;
+type Result<T> = std::result::Result<T, Error>; // Alias for Result with custom Error
 
 
 
 
-pub struct Password;
+/**
+ * Trait for password operations including hashing and verification.
+ */
+pub trait Password {
+    /// Hashes the password using Argon2.
+    ///
+    /// # Arguments
+    ///
+    /// * `argon2` - Reference to Argon2 hasher.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<String>` - The hashed password as a string.
+    fn hash(&self, argon2: &Argon2<'_>) -> Result<String>;
+    /// Verifies the password against a hash using Argon2.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash` - The hash to verify against.
+    /// * `argon2` - Reference to Argon2 verifier.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<()>` - Ok if the password matches the hash, otherwise an error.
+    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()>;
+}
 
 
-impl Password {
-    pub fn hash(password: &str, argon2: &Argon2<'_>) -> Result<String> {
-        let salt = SaltString::generate(OsRng);
-        let hash = argon2.hash_password(password.as_bytes(), &salt)?.to_string();
+impl Password for &str { // Implementing Password trait for &str
+    fn hash(&self, argon2: &Argon2<'_>) -> Result<String> {
+        let salt = SaltString::generate(OsRng); // Generate a random salt
+        let hash = argon2.hash_password(self.as_bytes(), &salt)?.to_string(); // Hash the password
         Ok(hash)
     }
-    pub fn verify(password: &str, hash: &str, argon2: &Argon2<'_>) -> Result<()> {
-        let hash = PasswordHash::new(hash)?;
-        Ok(argon2.verify_password(password.as_bytes(), &hash)?)
+    
+    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()> { // Verify password
+        let hash = PasswordHash::new(hash)?; // Parse the hash
+        Ok(argon2.verify_password(self.as_bytes(), &hash)?) // Verify the password
+    }
+}
+
+impl Password for &String { // Implementing Password trait for &String
+    fn hash(&self, argon2: &Argon2<'_>) -> Result<String> {
+        let salt = SaltString::generate(OsRng); // Generate a random salt
+        let hash = argon2.hash_password(self.as_bytes(), &salt)?.to_string(); // Hash the password
+        Ok(hash)
+    }
+    
+    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()> { // Verify password
+        let hash = PasswordHash::new(hash)?; // Parse the hash
+        Ok(argon2.verify_password(self.as_bytes(), &hash)?) // Verify the password
+    }
+}
+
+impl Password for String { // Implementing Password trait for String
+    fn hash(&self, argon2: &Argon2<'_>) -> Result<String> {
+        let salt = SaltString::generate(OsRng); // Generate a random salt
+        let hash = argon2.hash_password(self.as_bytes(), &salt)?.to_string(); // Hash the password
+        Ok(hash)
+    }
+    
+    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()> { // Verify password
+        let hash = PasswordHash::new(hash)?; // Parse the hash
+        Ok(argon2.verify_password(self.as_bytes(), &hash)?) // Verify the password
     }
 }
