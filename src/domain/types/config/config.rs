@@ -1,6 +1,6 @@
 use crate::ports::outputs::database::Database;
 use serde::{Serialize, Deserialize};
-use super::argon::Argon;
+use super::{argon::Argon, Paseto};
 
 
 
@@ -8,5 +8,5 @@ use super::argon::Argon;
 pub struct Config<DB: Database> {
     database: DB,
     argon: Argon,
-    paseto: ()
+    paseto: Paseto
 }
