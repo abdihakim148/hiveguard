@@ -2,7 +2,7 @@ use actix_web::{get, post, web, App, HttpServer, Responder, HttpResponseBuilder 
 use crate::adaptors::outputs::database::memory::{MEMORY, Memory};
 use crate::ports::outputs::database::Database;
 use crate::domain::services::Registration;
-use crate::domain::types::User;
+use crate::domain::types::{User, Config};
 use serde_json::to_string;
 use crate::ports::Error;
 use argon2::Argon2;
@@ -10,12 +10,14 @@ use argon2::Argon2;
 
 type Response = Result<HttpResponse, Error>;
 
-
-pub struct Actix;
+#[derive(Default)]
+pub struct Actix {
+    config: Config<Memory>
+}
 
 
 impl Actix {
-    pub async fn start() -> std::io::Result<()> {
+    pub async fn start(&self) -> std::io::Result<()> {
         HttpServer::new(|| {
             App::new()
             .service(greet)
