@@ -7,20 +7,19 @@
  */
 pub trait Config: Sized {
     type Error;
-    type Config;
     type Input;
     /// This would be the default path for the configuration file.
     const PATH: &'static str = "config.yaml";
-    /// Loads the configuration from a specified input source.
+    /// Loads the configuration from a specified path or use the default path.
     ///
     /// # Arguments
     ///
-    /// * `input` - An optional input source for loading the configuration.
+    /// * `input` - An input source for loading the configuration.
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Config, Self::Error>` - The loaded configuration wrapped in a `Result`.
-    async fn load(input: Option<Self::Input>) -> Result<Self::Config, Self::Error>;
+    /// * `Result<Self, Self::Error>` - The loaded configuration wrapped in a `Result`.
+    async fn load(path: Option<&str>, input: Self::Input) -> Result<Self, Self::Error>;
     /// Saves the configuration to a specified input source.
     ///
     /// # Arguments
@@ -29,6 +28,6 @@ pub trait Config: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Self::Config, Self::Error>` - The result of the save operation wrapped in a `Result`.
-    async fn save(input: Option<Self::Input>) -> Result<Self::Config, Self::Error>;
+    /// * `Result<Self, Self::Error>` - The result of the save operation wrapped in a `Result`.
+    async fn save(&self, path: Option<&str>, input: Self::Input) -> Result<(), Self::Error>;
 }
