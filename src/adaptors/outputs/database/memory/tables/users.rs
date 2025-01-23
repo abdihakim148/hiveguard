@@ -7,7 +7,7 @@ use std::sync::RwLock;
 
 
 /// A struct representing a collection of users stored in memory.
-// #[derive(Clone)]
+#[derive(Debug, Default)]
 pub struct Users {
     emails: RwLock<HashMap<EmailAddress, ObjectId>>,
     users: RwLock<HashMap<ObjectId, User>>,

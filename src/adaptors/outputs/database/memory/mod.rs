@@ -4,6 +4,7 @@ mod error;
 
 use crate::ports::outputs::database::Database;
 use crate::ports::outputs::database::Table;
+use serde::{Serialize, Deserialize};
 use tokio::sync::OnceCell;
 pub use tables::*;
 pub use error::*;
@@ -13,7 +14,9 @@ pub static MEMORY: OnceCell<Memory> = OnceCell::const_new();
 
 /// A struct representing an in-memory database.
 /// A struct representing an in-memory database.
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Memory {
+    #[serde(skip)]
     users: Users,
 }
 
