@@ -5,3 +5,4 @@ mod argon;
 
 pub use secret::*;
 pub use paseto::*;
+pub use config::*;
