@@ -11,5 +11,6 @@ use adaptors::inputs::api::actix::Actix;
 /// Entry point of the application.
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    Actix::start().await
+    let actix = Actix::default();
+    actix.start().await
 }
