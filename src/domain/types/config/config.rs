@@ -1,21 +1,28 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::ports::inputs::config::Config as ConfigTrait;
+use super::{argon::Argon, Paseto, mail::MailConfig};
 use crate::ports::outputs::database::Database;
-use super::{argon::Argon, Paseto};
+use crate::ports::outputs::mailer::Mailer;
+use crate::domain::types::Mail;
 use std::io::{Read, Write};
 
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Config<DB: Database + Default> {
+pub struct Config<DB: Database + Default, M: Mailer + TryFrom<Mail>> 
+where M::Error: std::fmt::Display
+{
     database: DB,
     argon: Argon,
-    paseto: Paseto
+    paseto: Paseto,
+    mailer: MailConfig<M>
 }
 
 
 
-impl<DB: Database + Default> Config<DB> {
+impl<DB: Database + Default, M: Mailer + TryFrom<Mail>> Config<DB, M> 
+where M::Error: std::fmt::Display
+{
     pub fn db(&self) -> &DB {
         &self.database
     }
@@ -27,10 +34,18 @@ impl<DB: Database + Default> Config<DB> {
     pub fn paseto(&self) -> &Paseto {
         &self.paseto
     }
+
+    pub fn mailer(&self) -> &MailConfig<M> {
+        &self.mailer
+    }
 }
 
 
-impl<DB: Database + Default + Serialize + DeserializeOwned> ConfigTrait for Config<DB> {
+impl<DB: Database + Default + Serialize + DeserializeOwned, M> ConfigTrait for Config<DB, M> 
+where 
+    M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned,
+    M::Error: std::fmt::Display,
+{
     type Error = Box<dyn std::error::Error + 'static>;
     type Input = ();
     
@@ -64,7 +79,11 @@ impl<DB: Database + Default + Serialize + DeserializeOwned> ConfigTrait for Conf
 
 
 /// This implementations panics.
-impl<DB: Database + Default + Serialize + DeserializeOwned> Default for Config<DB> {
+impl<DB: Database + Default + Serialize + DeserializeOwned, M> Default for Config<DB, M> 
+where 
+    M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned,
+    M::Error: std::fmt::Display,
+{
     fn default() -> Self {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let config = runtime.block_on(Config::load(None, ())).unwrap();
