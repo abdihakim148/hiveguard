@@ -57,10 +57,15 @@ impl<'de> Deserialize<'de> for Mail {
                 while let Some(key) = map.next_key()? {
                     match key {
                         "credentials" => {
-                            let res: Result<Cred, V::Error> = map.next_value();
+                            let res: Result<Option<Cred>, V::Error> = map.next_value();
                             credentials = match res {
-                                Ok(value) => Some(value.into()),
-                                _ => Some(map.next_value()?)
+                                Ok(value) => {
+                                    match value {
+                                        Some(value) => Some(value.into()),
+                                        None => None,
+                                    }
+                                },
+                                _ => map.next_value()?
                             };
                         }
                         "url" => {
