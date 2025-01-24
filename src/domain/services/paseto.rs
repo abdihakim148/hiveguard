@@ -1,7 +1,5 @@
 use chrono::Utc;
 use rusty_paseto::core::{ImplicitAssertion, PasetoError, Payload, Public, V4};
-use rusty_paseto::core::PasetoAsymmetricPrivateKey;
-use rusty_paseto::core::PasetoAsymmetricPublicKey;
 use rusty_paseto::core::Paseto as PasetoBuilder;
 use serde::{Serialize, de::DeserializeOwned};
 use super::super::types::{Error, Token, PasetoKeys, Value};

@@ -1,4 +1,3 @@
-#![allow(unused)]
 /// Module for database table operations.
 mod table;
 mod item;

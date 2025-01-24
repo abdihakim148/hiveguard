@@ -1,6 +1,6 @@
-use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
 use super::{Resource, Permission};
+use bson::oid::ObjectId;
 
 /// A struct representing a role with specific permissions on resources.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

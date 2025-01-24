@@ -7,7 +7,6 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Deserialize, Default, PartialEq)]
 pub struct Uuid(Uid);
 
-#[allow(unused)]
 impl Uuid {
     pub fn new_v4() -> Self {
         Self(Uid::new_v4())

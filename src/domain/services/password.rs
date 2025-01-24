@@ -1,9 +1,5 @@
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-    Argon2,
-};
+use argon2::password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use super::super::types::Error; // Importing custom error type
-use static_init::dynamic;
 
 
 type Result<T> = std::result::Result<T, Error>; // Alias for Result with custom Error

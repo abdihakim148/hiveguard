@@ -1,5 +1,5 @@
-use bson::oid::ObjectId;
 use serde::{Serialize, Deserialize};
+use bson::oid::ObjectId;
 
 /// A struct representing a member with roles in an organisation.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
