@@ -27,5 +27,6 @@ mockall = "0.13.0"
 
 [features]
 actix = []
+memory = []
 
-default = ["actix"]
+default = ["actix", "memory"]
