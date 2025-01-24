@@ -1,9 +1,8 @@
-use std::marker::PhantomData;
-use serde::de::{self, Deserializer, Visitor, MapAccess};
-use std::fmt;
-use serde::{Serialize, Deserialize};
-use crate::domain::types::Mail;
+use serde::{Serialize, Deserialize, Deserializer, de::{self, Visitor, MapAccess}};
 use crate::ports::outputs::mailer::Mailer;
+use crate::domain::types::Mail;
+use std::marker::PhantomData;
+use std::fmt;
 
 
 #[derive(Debug, Clone, Serialize)]
@@ -12,6 +11,13 @@ pub struct MailConfig<M: Mailer + TryFrom<Mail>> {
     mail: Mail,
     #[serde(skip)]
     mailer: M,
+}
+
+
+impl<M: Mailer + TryFrom<Mail>> PartialEq  for MailConfig<M> {
+    fn eq(&self, other: &Self) -> bool {
+        self.mail == other.mail
+    }
 }
 
 

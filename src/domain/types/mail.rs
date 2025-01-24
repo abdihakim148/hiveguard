@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize, Deserializer, de::{self, MapAccess, Visitor}
 use std::fmt;
 
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Mail {
     pub url: String,
     pub credentials: Option<Credentials>,
