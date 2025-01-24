@@ -1,0 +1,102 @@
+use std::marker::PhantomData;
+use serde::de::{self, Deserializer, Visitor, MapAccess};
+use std::fmt;
+use serde::{Serialize, Deserialize};
+use crate::domain::types::Mail;
+use crate::ports::outputs::mailer::Mailer;
+
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MailConfig<M: Mailer + TryFrom<Mail>> {
+    #[serde(flatten)]
+    mail: Mail,
+    #[serde(skip)]
+    mailer: M,
+}
+
+
+
+impl<'de, M> Deserialize<'de> for MailConfig<M>
+where
+    M: Mailer + TryFrom<Mail>,
+    M::Error: std::fmt::Display,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mail = Mail::deserialize(deserializer)?;
+        let clone = mail.clone();
+        let mailer = clone.try_into().map_err(de::Error::custom)?;
+
+        Ok(MailConfig {mail, mailer})
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+    use crate::domain::types::Mail;
+    use crate::ports::outputs::mailer::Mailer;
+    use std::convert::TryFrom;
+    use crate::ports::Result;
+
+    #[derive(Debug, Clone)]
+    struct MockMailer;
+
+    impl Mailer for MockMailer {
+        type Config = ();
+        type Mail = ();
+
+        async fn new(_config: Self::Config) -> Result<Self> {
+            Ok(MockMailer)
+        }
+
+        async fn send(&self, _mail: Self::Mail) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    impl TryFrom<Mail> for MockMailer {
+        type Error = &'static str;
+
+        fn try_from(_mail: Mail) -> std::result::Result<Self, Self::Error> {
+            Ok(MockMailer)
+        }
+    }
+
+    #[test]
+    fn test_serialize_mail_config() {
+        let mail = Mail {
+            url: "smtp://example.com".to_string(),
+            credentials: None,
+            sender: "sender@example.com".parse().unwrap(),
+        };
+        let mail_config = MailConfig::<MockMailer> {
+            mail: mail.clone(),
+            mailer: MockMailer,
+        };
+
+        let serialized = serde_json::to_string(&mail_config).unwrap();
+        let expected = serde_json::to_string(&mail).unwrap();
+        assert_eq!(serialized, expected);
+    }
+
+    #[test]
+    fn test_deserialize_mail_config() {
+        let json = r#"
+        {
+            "url": "smtp://example.com",
+            "credentials": null,
+            "sender": "User <sender@example.com>"
+        }
+        "#;
+
+        let mail_config: MailConfig<MockMailer> = serde_json::from_str(json).unwrap();
+        assert_eq!(mail_config.mail.url, "smtp://example.com");
+        assert_eq!(mail_config.mail.sender.to_string(), "User <sender@example.com>");
+    }
+}
