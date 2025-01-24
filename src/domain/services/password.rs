@@ -24,7 +24,7 @@ pub trait Password {
     /// # Returns
     ///
     /// * `Result<String>` - The hashed password as a string.
-    fn hash(&self, argon2: &Argon2<'_>) -> Result<String>;
+    fn hash<T: PasswordHasher>(&self, argon2: &T) -> Result<String>;
     /// Verifies the password against a hash using Argon2.
     ///
     /// # Arguments
@@ -35,44 +35,44 @@ pub trait Password {
     /// # Returns
     ///
     /// * `Result<()>` - Ok if the password matches the hash, otherwise an error.
-    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()>;
+    fn verify<T: PasswordVerifier>(&self, hash: &str, argon2: &T) -> Result<()>;
 }
 
 
 impl Password for &str { // Implementing Password trait for &str
-    fn hash(&self, argon2: &Argon2<'_>) -> Result<String> {
+    fn hash<T: PasswordHasher>(&self, argon2: &T) -> Result<String> {
         let salt = SaltString::generate(OsRng); // Generate a random salt
         let hash = argon2.hash_password(self.as_bytes(), &salt)?.to_string(); // Hash the password
         Ok(hash)
     }
     
-    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()> { // Verify password
+    fn verify<T: PasswordVerifier>(&self, hash: &str, argon2: &T) -> Result<()> { // Verify password
         let hash = PasswordHash::new(hash)?; // Parse the hash
         Ok(argon2.verify_password(self.as_bytes(), &hash)?) // Verify the password
     }
 }
 
 impl Password for &String { // Implementing Password trait for &String
-    fn hash(&self, argon2: &Argon2<'_>) -> Result<String> {
+    fn hash<T: PasswordHasher>(&self, argon2: &T) -> Result<String> {
         let salt = SaltString::generate(OsRng); // Generate a random salt
         let hash = argon2.hash_password(self.as_bytes(), &salt)?.to_string(); // Hash the password
         Ok(hash)
     }
     
-    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()> { // Verify password
+    fn verify<T: PasswordVerifier>(&self, hash: &str, argon2: &T) -> Result<()> { // Verify password
         let hash = PasswordHash::new(hash)?; // Parse the hash
         Ok(argon2.verify_password(self.as_bytes(), &hash)?) // Verify the password
     }
 }
 
 impl Password for String { // Implementing Password trait for String
-    fn hash(&self, argon2: &Argon2<'_>) -> Result<String> {
+    fn hash<T: PasswordHasher>(&self, argon2: &T) -> Result<String> {
         let salt = SaltString::generate(OsRng); // Generate a random salt
         let hash = argon2.hash_password(self.as_bytes(), &salt)?.to_string(); // Hash the password
         Ok(hash)
     }
     
-    fn verify(&self, hash: &str, argon2: &Argon2<'_>) -> Result<()> { // Verify password
+    fn verify<T: PasswordVerifier>(&self, hash: &str, argon2: &T) -> Result<()> { // Verify password
         let hash = PasswordHash::new(hash)?; // Parse the hash
         Ok(argon2.verify_password(self.as_bytes(), &hash)?) // Verify the password
     }

@@ -3,7 +3,7 @@ use crate::ports::outputs::database::Table;
 use crate::ports::outputs::database::Item;
 use crate::domain::types::{User, Error};
 use bson::oid::ObjectId;
-use argon2::Argon2;
+use argon2::PasswordHasher;
 
 use super::Password;
 
@@ -15,13 +15,13 @@ pub trait Registration: Sized + Item {
     /// # Returns
     ///
     /// * `Result<Self::Id>` - Returns the ID of the registered entity wrapped in a `Result`.
-    async fn register<T: Table<Self, Error: Into<Self::Error>>>(&self, table: &T, argon2: &Argon2<'_>) -> Result<Self, Self::Error>;
+    async fn register<T: Table<Self, Error: Into<Self::Error>>, H: PasswordHasher>(&self, table: &T, argon2: &H) -> Result<Self, Self::Error>;
 }
 
 impl Registration for User {
     type Id = ObjectId;
     type Error = Error;
-    async fn register<T: Table<User, Error: Into<Self::Error>>>(&self, table: &T, argon2: &Argon2<'_>) -> Result<Self, Self::Error> {
+    async fn register<T: Table<User, Error: Into<Self::Error>>, H: PasswordHasher>(&self, table: &T, argon2: &H) -> Result<Self, Self::Error> {
         let id = self.id;
         let username = self.username.clone();
         let first_name = self.first_name.clone();
