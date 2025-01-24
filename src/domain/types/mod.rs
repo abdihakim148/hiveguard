@@ -14,6 +14,7 @@ mod token;
 mod user;
 mod role;
 mod uuid;
+mod mail;
 mod id;
 
 /// Re-exporting types for external access.
