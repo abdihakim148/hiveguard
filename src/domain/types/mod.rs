@@ -30,4 +30,5 @@ pub use email::*;
 pub use token::*;
 pub use user::*;
 pub use uuid::*;
+pub use mail::*;
 pub use id::*;

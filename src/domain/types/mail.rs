@@ -5,9 +5,9 @@ use std::fmt;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Mail {
-    url: String,
-    credentials: Option<Credentials>,
-    sender: Mailbox
+    pub url: String,
+    pub credentials: Option<Credentials>,
+    pub sender: Mailbox
 }
 
 
