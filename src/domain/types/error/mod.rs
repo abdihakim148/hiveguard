@@ -6,6 +6,8 @@ use actix_web::{error::ResponseError, http::StatusCode, HttpResponse as Response
 use std::fmt::{self, Debug as DebugTrait, Display, Result};
 use lettre::address::AddressError as EmailAddressError;
 use argon2::password_hash::errors::Error as HashError;
+use lettre::transport::smtp::Error as SmtpError;
+use lettre::error::Error as LettreError;
 use crate::ports::Error as GlobalError;
 pub use conversion::ConversionError;
 use rusty_paseto::core::PasetoError;
@@ -29,6 +31,10 @@ pub enum Error<T: DebugTrait = Value> {
     PasetoError(PasetoError),
     #[error("internal server error: {0}")]
     InternalServerError(Box<dyn std::error::Error>),
+    #[error("email error: {0}")]
+    MailError(LettreError),
+    #[error("smtp error: {0}")]
+    SmtpError(SmtpError),
     #[error("{0}")]
     New(GlobalError)
 }
@@ -69,6 +75,8 @@ impl From<Error<Number>> for Error<Value> {
             Error::InvalidToken => Error::InvalidToken,
             Error::PasetoError(err) => Error::PasetoError(err),
             Error::InternalServerError(err) => Error::InternalServerError(err),
+            Error::MailError(err) => Error::MailError(err),
+            Error::SmtpError(err) => Error::SmtpError(err),
             Error::New(err) => Error::New(err)
         }
     }
@@ -85,13 +93,34 @@ impl From<PasetoError> for Error {
 }
 
 
+impl From<LettreError> for Error {
+    fn from(err: LettreError) -> Self {
+        Self::MailError(err)
+    }
+}
+
+
+impl From<SmtpError> for Error {
+    fn from(err: SmtpError) -> Self {
+        Self::SmtpError(err)
+    }
+}
+
+
+
 #[cfg(feature = "actix")]
 impl<T: DebugTrait> ResponseError for Error<T> {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::ConversionError(_) | Self::EmailAddressError(_) => StatusCode::BAD_REQUEST,
-            Self::HashingError(_) | Self::PasetoError(_) | Self::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::HashingError(_) | Self::PasetoError(_) | Self::InternalServerError(_) | Self::SmtpError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::InvalidToken => StatusCode::UNAUTHORIZED,
+            Self::MailError(err) => {
+                match err {
+                    LettreError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    _ => StatusCode::BAD_REQUEST
+                }
+            }
             Self::New(err) => err.status_code() 
         }
     }
@@ -102,8 +131,14 @@ impl<T: DebugTrait> ResponseError for Error<T> {
         builder.content_type("application/json");
         let body = match self {
             Self::ConversionError(_) | Self::EmailAddressError(_) => BoxBody::new(format!("{{\"error\": \"{self}\"}}")),
-            Self::HashingError(_) | Self::PasetoError(_) | Self::InternalServerError(_) => BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}")),
+            Self::HashingError(_) | Self::PasetoError(_) | Self::InternalServerError(_) | Self::SmtpError(_) => BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}")),
             Self::InvalidToken => BoxBody::new(format!("invalid token")),
+            Self::MailError(err) => {
+                match err {
+                    LettreError::Io(_) => BoxBody::new(format!("internal server error. could not send email")),
+                    _ => BoxBody::new(format!("{}", err))
+                }
+            }
             Self::New(err) => err.error_response().into_body()
         };
         builder.body(body)
