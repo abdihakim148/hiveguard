@@ -42,3 +42,15 @@ impl Mailer for SmtpMailer {
         Ok(())
     }
 }
+
+
+impl TryFrom<Mail> for SmtpMailer {
+    type Error = Box<dyn std::error::Error + 'static>;
+
+    fn try_from(config: Mail) -> std::result::Result<Self, Self::Error> {
+        let runtime = tokio::runtime::Runtime::new()?;
+        let future = Self::new(config);
+        let mailer = runtime.block_on(future)?;
+        Ok(mailer)
+    }
+}
