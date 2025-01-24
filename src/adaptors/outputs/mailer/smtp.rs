@@ -18,13 +18,7 @@ impl Mailer for SmtpMailer {
     type Mail = (Mailbox, Mailbox, String, String);
 
     async fn new(mail: Self::Config) -> Result<Self> {
-        let connection_url = &mail.url;
-        let mut mailer = Client::from_url(connection_url).map_err(|err|Error::from(err))?;
-        if let Some(credentials) = mail.credentials {
-            mailer = mailer.credentials(credentials)
-        }
-        let client = mailer.pool_config(PoolConfig::new()).build();
-        Ok(SmtpMailer(client))
+        Ok(mail.try_into()?)
     }
 
     async fn send(&self, mail: Self::Mail) -> Result<()> {
@@ -45,12 +39,15 @@ impl Mailer for SmtpMailer {
 
 
 impl TryFrom<Mail> for SmtpMailer {
-    type Error = Box<dyn std::error::Error + 'static>;
+    type Error = Error;
 
-    fn try_from(config: Mail) -> std::result::Result<Self, Self::Error> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        let future = Self::new(config);
-        let mailer = runtime.block_on(future)?;
-        Ok(mailer)
+    fn try_from(mail: Mail) -> std::result::Result<Self, Self::Error> {
+        let connection_url = &mail.url;
+        let mut mailer = Client::from_url(connection_url)?;
+        if let Some(credentials) = mail.credentials {
+            mailer = mailer.credentials(credentials)
+        }
+        let client = mailer.pool_config(PoolConfig::new()).build();
+        Ok(SmtpMailer(client))
     }
 }
