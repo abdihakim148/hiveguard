@@ -1,3 +1,4 @@
+#![allow(unused)]
 /// Main module for the application.
 mod adaptors;
 /// Module for domain logic.
