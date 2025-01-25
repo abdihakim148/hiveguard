@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode, HttpResponse};
+use actix_web::{get, post, web::{Data, Json}, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode, HttpResponse};
 use crate::adaptors::outputs::database::memory::Memory;
 use crate::adaptors::outputs::mailer::smtp::SmtpMailer;
 use crate::ports::outputs::database::Database;
@@ -21,8 +21,10 @@ pub struct Actix;
 
 impl Actix {
     pub async fn start() -> std::io::Result<()> {
-        let state = <Config<Memory, Mailer> as Default>::default();
-        let data = web::Data::new(state);
+        std::env::set_var("RUST_LOG", "debug");
+        env_logger::init();
+        let state = Arc::new(<Config<Memory, Mailer> as Default>::default());
+        let data = Data::new(state);
         HttpServer::new(move|| {
             App::new()
             .app_data(data.clone())
@@ -47,7 +49,7 @@ async fn greet() -> impl Responder {
 
 
 #[post("/register")]
-async fn register(user: web::Json<User>, config: web::Data<Arc<Config<DB, Mailer>>>) -> Response {
+async fn register(user: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response {
     let table = config.db().users().await?;
     let argon = config.argon();
     let user = user.register(table, argon).await?;
