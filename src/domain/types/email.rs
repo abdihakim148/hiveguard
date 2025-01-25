@@ -33,15 +33,18 @@ impl Serialize for EmailAddress {
     where
         S: Serializer,
     {
+        let mut state = serializer.serialize_struct("EmailAddress", 2)?;
         match self {
-            EmailAddress::New(email) => serializer.serialize_str(email.as_ref()),
+            EmailAddress::New(email) => {
+                state.serialize_field::<str>("email", email.as_ref())?;
+                state.serialize_field("verified", &false)?;
+            },
             EmailAddress::Verified(email) => {
-                let mut state = serializer.serialize_struct("EmailAddress", 2)?;
                 state.serialize_field::<str>("email", email.as_ref())?;
                 state.serialize_field("verified", &true)?;
-                state.end()
             }
         }
+        state.end()
     }
 }
 
