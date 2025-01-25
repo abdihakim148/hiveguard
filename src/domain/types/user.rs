@@ -16,6 +16,7 @@ pub struct User {
     /// The last name of the user.
     pub last_name: String,
     /// The email address of the user.
+    #[serde(flatten)]
     pub email: EmailAddress,
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
