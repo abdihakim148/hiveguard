@@ -21,6 +21,19 @@ impl<M: Mailer + TryFrom<Mail>> PartialEq  for MailConfig<M> {
 }
 
 
+impl<M: Mailer + TryFrom<Mail>> Default for MailConfig<M>
+where
+    M: Mailer + TryFrom<Mail>,
+    M::Error: std::fmt::Display + std::fmt::Debug,
+{
+    fn default() -> Self {
+        let mail = Mail::default();
+        let mailer = mail.clone().try_into().expect("ERROR WHILE CONVERTING DEFAULT MAIL TO MAILER");
+        Self{mail, mailer}
+    }
+}
+
+
 
 impl<'de, M> Deserialize<'de> for MailConfig<M>
 where

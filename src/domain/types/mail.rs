@@ -1,4 +1,4 @@
-use lettre::{message::Mailbox, transport::smtp::authentication::Credentials};
+use lettre::{message::Mailbox, transport::smtp::authentication::Credentials, Address};
 use serde::{Serialize, Deserialize, Deserializer, de::{self, MapAccess, Visitor}};
 use std::fmt;
 
@@ -8,6 +8,17 @@ pub struct Mail {
     pub url: String,
     pub credentials: Option<Credentials>,
     pub sender: Mailbox
+}
+
+
+impl Default for Mail {
+    fn default() -> Self {
+        let url = String::from("smtp://example.com");
+        let credentials = None;
+        let email = Address::new("sender", "example.com").expect("PANIC ON DEFAULT MAIL SENDER");
+        let sender = Mailbox::new(Some(String::from("Sender")), email);
+        Self {url, credentials, sender}
+    }
 }
 
 

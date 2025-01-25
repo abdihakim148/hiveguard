@@ -74,3 +74,12 @@ impl<'de> Deserialize<'de> for SmtpMailer {
         Err(serde::de::Error::custom("This operation should never be used"))
     }
 }
+
+
+
+impl Default for SmtpMailer {
+    fn default() -> Self {
+        let client = Client::unencrypted_localhost();
+        SmtpMailer(client)
+    }
+}
