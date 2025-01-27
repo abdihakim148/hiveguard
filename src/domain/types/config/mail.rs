@@ -5,11 +5,9 @@ use std::marker::PhantomData;
 use std::fmt;
 
 
-#[derive(Debug, Clone, Serialize)]
-pub struct MailConfig<M: Mailer + TryFrom<Mail>> {
-    #[serde(flatten)]
+#[derive(Debug, Clone)]
+pub struct MailConfig<M> {
     mail: Mail,
-    #[serde(skip)]
     mailer: M,
 }
 
@@ -30,6 +28,15 @@ where
         let mail = Mail::default();
         let mailer = mail.clone().try_into().expect("ERROR WHILE CONVERTING DEFAULT MAIL TO MAILER");
         Self{mail, mailer}
+    }
+}
+
+
+impl<M: Mailer + TryFrom<Mail>> Serialize for MailConfig<M> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        self.mail.serialize(serializer)
     }
 }
 
