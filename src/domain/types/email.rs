@@ -173,7 +173,7 @@ mod tests {
     fn test_serialize_new_email() {
         let email = EmailAddress::new("test@example.com").unwrap();
         let serialized = serde_json::to_string(&email).unwrap();
-        assert_eq!(serialized, "\"test@example.com\"");
+        assert_eq!(serialized, "{\"email\":\"test@example.com\",\"verified\":false}");
     }
 
     #[test]
