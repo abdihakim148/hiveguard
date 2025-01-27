@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Config<DB: Database + Default, M: Mailer + TryFrom<Mail>> 
 where M::Error: std::fmt::Display + std::fmt::Debug,
 {
@@ -20,7 +20,7 @@ where M::Error: std::fmt::Display + std::fmt::Debug,
 
 
 
-impl<DB: Database + Default + Serialize + DeserializeOwned, M: Mailer + TryFrom<Mail> + Default> Config<DB, M> 
+impl<DB: Database + Default + Serialize + DeserializeOwned, M: Mailer + TryFrom<Mail>> Config<DB, M> 
 where 
     M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned,
     M::Error: std::fmt::Display + std::fmt::Debug,
@@ -71,7 +71,7 @@ where
 
 impl<DB: Database + Default + Serialize + DeserializeOwned, M> ConfigTrait for Config<DB, M> 
 where 
-    M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned + Default,
+    M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned,
     M::Error: std::fmt::Display + std::fmt::Debug,
 {
     type Error = Box<dyn std::error::Error + 'static>;
@@ -84,5 +84,20 @@ where
 
     async fn save(&self, path: Option<&str>, input: Self::Input) -> Result<(), Self::Error> {
         self.save_sync(path, input)
+    }
+}
+
+
+impl<DB: Default + Database, M: Mailer + TryFrom<Mail>> Default for Config<DB, M> 
+where 
+    M::Error: std::fmt::Display + std::fmt::Debug
+{
+    fn default() -> Self {
+        let database = Default::default();
+        let argon = Default::default();
+        let paseto = Default::default();
+        let mailer = Default::default();
+
+        Self{database, argon, paseto, mailer}
     }
 }
