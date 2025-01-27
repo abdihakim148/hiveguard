@@ -18,7 +18,7 @@ pub enum Audience {
 #[serde(default)]
 pub struct Token<T = HashMap<String, Value>> {
     #[serde(rename = "jti")]
-    pub id: Uuid,
+    pub id: Id,
     #[serde(rename = "iss")]
     pub issuer: String,
     #[serde(rename = "sub")]

@@ -10,6 +10,7 @@ pub struct User {
     #[serde(default)]
     pub id: ObjectId,
     /// The username of the user.
+    #[serde(alias = "user_name")]
     pub username: String,
     /// The first name of the user.
     pub first_name: String,
