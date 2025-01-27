@@ -1,5 +1,5 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use crate::ports::inputs::config::Config as ConfigTrait;
+use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
+use crate::{domain, ports::inputs::config::Config as ConfigTrait};
 use super::{argon::Argon, Paseto, mail::MailConfig};
 use crate::ports::outputs::database::Database;
 use crate::ports::outputs::mailer::Mailer;
@@ -8,10 +8,10 @@ use std::io::{Read, Write};
 
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Config<DB: Database + Default, M: Mailer + TryFrom<Mail>> 
-where M::Error: std::fmt::Display + std::fmt::Debug,
-{
+#[derive(Debug, Clone)]
+pub struct Config<DB, M> {
+    name: String,
+    domain: String,
     database: DB,
     argon: Argon,
     paseto: Paseto,
@@ -20,10 +20,11 @@ where M::Error: std::fmt::Display + std::fmt::Debug,
 
 
 
-impl<DB: Database + Default + Serialize + DeserializeOwned, M: Mailer + TryFrom<Mail>> Config<DB, M> 
+impl<DB, M> Config<DB, M>
 where 
-    M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned,
-    M::Error: std::fmt::Display + std::fmt::Debug,
+    DB: Database + Default + Serialize + DeserializeOwned,
+    M: Mailer + TryFrom<Mail>,
+    M::Error: std::fmt::Display + std::fmt::Debug
 {
     pub fn db(&self) -> &DB {
         &self.database
@@ -69,10 +70,25 @@ where
 }
 
 
+impl<DB: Serialize, M: Mailer + TryFrom<Mail>> Serialize for Config<DB, M> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        let mut state = serializer.serialize_struct("Config", 4)?;
+        state.serialize_field("database", &self.database)?;
+        state.serialize_field("argon", &self.argon)?;
+        state.serialize_field("paseto", &self.paseto)?;
+        state.serialize_field("mailer", &self.mailer)?;
+        state.end()
+    }
+}
+
+
 impl<DB: Database + Default + Serialize + DeserializeOwned, M> ConfigTrait for Config<DB, M> 
 where 
-    M: Mailer + TryFrom<Mail> + Serialize + DeserializeOwned,
-    M::Error: std::fmt::Display + std::fmt::Debug,
+    DB: Database + Default + Serialize + DeserializeOwned,
+    M: Mailer + TryFrom<Mail>,
+    M::Error: std::fmt::Display + std::fmt::Debug
 {
     type Error = Box<dyn std::error::Error + 'static>;
     type Input = ();
@@ -93,11 +109,108 @@ where
     M::Error: std::fmt::Display + std::fmt::Debug
 {
     fn default() -> Self {
+        let name = Default::default();
+        let domain = Default::default();
         let database = Default::default();
         let argon = Default::default();
         let paseto = Default::default();
         let mailer = Default::default();
 
-        Self{database, argon, paseto, mailer}
+        Self{name, domain, database, argon, paseto, mailer}
+    }
+}
+
+
+impl<'de, DB, M> Deserialize<'de> for Config<DB, M> 
+where
+    DB: Database + Default + Deserialize<'de>,
+    M: Mailer + TryFrom<Mail>,
+    M::Error: std::fmt::Display + std::fmt::Debug,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de> {
+
+        struct ConfigVisitor<DB, M> {
+            _t: std::marker::PhantomData<(DB, M)>
+        }
+
+        impl<'de, DB, M> Visitor<'de> for ConfigVisitor<DB, M> 
+        where
+            DB: Database + Default + Deserialize<'de>,
+            M: Mailer + TryFrom<Mail>,
+            M::Error: std::fmt::Display + std::fmt::Debug,
+        {
+            type Value = Config<DB, M>;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a struct of Config")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: serde::de::MapAccess<'de>, {
+                let mut name = None;
+                let mut domain = None;
+                let mut database = None;
+                let mut argon = None;
+                let mut paseto = None;
+                let mut mailer = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        "name" => {
+                            if name.is_some() {
+                                return Err(de::Error::duplicate_field("name"));
+                            }
+                            name = map.next_value()?;
+                        },
+                        "domain" => {
+                            if domain.is_some() {
+                                return Err(de::Error::duplicate_field("domain"));
+                            }
+                            domain = map.next_value()?;
+                        },
+                        "database" => {
+                            if database.is_some() {
+                                return Err(de::Error::duplicate_field("database"));
+                            }
+                            database = map.next_value()?;
+                        },
+                        "argon" => {
+                            if argon.is_some() {
+                                return Err(de::Error::duplicate_field("argon"));
+                            }
+                            argon = map.next_value()?;
+                        },
+                        "paseto" => {
+                            if paseto.is_some() {
+                                return Err(de::Error::duplicate_field("paseto"));
+                            }
+                            paseto = map.next_value()?;
+                        },
+                        "mailer" => {
+                            if mailer.is_some() {
+                                return Err(de::Error::duplicate_field("mailer"));
+                            }
+                            mailer = map.next_value()?;
+                        },
+                        _ => {
+                            let _: de::IgnoredAny = map.next_value()?;
+                        }
+                    }
+                }
+
+                let name = name.unwrap_or_default();
+                let domain = domain.unwrap_or_default();
+                let database = database.unwrap_or_default();
+                let argon = argon.unwrap_or_default();
+                let paseto = paseto.unwrap_or_default();
+                let mailer = mailer.unwrap_or_default();
+
+                Ok(Config{name, domain, database, argon, paseto, mailer})
+            }
+        }
+        let visitor = ConfigVisitor::<DB, M>{_t: std::marker::PhantomData::default()};
+        deserializer.deserialize_map(visitor)
     }
 }
