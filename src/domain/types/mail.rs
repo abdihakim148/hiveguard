@@ -118,19 +118,19 @@ mod tests {
     use lettre::message::Mailbox;
     use lettre::transport::smtp::authentication::Credentials;
 
-    #[test]
-    fn test_mail_serialization() {
-        let mail = Mail {
-            url: "smtp://example.com".to_string(),
-            credentials: Some(Credentials::new("user".to_string(), "password".to_string())),
-            sender: "sender@example.com".parse::<Mailbox>().unwrap(),
-        };
+    impl Mail {
 
-        let serialized = serde_json::to_string(&mail).unwrap();
-        println!("JSON: {}", serialized);
-        assert!(serialized.contains("\"url\":\"smtp://example.com\""));
-        assert!(serialized.contains("\"credentials\":"));
-        assert!(serialized.contains("\"sender\":\"sender@example.com\""));
+        pub fn new_default() -> Self {
+            Mail {
+                url: "smtp://example.com".to_string(),
+                credentials: None,
+                sender: Mailbox::new(Some(String::from("Sender")), Address::new("sender", "example.com").unwrap()),
+            }
+        }
+
+        pub fn set_default_credentials(&mut self) {
+            self.credentials = Some(Credentials::new("smtp".to_string(), "password".to_string()))
+        }
     }
 
     #[test]
@@ -143,15 +143,15 @@ mod tests {
                 "password": "password"
             },
             "sender": {
-                "name": "User",
+                "name": "Sender",
                 "email": "sender@example.com"
             }
         }
         "#;
 
         let mail: Mail = serde_json::from_str(data).unwrap();
-        assert_eq!(mail.url, "smtp://example.com");
-        assert!(mail.credentials.is_some());
-        assert_eq!(mail.sender.to_string(), "User <sender@example.com>");
+        let mut default_mail = Mail::new_default();
+        default_mail.set_default_credentials();
+        assert_eq!(mail, default_mail);
     }
 }

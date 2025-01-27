@@ -71,7 +71,7 @@ mod tests {
     use crate::ports::Result;
 
     #[derive(Debug, Clone)]
-    struct MockMailer;
+    pub struct MockMailer;
 
     impl Mailer for MockMailer {
         type Config = ();
@@ -94,17 +94,19 @@ mod tests {
         }
     }
 
+
+    impl MailConfig<MockMailer> {
+        fn new() -> Self {
+            let mail = Mail::new_default();
+            let mailer = MockMailer;
+            MailConfig{mail, mailer}
+        }
+    }
+
     #[test]
     fn test_serialize_mail_config() {
-        let mail = Mail {
-            url: "smtp://example.com".to_string(),
-            credentials: None,
-            sender: "sender@example.com".parse().unwrap(),
-        };
-        let mail_config = MailConfig::<MockMailer> {
-            mail: mail.clone(),
-            mailer: MockMailer,
-        };
+        let mail = Mail::new_default();
+        let mail_config = MailConfig::<MockMailer>::default();
 
         let serialized = serde_json::to_string(&mail_config).unwrap();
         let expected = serde_json::to_string(&mail).unwrap();
@@ -117,12 +119,11 @@ mod tests {
         {
             "url": "smtp://example.com",
             "credentials": null,
-            "sender": "User <sender@example.com>"
+            "sender": "Sender <sender@example.com>"
         }
         "#;
 
         let mail_config: MailConfig<MockMailer> = serde_json::from_str(json).unwrap();
-        assert_eq!(mail_config.mail.url, "smtp://example.com");
-        assert_eq!(mail_config.mail.sender.to_string(), "User <sender@example.com>");
+        assert_eq!(mail_config, MailConfig::<MockMailer>::new());
     }
 }
