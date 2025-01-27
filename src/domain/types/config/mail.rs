@@ -12,7 +12,7 @@ pub struct MailConfig<M> {
 }
 
 
-impl<M: Mailer + TryFrom<Mail>> PartialEq  for MailConfig<M> {
+impl<M> PartialEq  for MailConfig<M> {
     fn eq(&self, other: &Self) -> bool {
         self.mail == other.mail
     }
