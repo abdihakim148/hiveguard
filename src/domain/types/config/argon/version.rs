@@ -37,6 +37,12 @@ impl<'de> Visitor<'de> for VersionVisitor {
     {
         Ok(value.into())
     }
+
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error, {
+        self.visit_u8(v as u8)
+    }
 }
 
 impl<'de> Deserialize<'de> for Version {
