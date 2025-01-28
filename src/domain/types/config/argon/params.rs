@@ -4,9 +4,13 @@ use argon2::Params as ArgonParams;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Params {
+    #[serde(alias = "m_cost")]
     pub memory_cost: u32,
+    #[serde(alias = "t_cost")]
     pub time_cost: u32,
+    #[serde(alias = "p_cost")]
     pub parallelism: u32,
+    #[serde(alias = "output_len")]
     pub output_length: Option<usize>
 }
 
