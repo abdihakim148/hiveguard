@@ -51,9 +51,9 @@ pub trait Secret: Sized {
         // Count the number of delimiters to determine the security level.
         while let Some(byte) = bytes.peek() { 
             if *byte == &Self::DELIMETER {
-                bytes.next();
                 round += 1;
             }
+            bytes.next();
         }
         
         // Call the appropriate method based on the number of delimiters found.
@@ -115,4 +115,12 @@ where
     fn tripple(_key: &str) -> Result<Self, <Self as Secret>::Error> {
         Err("")?
     }
+}
+
+
+#[cfg(test)]
+#[test]
+fn test_secret() {
+    let result = <String as Secret>::process("hello").unwrap();
+    assert_eq!(result, None)
 }
