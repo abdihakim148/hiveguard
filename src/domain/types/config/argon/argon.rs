@@ -168,18 +168,26 @@ mod tests {
     use super::*; // Import the necessary components for testing
     use serde_json::json;
 
+
+    impl Argon {
+        pub fn new() -> Self {
+            let algorithm = Default::default(); // Use default algorithm
+            let version = Default::default(); // Use default version
+            let params: Params = Default::default(); // Use default params
+            PEPPER.set(String::from("test_pepper")).unwrap(); // Set test pepper
+            let pepper = PEPPER.get();
+            let argon2 = Argon::argon2(algorithm, version, params.clone()); // Create Argon2 instance
+            let algorithm = algorithm.into();
+            let version = version.into();
+            let params = params.into();
+            let argon = Argon { algorithm, version, params, pepper, argon2 };
+            argon
+        }
+    }
+
     #[test] // Test function for Argon deserialization
     fn test_argon_deserialization() {
-        let algorithm = Default::default(); // Use default algorithm
-        let version = Default::default(); // Use default version
-        let params: Params = Default::default(); // Use default params
-        PEPPER.set(String::from("test_pepper")).unwrap(); // Set test pepper
-        let pepper = PEPPER.get();
-        let argon2 = Argon::argon2(algorithm, version, params.clone()); // Create Argon2 instance
-        let algorithm = algorithm.into();
-        let version = version.into();
-        let params = params.into();
-        let argon = Argon { algorithm, version, params, pepper, argon2 }; // Construct Argon
+        let argon = Argon::new(); // Construct Argon
 
         let json = serde_json::to_string(&argon).unwrap(); // Serialize Argon to JSON
 
