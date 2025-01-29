@@ -7,10 +7,10 @@ mod domain;
 mod ports;
 
 
-use adaptors::inputs::api::actix::Actix;
+use adaptors::inputs::api::actix::{Actix, Result};
 
 /// Entry point of the application.
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     Actix::start().await
 }
