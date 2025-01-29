@@ -32,3 +32,5 @@ memory = []
 smtp = []
 
 default = ["actix", "memory", "smtp"]
+[badges]
+travis-ci = { repository = "abdihakim148/beekeeper", branch = "main" }
