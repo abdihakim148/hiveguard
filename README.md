@@ -1,5 +1,5 @@
 <div align="center">
-<img src="logo.png">
+    <img src="logo.png" alt="Beekeeper Logo" width="200">
 </div>
 
 <div align="center">
@@ -10,37 +10,55 @@
 
 </div>
 
-
-
-## Overview
+# Beekeeper
 
 Beekeeper is an open-source Authentication, Authorization, and User Management system. It supports both third-party and custom OAuth2.0 and OpenID Connect (OpenIDC) implementations. Built with Rust, it leverages the hexagonal architecture to allow easy swapping of adaptors, databases, and input methods.
 
 ## Features
-- **Security**: This system uses Argon2 to securely hash passwords and PASETO (Platform-Agnostic Security Tokens) for creating and managing secure tokens.
+
+- **Security**: Utilizes Argon2 for password hashing and PASETO for secure token management.
 - **Flexible Architecture**: Hexagonal architecture for easy integration and adaptability.
+- **In-Memory Database**: Currently supports an in-memory database for quick setup and testing.
+- **HTTP API**: Built with Actix for handling HTTP requests.
 
-### Features to be Implemented
+## Planned Features
 
-#### Databases
+### Databases
 - [x] In-Memory database support
 - [ ] SQLite database support
 - [ ] MongoDB database support
 - [ ] DynamoDB database support
 - [ ] PostgreSQL database support
 
-#### Domain
+### Domain
 - [ ] Third-party OAuth2.0 and OpenID Connect integration
 - [ ] Own OAuth2.0 and OpenID Connect implementation
 - [ ] Email validation
 - [ ] Logging
+- [ ] Organization Management
+- [ ] Service Management
+- [ ] Comprehensive Roles and Permissions Strategy
 
-#### Interface
+### Interface
 - [x] HTTP API with Actix
 - [ ] GRPC input method
 - [ ] Lambda input method
 - [ ] YAML configuration support
-- [ ] JSON configuration support
+- [x] JSON configuration support
+
+## Installation
+
+To install Beekeeper, ensure you have Rust installed on your system. Clone the repository and build the project using Cargo:
+
+```bash
+git clone https://github.com/abdihakim148/beekeeper.git
+cd beekeeper
+cargo build --release
+```
+
+## Getting Started
+
+To get started with Beekeeper, clone the repository and follow the setup instructions in the [documentation](docs/SETUP.md).
 
 ## Contributing
 
