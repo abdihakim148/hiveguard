@@ -9,7 +9,7 @@ pub trait Config: Sized {
     type Error;
     type Input;
     /// This would be the default path for the configuration file.
-    const PATH: &'static str = "config.yaml";
+    const PATH: &'static str = "config.json";
     /// Loads the configuration from a specified path or use the default path.
     ///
     /// # Arguments
