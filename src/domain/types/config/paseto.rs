@@ -9,7 +9,7 @@ use super::super::PasetoKeys; // Importing PasetoKeys for key management
 const DEFAULT_PATH: &'static str = "paseto_keys.json";
 
 
-#[derive(Debug, Clone, Serialize, PartialEq)] // Paseto struct with serialization capabilities
+#[derive(Debug, Clone, PartialEq)] // Paseto struct with serialization capabilities
 pub struct Paseto {
     /// File path for storing keys
     path: String,
@@ -57,6 +57,15 @@ impl Paseto {
     }
 }
 
+
+impl Serialize for Paseto {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        serializer.serialize_str(&self.path)
+    }
+}
+
 /// This function panics incase the data could not be written to the file
 impl Default for Paseto {
     /// Provides a default instance of Paseto.
@@ -89,47 +98,7 @@ impl<'de> Deserialize<'de> for Paseto {
     where
         D: serde::Deserializer<'de>,
     {
-        struct PasetoVisitor; // Visitor for deserializing Paseto
-
-        impl<'de> serde::de::Visitor<'de> for PasetoVisitor {
-            type Value = Paseto;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                // Describe what the visitor expects
-                formatter.write_str("struct Paseto")
-            }
-
-            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                let mut path = String::from(DEFAULT_PATH); // Default path for keys
-
-                while let Some(key) = map.next_key()? {
-                    match key {
-                        "path" => {
-                            path = map.next_value()?;
-                        }
-                        _ => {
-                            let _: serde::de::IgnoredAny = map.next_value()?;
-                        }
-                    }
-                }
-
-                let paseto = match Paseto::load(&path) {
-                    // Attempt to load Paseto from file
-                    Ok(paseto) => paseto,
-                    _ => {
-                        let keys = PasetoKeys::default();
-                        let paseto = Paseto { path, keys }; // Create new Paseto instance
-                        paseto.save().map_err(serde::de::Error::custom)?; // Save new keys
-                        paseto
-                    }
-                };
-                Ok(paseto)
-            }
-        }
-
-        deserializer.deserialize_struct("Paseto", &["path", "keys"], PasetoVisitor)
+        let path = String::deserialize(deserializer)?;
+        Ok(Paseto::load(&path).unwrap_or_default())
     }
 }
