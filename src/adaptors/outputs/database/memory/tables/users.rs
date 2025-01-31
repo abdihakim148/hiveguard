@@ -1,4 +1,4 @@
-use crate::domain::types::{User, Value, EmailAddress, Either};
+use crate::domain::types::{User, Value, EmailAddress, Either, Key};
 use crate::ports::outputs::database::{Table, Item}; // Importing necessary traits and types
 use std::collections::HashMap;
 use super::super::Error;
@@ -127,6 +127,12 @@ impl Table for Users {
                 }
             }
         }
+    }
+
+    /// This function does nothing and whill always return None.
+    /// NOT TO BE USED. IMPLEMENTED JUST FOR FORMALITY.
+    async fn get_many(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error> {
+        Ok(None)
     }
 
 
