@@ -52,8 +52,9 @@ impl Users {
 
 
 
-impl Table<User> for Users {
+impl Table for Users {
     type Map = HashMap<String, Value>;
+    type Item = User;
     type Error = Error;
 
     const NAME: &'static str = "users";

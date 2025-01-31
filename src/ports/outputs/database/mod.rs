@@ -9,7 +9,7 @@ pub use item::Item;
 
 /// A trait representing a database with user-related operations.
 pub trait Database: Sized {
-    type Users: Table<User>;
+    type Users: Table;
     type Config;
     type Error: ErrorTrait + Into<Error>;
     async fn new(config: Self::Config) -> Result<Self, Self::Error>;
