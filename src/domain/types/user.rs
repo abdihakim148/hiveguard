@@ -31,6 +31,7 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 
 
 impl Item for User {
+    const NAME: &'static str = "user";
     type PK = ObjectId;
     type SK = EmailAddress;
 }
