@@ -1,7 +1,7 @@
+use crate::domain::types::{Either, Key};
 use crate::ports::{ErrorTrait, Error};
-use crate::domain::types::Either;
-use super::Item;
 use std::hash::Hash;
+use super::Item;
 
 /// A trait representing a database table.
 pub trait Table: Sized {
@@ -43,8 +43,30 @@ pub trait Table: Sized {
     async fn get(&self, key: Either<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error>;
 
 
+    /// Reads multiple items by a composite key from the table.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - A composite key consisting of primary and secondary keys.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Option<Vec<impl Iterator<Item = Self::Item>>>>` - Returns an iterator over the items if found, otherwise `None`, wrapped in a `Result`.
+    async fn get_many(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error>;
+
+
+    /// Partially updates an existing item in the table.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - A reference to the ID of the item to be patched.
+    /// * `map` - A map of fields and values to update.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Item>` - Returns the updated item wrapped in a `Result`.
     async fn patch(&self, id: &<Self::Item as Item>::PK, map: Self::Map) -> Result<Self::Item, Self::Error>;
-    /// Updates an existing item in the table.
+    /// Replaces an existing item in the table with a new one.
     ///
     /// # Arguments
     ///
@@ -52,7 +74,7 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Item::PK>` - Returns the ID of the updated item wrapped in a `Result`.
+    /// * `Result<()>` - Returns an empty result on success.
     async fn update(&self, item: &Self::Item) -> Result<(), Self::Error>;
     /// Deletes an item by ID from the table.
     ///
@@ -62,6 +84,6 @@ pub trait Table: Sized {
     ///
     /// # Returns
     ///
-    /// * `Result<Item::PK>` - Returns the ID of the deleted item wrapped in a `Result`.
+    /// * `Result<()>` - Returns an empty result on success.
     async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error>;
 }
