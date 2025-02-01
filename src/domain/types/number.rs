@@ -1,7 +1,7 @@
+use serde::{Serialize, Deserialize};
+use crate::domain::types::Error;
 use std::convert::TryFrom; // Importing TryFrom trait for conversions
 use std::fmt;
-use crate::domain::types::{Error, ConversionError, Type};
-use serde::{Serialize, Deserialize};
 
 /// Enum representing various numerical types.
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ macro_rules! impl_from_for_number {
             }
 
             impl TryFrom<Number> for $t {
-                type Error = Error<Number>;
+                type Error = Error;
 
                 fn try_from(number: Number) -> Result<Self, Self::Error> {
                     match number {
@@ -52,7 +52,7 @@ macro_rules! impl_from_for_number {
                         Number::I128(value) if value >= <$t>::MIN as i128 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= <$t>::MIN as f32 && value <= <$t>::MAX as f32 => Ok(value as $t),
                         Number::F64(value) if value >= <$t>::MIN as f64 && value <= <$t>::MAX as f64 => Ok(value as $t),
-                        _ => Err(Error::<Number>::ConversionError(ConversionError::new(Type::from(&number), Type::$variant, number))),
+                        _ => Err(Error::Custom(Box::new("integer out of range".into()))),
                     }
                 }
             }
@@ -94,27 +94,6 @@ impl fmt::Display for Number {
             Number::I128(value) => write!(f, "{}", value),
             Number::F32(value) => write!(f, "{}", value),
             Number::F64(value) => write!(f, "{}", value),
-        }
-    }
-}
-
-impl From<&Number> for Type {
-    fn from(number: &Number) -> Self {
-        match number {
-            Number::U8(_) => Type::U8,
-            Number::I8(_) => Type::I8,
-            Number::U16(_) => Type::U16,
-            Number::I16(_) => Type::I16,
-            Number::U32(_) => Type::U32,
-            Number::I32(_) => Type::I32,
-            Number::U64(_) => Type::U64,
-            Number::I64(_) => Type::I64,
-            Number::Usize(_) => Type::Usize,
-            Number::Isize(_) => Type::Isize,
-            Number::U128(_) => Type::U128,
-            Number::I128(_) => Type::I128,
-            Number::F32(_) => Type::F32,
-            Number::F64(_) => Type::F64,
         }
     }
 }
