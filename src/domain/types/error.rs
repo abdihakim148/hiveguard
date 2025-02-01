@@ -15,8 +15,9 @@ use serde::Serialize;
 use std::any::TypeId;
 use Error::*;
 
-
+#[cfg(feature = "http")]
 pub trait ErrorTrait: ResponseError + StdError + Display + Debug {}
+#[cfg(feature = "http")]
 impl<T: ResponseError + StdError + Serialize> ErrorTrait for T {}
 
 

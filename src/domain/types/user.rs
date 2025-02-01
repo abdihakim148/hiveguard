@@ -1,3 +1,4 @@
+#[cfg(feature = "http")]
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
 use serde::{Deserialize, Serialize};
@@ -25,7 +26,7 @@ pub struct User {
     pub password: String,
 }
 
-
+#[cfg(feature = "http")]
 impl Responder for User {
     type Body = <Json<Self> as Responder>::Body;
     fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
