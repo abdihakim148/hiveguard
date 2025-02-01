@@ -5,7 +5,7 @@ use thiserror::Error as ThisError;
 use serde_json::Error as JsonError;
 use serde::ser::Error as SerError;
 use std::io::ErrorKind;
-#[cfg(feature = "actix")]
+#[cfg(feature = "http")]
 use actix_web::ResponseError;
 
 
@@ -22,7 +22,7 @@ impl Error {
     }
 }
 
-#[cfg(feature = "actix")]
+#[cfg(feature = "http")]
 impl ResponseError for Error {
     fn status_code(&self) -> actix_web::http::StatusCode {
         self.0.status_code()
@@ -33,7 +33,7 @@ impl ResponseError for Error {
     }
 }
 
-#[cfg(feature = "actix")]
+#[cfg(feature = "http")]
 impl From<JsonError> for Error {
     fn from(err: JsonError) -> Self {
         if let Some(kind) = err.io_error_kind() {

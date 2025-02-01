@@ -27,10 +27,10 @@ mockall = "0.13.0"
 
 
 [features]
-actix = []
+http = []
 memory = []
 smtp = []
 
-default = ["actix", "memory", "smtp"]
+default = ["http", "memory", "smtp"]
 [badges]
 travis-ci = { repository = "abdihakim148/beekeeper", branch = "main" }

@@ -2,7 +2,7 @@ use crate::ports::{ErrorTrait, Error as GlobalError};
 use thiserror::Error as ThisError;
 use crate::domain::types::Error as DomainError;
 use std::sync::PoisonError;
-#[cfg(feature = "actix")]
+#[cfg(feature = "http")]
 use actix_web::{ResponseError, http::StatusCode, body::BoxBody, HttpResponse, HttpResponseBuilder as ResponseBuilder};
 
 
@@ -21,7 +21,7 @@ pub enum Error {
 }
 
 
-#[cfg(feature = "actix")]
+#[cfg(feature = "http")]
 impl ResponseError for Error {
     fn status_code(&self) -> StatusCode {
         match self {
