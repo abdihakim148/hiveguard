@@ -4,7 +4,7 @@ use crate::domain::types::{ErrorTrait, Error};
 pub trait Mailer: Sized {
     type Config;
     type Mail;
-    type Error: ErrorTrait + Into<Error>;
+    type Error: Into<Error>;
 
     /// Creates a new instance of the mailer with the given configuration.
     ///
