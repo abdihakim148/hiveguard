@@ -3,10 +3,21 @@ use crate::ports::outputs::mailer::Mailer;
 use crate::domain::types::Mail;
 
 
-#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct MailConfig<M> {
     mail: Mail,
     mailer: M,
+}
+
+
+impl<M> MailConfig<M>
+where 
+    M: Mailer + TryFrom<Mail>,
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
+{
+    pub fn mailer(&self) -> &M {
+        &self.mailer
+    }
 }
 
 

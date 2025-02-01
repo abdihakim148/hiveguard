@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 
 
 
-#[derive(Debug, Clone)]
+
 pub struct Config<DB, M> {
     name: String,
     domain: String,
@@ -38,8 +38,8 @@ where
         &self.paseto
     }
 
-    pub fn mailer(&self) -> &MailConfig<M> {
-        &self.mailer
+    pub fn mailer(&self) -> &M {
+        &self.mailer.mailer()
     }
 
     fn load_sync(path: Option<&str>, input: <Self as ConfigTrait>::Input) -> Result<Self, <Self as ConfigTrait>::Error> {
