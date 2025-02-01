@@ -1,3 +1,4 @@
+use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
 use serde::{Deserialize, Serialize};
 use bson::oid::ObjectId;
@@ -22,6 +23,21 @@ pub struct User {
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
+}
+
+
+impl Responder for User {
+    type Body = <Json<Self> as Responder>::Body;
+    fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
+        match req.method() {
+            &Method::POST => {
+                let mut res = Json(self).respond_to(req);
+                *res.status_mut() = StatusCode::CREATED;
+                res
+            },
+            _ => Json(self).respond_to(req)
+        }
+    }
 }
 
 
