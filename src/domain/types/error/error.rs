@@ -52,6 +52,21 @@ impl Error {
             Custom(err) => String::new()
         }
     }
+
+    fn set_field(self, field: &'static str) -> Self {
+        let field = Some(field);
+        match self {
+            ConversionError(expected, found, _, status) => ConversionError(expected, found, field, status),
+            _ => self
+        }
+    }
+
+    fn set_status(self, status: u16) -> Self {
+        match self {
+            ConversionError(expected, found, field, _) => ConversionError(expected, found, field, status),
+            _ => self
+        }
+    }
 }
 
 
