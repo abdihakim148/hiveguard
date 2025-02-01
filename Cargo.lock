@@ -396,7 +396,6 @@ dependencies = [
  "static_init",
  "thiserror",
  "tokio",
- "uuid",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
-use super::{Uuid, Id, Value};
+use super::{Id, Value};
 use chrono::{Utc, DateTime};
 
 

@@ -1,4 +1,4 @@
-use crate::domain::types::{ErrorTrait, Error};
+use crate::domain::types::Error;
 
 
 pub trait Mailer: Sized {

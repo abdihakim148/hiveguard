@@ -1,6 +1,5 @@
 use crate::domain::types::{ErrorTrait, Error};
 use crate::domain::types::{Either, Key};
-use std::hash::Hash;
 use super::Item;
 
 /// A trait representing a database table.

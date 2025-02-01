@@ -1,7 +1,6 @@
 use lettre::{message::{Mailbox, Message, SinglePart}, transport::smtp::PoolConfig, AsyncSmtpTransport, Tokio1Executor, AsyncTransport};
 use crate::ports::outputs::mailer::Mailer;
-use crate::domain::types::{Error, Value};
-use serde::{Serialize, Deserialize};
+use crate::domain::types::Error;
 use crate::domain::types::Mail;
 
 

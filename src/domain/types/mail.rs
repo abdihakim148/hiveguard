@@ -27,12 +27,6 @@ impl<'de> Deserialize<'de> for Mail {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        struct MailData {
-            credentials: Option<Credentials>,
-            url: String,
-            sender: Mailbox,
-        }
 
         struct MailVisitor;
 

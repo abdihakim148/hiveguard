@@ -1,5 +1,5 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
-use crate::{domain, ports::inputs::config::Config as ConfigTrait};
+use crate::ports::inputs::config::Config as ConfigTrait;
 use super::{argon::Argon, Paseto, mail::MailConfig};
 use crate::ports::outputs::database::Database;
 use crate::ports::outputs::mailer::Mailer;

@@ -1,4 +1,4 @@
-use actix_web::{get, post, web::{Data, Json}, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode, HttpResponse};
+use actix_web::{get, post, web::{Data, Json}, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode};
 use crate::adaptors::outputs::database::memory::Memory;
 use crate::adaptors::outputs::mailer::smtp::SmtpMailer;
 use crate::ports::inputs::config::Config as Conf;
@@ -7,7 +7,6 @@ use crate::domain::services::Registration;
 use crate::domain::types::{User, Config};
 use std::error::Error as StdError;
 use crate::domain::types::Error;
-use serde_json::to_string;
 use std::sync::Arc;
 
 

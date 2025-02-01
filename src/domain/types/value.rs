@@ -156,8 +156,8 @@ impl From<&Value> for TypeId {
             Value::Bool(_) => TypeId::of::<bool>(),
             Value::Number(number) => number.into(),
             Value::String(_) => TypeId::of::<String>(),
-            Value::Object(map) => TypeId::of::<HashMap<String, Value>>(), 
-            Value::Vec(array) => TypeId::of::<Vec<Value>>(),
+            Value::Object(_) => TypeId::of::<HashMap<String, Value>>(), 
+            Value::Vec(_) => TypeId::of::<Vec<Value>>(),
         }
     }
 }

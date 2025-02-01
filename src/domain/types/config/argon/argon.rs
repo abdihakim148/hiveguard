@@ -121,7 +121,7 @@ impl<'de> Deserialize<'de> for Argon {
                     // Conditionally set the PEPPER based on the build type
                     Some(value) => { // If pepper is provided
                         #[cfg(test)] // In test builds, set without error handling
-                        PEPPER.set(value);
+                        let _ = PEPPER.set(value);
                         #[cfg(not(test))] // In non-test builds, handle potential errors
                         PEPPER.set(value).map_err(de::Error::custom)?
                     },
@@ -166,7 +166,6 @@ impl PasswordHasher for Argon {
 #[cfg(test)]
 mod tests {
     use super::*; // Import the necessary components for testing
-    use serde_json::json;
 
 
     impl Argon {

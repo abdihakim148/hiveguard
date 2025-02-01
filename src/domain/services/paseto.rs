@@ -1,10 +1,10 @@
-use chrono::Utc;
 use rusty_paseto::core::{ImplicitAssertion, PasetoError, Payload, Public, V4};
+use super::super::types::{Error, Token, PasetoKeys};
 use rusty_paseto::core::Paseto as PasetoBuilder;
 use serde::{Serialize, de::DeserializeOwned};
-use super::super::types::{Error, Token, PasetoKeys, Value};
 use rusty_paseto::core::Footer;
 use rusty_paseto::core::Key;
+use chrono::Utc;
 
 
 type Result<T> = std::result::Result<T, Error>;

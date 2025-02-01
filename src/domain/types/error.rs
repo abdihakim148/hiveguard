@@ -1,16 +1,13 @@
 #[cfg(feature = "http")]
-use actix_web::{http::StatusCode, HttpResponse, body::BoxBody};
+use actix_web::{http::StatusCode, HttpResponse, body::BoxBody, error::ResponseError};
 use lettre::address::AddressError as EmailAddressError;
 use argon2::password_hash::errors::Error as HashError;
 use std::fmt::{Display, Formatter, Result, Debug};
-use actix_web::{error::ResponseError, Responder};
 use lettre::transport::smtp::Error as SmtpError;
 use lettre::error::Error as LettreError;
 use rusty_paseto::core::PasetoError;
 use std::error::Error as StdError;
 use std::sync::PoisonError;
-use serde_json::to_string;
-use actix_web::web::Json;
 use serde::Serialize;
 use std::any::TypeId;
 use Error::*;
@@ -45,7 +42,7 @@ impl Error {
             InvalidEmailAddress => String::from("invalid email address"),
             InvalidToken => String::from("invalid token"),
             ExpiredToken => String::from("expired token"),
-            ConversionError(expected, found, field, status, message) => {
+            ConversionError(_, _, field, status, message) => {
                 if *status >= 500u16 {
                     return String::from("internal server Error")
                 }
@@ -60,7 +57,7 @@ impl Error {
                 }
                 String::from("invalid data format")
             },
-            Custom(err) => String::new()
+            Custom(_) => String::new()
         }
     }
 
@@ -90,13 +87,13 @@ impl Display for Error {
             InvalidEmailAddress => write!(f, "invalid email address"),
             InvalidToken => write!(f, "invalid token"),
             ExpiredToken => write!(f, "expired token"),
-            ConversionError(expected, found, field, _status, message) => {
+            ConversionError(expected, found, field, _status, _) => {
                 match field {
                     Some(field) => write!(f, "expected {:?} instead got {:?} for field `{}`", expected, found, field),
                     None => write!(f, "expected {:?} instead got {:?}", expected, found),
                 }
             },
-            Custom(err) => Display::fmt(&self, f)
+            Custom(err) => Display::fmt(err, f)
         }
     }
 }
@@ -147,8 +144,7 @@ impl ResponseError for Error {
 
 impl From<HashError> for Error {
     fn from(err: HashError) -> Self {
-        // Self::Internal(Box::new(err))
-        todo!()
+        Self::Internal(err.into())
     }
 }
 

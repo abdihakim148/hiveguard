@@ -1,8 +1,6 @@
-use serde::{Serialize, Deserialize, Deserializer, de::{self, Visitor, MapAccess}};
+use serde::{Serialize, Deserialize, Deserializer, de};
 use crate::ports::outputs::mailer::Mailer;
-use crate::domain::types::{Mail, Error};
-use std::marker::PhantomData;
-use std::fmt;
+use crate::domain::types::Mail;
 
 
 #[derive(Debug, Clone)]
@@ -65,7 +63,7 @@ where
 mod tests {
     use super::*;
     use serde_json;
-    use crate::domain::types::Mail;
+    use crate::domain::types::{Mail, Error};
     use crate::ports::outputs::mailer::Mailer;
     use std::convert::TryFrom;
 
@@ -77,11 +75,11 @@ mod tests {
         type Mail = ();
         type Error = Error;
 
-        async fn new(config: Self::Config) -> std::result::Result<Self, Self::Error> {
+        async fn new(_: Self::Config) -> std::result::Result<Self, Self::Error> {
             Ok(MockMailer)
         }
 
-        async fn send(&self, mail: Self::Mail) -> std::result::Result<(), Self::Error> {
+        async fn send(&self, _: Self::Mail) -> std::result::Result<(), Self::Error> {
             Ok(())
         }
     }
@@ -89,7 +87,7 @@ mod tests {
     impl TryFrom<Mail> for MockMailer {
         type Error = &'static str;
 
-        fn try_from(_mail: Mail) -> std::result::Result<Self, Self::Error> {
+        fn try_from(_: Mail) -> std::result::Result<Self, Self::Error> {
             Ok(MockMailer)
         }
     }
