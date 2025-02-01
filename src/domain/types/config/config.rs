@@ -24,7 +24,7 @@ impl<DB, M> Config<DB, M>
 where 
     DB: Database + Default + Serialize + DeserializeOwned,
     M: Mailer + TryFrom<Mail>,
-    M::Error: std::fmt::Display + std::fmt::Debug
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     pub fn db(&self) -> &DB {
         &self.database
@@ -88,7 +88,7 @@ impl<DB: Database + Default + Serialize + DeserializeOwned, M> ConfigTrait for C
 where 
     DB: Database + Default + Serialize + DeserializeOwned,
     M: Mailer + TryFrom<Mail>,
-    M::Error: std::fmt::Display + std::fmt::Debug
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     type Error = Box<dyn std::error::Error + 'static>;
     type Input = ();
@@ -106,7 +106,7 @@ where
 
 impl<DB: Default + Database, M: Mailer + TryFrom<Mail>> Default for Config<DB, M> 
 where 
-    M::Error: std::fmt::Display + std::fmt::Debug
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     fn default() -> Self {
         let name = Default::default();
@@ -125,7 +125,7 @@ impl<'de, DB, M> Deserialize<'de> for Config<DB, M>
 where
     DB: Database + Default + Deserialize<'de>,
     M: Mailer + TryFrom<Mail>,
-    M::Error: std::fmt::Display + std::fmt::Debug,
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -139,7 +139,7 @@ where
         where
             DB: Database + Default + Deserialize<'de>,
             M: Mailer + TryFrom<Mail>,
-            M::Error: std::fmt::Display + std::fmt::Debug,
+            <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
         {
             type Value = Config<DB, M>;
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

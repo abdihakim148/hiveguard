@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use crate::domain::types::Error;
 use std::convert::TryFrom; // Importing TryFrom trait for conversions
+use std::any::TypeId;
 use std::fmt;
 
 /// Enum representing various numerical types.
@@ -52,7 +53,7 @@ macro_rules! impl_from_for_number {
                         Number::I128(value) if value >= <$t>::MIN as i128 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= <$t>::MIN as f32 && value <= <$t>::MAX as f32 => Ok(value as $t),
                         Number::F64(value) if value >= <$t>::MIN as f64 && value <= <$t>::MAX as f64 => Ok(value as $t),
-                        _ => Err(Error::Custom(Box::new("integer out of range".into()))),
+                        _ => Err(Error::ConversionError(TypeId::of::<$t>(), From::from(&number), None, 400, Some("integer out of range"))),
                     }
                 }
             }
@@ -97,6 +98,31 @@ impl fmt::Display for Number {
         }
     }
 }
+
+
+impl From<&Number> for TypeId {
+    fn from(number: &Number) -> Self {
+        match number {
+            Number::U8(_) => TypeId::of::<u8>(),
+            Number::I8(_) => TypeId::of::<i8>(),
+            Number::U16(_) => TypeId::of::<u16>(),
+            Number::I16(_) => TypeId::of::<i16>(),
+            Number::U32(_) => TypeId::of::<u32>(),
+            Number::I32(_) => TypeId::of::<i32>(),
+            Number::U64(_) => TypeId::of::<u64>(),
+            Number::I64(_) => TypeId::of::<i64>(),
+            Number::Usize(_) => TypeId::of::<usize>(),
+            Number::Isize(_) => TypeId::of::<isize>(),
+            Number::U128(_) => TypeId::of::<u128>(),
+            Number::I128(_) => TypeId::of::<i128>(),
+            Number::F32(_) => TypeId::of::<f32>(),
+            Number::F64(_) => TypeId::of::<f64>(),
+        }
+    }
+}
+
+
+
 
 
 #[cfg(test)]

@@ -1,12 +1,12 @@
 /// Module for database tables.
 mod tables;
-mod error;
+// mod error;
 
 use crate::ports::outputs::database::Database;
 use crate::ports::outputs::database::Table;
 use serde::{Serialize, Deserialize};
+use crate::domain::types::Error;
 pub use tables::*;
-pub use error::*;
 
 /// A struct representing an in-memory database.
 /// A struct representing an in-memory database.

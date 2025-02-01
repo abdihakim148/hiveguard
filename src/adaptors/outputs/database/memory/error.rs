@@ -16,8 +16,6 @@ pub enum Error {
     NotFound(&'static str),
     #[error("data inconsistency")]
     InconsistentData,
-    #[error("{0}")]
-    New(Box<dyn ErrorTrait>)
 }
 
 
@@ -28,7 +26,6 @@ impl ResponseError for Error {
             Self::LockPoisoned | Self::InconsistentData => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UserWithEmailExists => StatusCode::CONFLICT,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::New(err) => err.status_code(),
         }
     }
 
@@ -39,7 +36,6 @@ impl ResponseError for Error {
         let body = match self {
             Self::LockPoisoned | Self::InconsistentData => BoxBody::new(format!("{{\"error\": \"Internal Server Error\"}}",)),
             Self::NotFound(_) | Self::UserWithEmailExists => BoxBody::new(format!("{{\"error\": \"{self}\"}}")),
-            Self::New(err) => err.error_response().into_body()
         };
         builder.body(body)
     }

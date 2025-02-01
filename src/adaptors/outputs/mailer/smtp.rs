@@ -3,7 +3,6 @@ use crate::ports::outputs::mailer::Mailer;
 use crate::domain::types::{Error, Value};
 use serde::{Serialize, Deserialize};
 use crate::domain::types::Mail;
-use crate::ports::Result;
 
 
 type Client = AsyncSmtpTransport<Tokio1Executor>;
@@ -17,12 +16,13 @@ impl Mailer for SmtpMailer {
     type Config = Mail;
     /// sender, receiver, subject, body
     type Mail = (Mailbox, Mailbox, String, String);
+    type Error = Error;
 
-    async fn new(mail: Self::Config) -> Result<Self> {
+    async fn new(mail: Self::Config) -> std::result::Result<Self, Self::Error> {
         Ok(mail.try_into()?)
     }
 
-    async fn send(&self, mail: Self::Mail) -> Result<()> {
+    async fn send(&self, mail: Self::Mail) -> std::result::Result<(), Self::Error> {
         let sender = mail.0;
         let receiver = mail.1;
         let subject = mail.2;

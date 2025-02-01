@@ -1,8 +1,9 @@
-use crate::domain::types::{Error, Value, ConversionError, Type};
+use crate::domain::types::{Error, Value};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self, MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 use lettre::address::Address;
+use std::any::TypeId;
 use std::fmt;
 
 /// An enum representing the state of an email.
@@ -23,7 +24,7 @@ impl EmailAddress {
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
     pub fn new(email: &str) -> Result<Self, Error> {
-        let address: Address = email.parse().map_err(Error::<Value>::EmailAddressError)?;
+        let address: Address = email.parse().map_err(|_| Error::ConversionError(TypeId::of::<Address>(), TypeId::of::<()>(), None, 400, Some("invalid email format")))?;
         Ok(EmailAddress::New(address))
     }
 }
@@ -112,12 +113,12 @@ impl<'de> Deserialize<'de> for EmailAddress {
 
 
 impl TryFrom<Value> for EmailAddress {
-    type Error = Error<Value>;
+    type Error = Error;
 
     fn try_from(mut value: Value) -> Result<Self, Self::Error> {
         match &mut value {
             Value::String(string) => {
-                let address: Address = string.parse().map_err(Error::<Value>::EmailAddressError)?;
+                let address: Address = string.parse()?;
                 Ok(EmailAddress::New(address))
             }
             Value::Object(ref mut map) => {
@@ -127,15 +128,15 @@ impl TryFrom<Value> for EmailAddress {
                         None => false,
                     };
                     let email_str: String = email.try_into()?;
-                    let address: Address = email_str.parse().map_err(Error::<Value>::EmailAddressError)?;
+                    let address: Address = email_str.parse()?;
                     return match verified {
                         true => Ok(EmailAddress::Verified(address)),
                         false => Ok(EmailAddress::New(address)),
                     };
                 }
-                Err(Error::ConversionError(ConversionError::new(Type::Object(Box::new((Type::String, Type::Unknown))), Type::New(std::any::TypeId::of::<EmailAddress>()), value)))
+                Err(Error::ConversionError(TypeId::of::<EmailAddress>(), TypeId::from(&value), None, 400, Some("invalid data format")))
             }
-            _ => Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<EmailAddress>()), value))),
+            _ => Err(Error::ConversionError(TypeId::of::<EmailAddress>(), TypeId::from(&value), None, 400, Some("invalid data format"))),
         }
     }
 }

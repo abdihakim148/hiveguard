@@ -1,7 +1,7 @@
 use crate::domain::types::{User, Value, EmailAddress, Either, Key};
 use crate::ports::outputs::database::{Table, Item}; // Importing necessary traits and types
 use std::collections::HashMap;
-use super::super::Error;
+use crate::domain::types::Error;
 use bson::oid::ObjectId;
 use std::sync::RwLock;
 
@@ -27,7 +27,7 @@ impl Users {
     ///
     /// * `Result<bool>` - Returns `Ok(true)` if the email exists, `Ok(false)` otherwise.
     async fn exists(&self, email: &EmailAddress) -> Result<bool, Error> {
-        let emails = self.emails.read().map_err(|_| Error::LockPoisoned)?;
+        let emails = self.emails.read()?;
         Ok(emails.contains_key(email))
     }
 
@@ -42,7 +42,7 @@ impl Users {
     ///
     /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
     async fn email(&self, id: &ObjectId) -> Result<Option<EmailAddress>, Error> {
-        let users = self.users.read().map_err(|_| Error::LockPoisoned)?;
+        let users = self.users.read()?;
         match users.get(id) {
             None => Ok(None),
             Some(user) => Ok(Some(user.email.clone()))
@@ -83,17 +83,17 @@ impl Table for Users {
     /// * `Result<<User as Item>::PK>` - Returns the ID of the created user wrapped in a `Result`.
     async fn create(&self, user: &User) -> Result<<User as Item>::PK, Self::Error> {
         if self.exists(&user.email).await? {
-            return Err(Error::UserWithEmailExists);
+            return Err(Error::Conflict(User::NAME));
         }
 
         if let Some(existing_email) = self.email(&user.id).await? {
             if existing_email != user.email && self.exists(&user.email).await? {
-                return Err(Error::UserWithEmailExists);
+                return Err(Error::Conflict(User::NAME));
             }
         }
 
-        let mut users = self.users.write().map_err(|_| Error::LockPoisoned)?;
-        let mut emails = self.emails.write().map_err(|_| Error::LockPoisoned)?;
+        let mut users = self.users.write()?;
+        let mut emails = self.emails.write()?;
 
         users.insert(user.id.clone(), user.clone());
         emails.insert(user.email.clone(), user.id.clone());
@@ -113,14 +113,14 @@ impl Table for Users {
     async fn get(&self, key: Either<&<User as Item>::PK, &<User as Item>::SK>) -> Result<Option<User>, Self::Error> {
         match key {
             Either::Left(id) => {
-                let users = self.users.read().map_err(|_| Error::LockPoisoned)?;
+                let users = self.users.read()?;
                 Ok(users.get(id).cloned())
             },
             Either::Right(email) => {
-                let emails = self.emails.read().map_err(|_|Error::LockPoisoned)?;
+                let emails = self.emails.read()?;
                 match emails.get(email) {
                     Some(id) => {
-                        let users = self.users.read().map_err(|_| Error::LockPoisoned)?;
+                        let users = self.users.read()?;
                         Ok(users.get(id).cloned())
                     },
                     None => Ok(None)
@@ -156,7 +156,7 @@ impl Table for Users {
             let email = match map.remove("email") {Some(name) => name.try_into()?, None => user.email};
             let password = match map.remove("password") {Some(name) => name.try_into()?, None => user.password};
             let user = User{id, username, first_name, last_name, email,password};
-            let mut users = self.users.write().map_err(|_| Error::LockPoisoned)?;
+            let mut users = self.users.write()?;
             users.insert(id, user.clone());
             return Ok(user);
         }
@@ -173,12 +173,12 @@ impl Table for Users {
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the updated user wrapped in a `Result`.
     async fn update(&self, user: &User) -> Result<(), Self::Error> {
-        let mut users = self.users.write().map_err(|_| Error::LockPoisoned)?;
-        let mut emails = self.emails.write().map_err(|_| Error::LockPoisoned)?;
+        let mut users = self.users.write()?;
+        let mut emails = self.emails.write()?;
 
         if let Some(id) = emails.get(&user.email) {
             if id != &user.id {
-                return Err(Error::UserWithEmailExists);
+                return Err(Error::Conflict(User::NAME));
             }
         }
 
@@ -201,8 +201,8 @@ impl Table for Users {
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the deleted user wrapped in a `Result`.
     async fn delete(&self, id: &<User as Item>::PK) -> Result<(), Self::Error> {
-        let mut users = self.users.write().map_err(|_| Error::LockPoisoned)?;
-        let mut emails = self.emails.write().map_err(|_| Error::LockPoisoned)?;
+        let mut users = self.users.write()?;
+        let mut emails = self.emails.write()?;
 
         if let Some(user) = users.remove(id) {
             emails.remove(&user.email);

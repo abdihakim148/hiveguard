@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize, Deserializer, de::{self, Visitor, MapAccess}};
 use crate::ports::outputs::mailer::Mailer;
-use crate::domain::types::Mail;
+use crate::domain::types::{Mail, Error};
 use std::marker::PhantomData;
 use std::fmt;
 
@@ -22,7 +22,7 @@ impl<M> PartialEq  for MailConfig<M> {
 impl<M: Mailer + TryFrom<Mail>> Default for MailConfig<M>
 where
     M: Mailer + TryFrom<Mail>,
-    M::Error: std::fmt::Display + std::fmt::Debug,
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     fn default() -> Self {
         let mail = Mail::default();
@@ -45,7 +45,7 @@ impl<M: Mailer + TryFrom<Mail>> Serialize for MailConfig<M> {
 impl<'de, M> Deserialize<'de> for MailConfig<M>
 where
     M: Mailer + TryFrom<Mail>,
-    M::Error: std::fmt::Display,
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -68,7 +68,6 @@ mod tests {
     use crate::domain::types::Mail;
     use crate::ports::outputs::mailer::Mailer;
     use std::convert::TryFrom;
-    use crate::ports::Result;
 
     #[derive(Debug, Clone)]
     pub struct MockMailer;
@@ -76,12 +75,13 @@ mod tests {
     impl Mailer for MockMailer {
         type Config = ();
         type Mail = ();
+        type Error = Error;
 
-        async fn new(_config: Self::Config) -> Result<Self> {
+        async fn new(config: Self::Config) -> std::result::Result<Self, Self::Error> {
             Ok(MockMailer)
         }
 
-        async fn send(&self, _mail: Self::Mail) -> Result<()> {
+        async fn send(&self, mail: Self::Mail) -> std::result::Result<(), Self::Error> {
             Ok(())
         }
     }

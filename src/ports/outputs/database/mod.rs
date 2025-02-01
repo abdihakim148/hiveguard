@@ -2,7 +2,7 @@
 mod table;
 mod item;
 
-use crate::ports::{ErrorTrait, Error};
+use crate::domain::types::{ErrorTrait, Error};
 use crate::domain::types::User;
 pub use table::Table;
 pub use item::Item;

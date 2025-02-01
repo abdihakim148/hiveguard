@@ -1,9 +1,10 @@
-use crate::domain::types::{Error, Type, ConversionError};
+use crate::domain::types::Error;
 use std::convert::{TryFrom, TryInto};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use super::number::Number;
 use bson::oid::ObjectId;
+use std::any::TypeId;
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -59,55 +60,55 @@ impl<T: Into<Value>> From<Vec<T>> for Value {
 }
 
 impl TryFrom<Value> for () {
-    type Error = Error<Value>;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::None = value {
             Ok(())
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<()>()), value)))
+            Err(Error::ConversionError(TypeId::of::<()>(), TypeId::from(&value), None, 400, Some("invalid data format")))
         }
     }
 }
 
 impl TryFrom<Value> for bool {
-    type Error = Error<Value>;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Bool(b) = value {
             Ok(b)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<bool>()), value)))
+            Err(Error::ConversionError(TypeId::of::<bool>(), TypeId::from(&value), None, 400, Some("invalid data format")))
         }
     }
 }
 
 impl TryFrom<Value> for String {
-    type Error = Error<Value>;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::String(s) = value {
             Ok(s)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<String>()), value)))
+            Err(Error::ConversionError(TypeId::of::<String>(), TypeId::from(&value), None, 400, Some("invalid data format")))
         }
     }
 }
 
 impl TryFrom<Value> for HashMap<String, Value> {
-    type Error = Error<Value>;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Object(o) = value {
             Ok(o)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<HashMap<String, Value>>()), value)))
+            Err(Error::ConversionError(TypeId::of::<HashMap<String, Value>>(), TypeId::from(&value), None, 400, Some("invalid data format")))
         }
     }
 }
 
-impl<T: TryFrom<Value, Error = Error<Value>> + 'static> TryFrom<Value> for Vec<T> {
-    type Error = Error<Value>;
+impl<T: TryFrom<Value, Error = Error> + 'static> TryFrom<Value> for Vec<T> {
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Vec(value) = value {
@@ -118,54 +119,45 @@ impl<T: TryFrom<Value, Error = Error<Value>> + 'static> TryFrom<Value> for Vec<T
             }
             Ok(array)
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<Vec<T>>()), value)))
+            Err(Error::ConversionError(TypeId::of::<Vec<T>>(), TypeId::from(&value), None, 400, Some("invalid data format")))
         }
     }
 }
 
 impl TryFrom<Value> for ObjectId {
-    type Error = Error<Value>;
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::String(s) = value {
-            ObjectId::parse_str(&s).map_err(|_| Error::ConversionError(ConversionError::new(Type::String, Type::Unknown, Value::String(s))))
+            ObjectId::parse_str(&s).map_err(|_| Error::ConversionError(TypeId::of::<ObjectId>(), TypeId::of::<()>(), None, 400, Some("invalid id format")))
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<ObjectId>()), value)))
+            Err(Error::ConversionError(TypeId::of::<ObjectId>(), TypeId::of::<()>(), None, 400, Some("invalid id format")))
         }
     }
 }
 
-impl<T: TryFrom<Number, Error = Error<Number>> + 'static> TryFrom<Value> for (T,) {
-    type Error = Error<Value>;
+impl<T: TryFrom<Number, Error = Error> + 'static> TryFrom<Value> for (T,) {
+    type Error = Error;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         if let Value::Number(n) = value {
             Ok((n.try_into()?,))
         } else {
-            Err(Error::ConversionError(ConversionError::new(Type::from(&value), Type::New(std::any::TypeId::of::<(T,)>()), value)))
+            Err(Error::ConversionError(TypeId::of::<T>(), From::from(&value), None, 400, Some("invalid data format")))
         }
     }
 }
 
 
-impl From<&Value> for Type {
+impl From<&Value> for TypeId {
     fn from(value: &Value) -> Self {
         match value {
-            Value::None => Type::Unknown,
-            Value::Bool(_) => Type::Bool,
-            Value::Number(number) => Type::from(number),
-            Value::String(_) => Type::String,
-            Value::Object(map) => {
-                if let Some((_, value)) = map.iter().next() {
-                    Type::Object(Box::new((Type::String, Type::from(value))))
-                }else {
-                    Type::Unknown
-                }
-            }, 
-            Value::Vec(array) => {
-                let ty = if let Some(value) = array.first() {Type::from(value)} else {Type::Unknown};
-                Type::Vec(Box::new(ty))
-            },
+            Value::None => TypeId::of::<Option<()>>(),
+            Value::Bool(_) => TypeId::of::<bool>(),
+            Value::Number(number) => number.into(),
+            Value::String(_) => TypeId::of::<String>(),
+            Value::Object(map) => TypeId::of::<HashMap<String, Value>>(), 
+            Value::Vec(array) => TypeId::of::<Vec<Value>>(),
         }
     }
 }

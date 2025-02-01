@@ -8,6 +8,7 @@ use lettre::transport::smtp::Error as SmtpError;
 use lettre::error::Error as LettreError;
 use rusty_paseto::core::PasetoError;
 use std::error::Error as StdError;
+use std::sync::PoisonError;
 use serde_json::to_string;
 use actix_web::web::Json;
 use serde::Serialize;
@@ -27,8 +28,8 @@ pub enum Error {
     InvalidEmailAddress,
     InvalidToken,
     ExpiredToken,
-    /// expected type, found type, field name, http status code
-    ConversionError(TypeId, TypeId, Option<&'static str>, u16),
+    /// expected type, found type, field name, http status code, custom message
+    ConversionError(TypeId, TypeId, Option<&'static str>, u16, Option<&'static str>),
     #[cfg(feature = "http")]
     Custom(Box<dyn ErrorTrait>)
 }
@@ -43,11 +44,20 @@ impl Error {
             InvalidEmailAddress => String::from("invalid email address"),
             InvalidToken => String::from("invalid token"),
             ExpiredToken => String::from("expired token"),
-            ConversionError(expected, found, field, status) => {
-                match status {
-                    500.. => String::from("internal server Error"),
-                    _ => format!("{self}")
+            ConversionError(expected, found, field, status, message) => {
+                if *status >= 500u16 {
+                    return String::from("internal server Error")
                 }
+                if let Some(message) = message {
+                    if let Some(field) = field {
+                        return format!("{message} for field `{field}`")
+                    }
+                    return String::from(*message)
+                }
+                if let Some(field) = field {
+                    return  format!("invalid data format for field {field}");
+                }
+                String::from("invalid data format")
             },
             Custom(err) => String::new()
         }
@@ -56,14 +66,14 @@ impl Error {
     fn set_field(self, field: &'static str) -> Self {
         let field = Some(field);
         match self {
-            ConversionError(expected, found, _, status) => ConversionError(expected, found, field, status),
+            ConversionError(expected, found, _, status, message) => ConversionError(expected, found, field, status, message),
             _ => self
         }
     }
 
     fn set_status(self, status: u16) -> Self {
         match self {
-            ConversionError(expected, found, field, _) => ConversionError(expected, found, field, status),
+            ConversionError(expected, found, field, _, message) => ConversionError(expected, found, field, status, message),
             _ => self
         }
     }
@@ -79,7 +89,7 @@ impl Display for Error {
             InvalidEmailAddress => write!(f, "invalid email address"),
             InvalidToken => write!(f, "invalid token"),
             ExpiredToken => write!(f, "expired token"),
-            ConversionError(expected, found, field, _status) => {
+            ConversionError(expected, found, field, _status, message) => {
                 match field {
                     Some(field) => write!(f, "expected {:?} instead got {:?} for field `{}`", expected, found, field),
                     None => write!(f, "expected {:?} instead got {:?}", expected, found),
@@ -117,7 +127,7 @@ impl ResponseError for Error {
             InvalidEmailAddress => StatusCode::BAD_REQUEST,
             InvalidToken => StatusCode::UNAUTHORIZED,
             ExpiredToken => StatusCode::UNAUTHORIZED,
-            ConversionError(_, _, _, status) => StatusCode::from_u16(*status).unwrap_or_default(),
+            ConversionError(_, _, _, status, _) => StatusCode::from_u16(*status).unwrap_or_default(),
             Custom(err) => err.status_code()
         }
     }
@@ -172,5 +182,11 @@ impl From<PasetoError> for Error {
 impl From<SmtpError> for Error {
     fn from(err: SmtpError) -> Self {
         Self::Internal(Box::new(err))
+    }
+}
+
+impl<T> From<PoisonError<T>> for Error {
+    fn from(_: PoisonError<T>) -> Self {
+        Internal("lock poison error".into())
     }
 }

@@ -6,12 +6,12 @@ use crate::ports::outputs::database::Database;
 use crate::domain::services::Registration;
 use crate::domain::types::{User, Config};
 use std::error::Error as StdError;
+use crate::domain::types::Error;
 use serde_json::to_string;
-use crate::ports::Error;
 use std::sync::Arc;
 
 
-type Response = std::result::Result<HttpResponse, Error>;
+type Response<T> = std::result::Result<T, Error>;
 #[cfg(feature = "memory")]
 type DB = Memory;
 #[cfg(feature = "smtp")]
@@ -53,11 +53,9 @@ async fn greet() -> impl Responder {
 
 
 #[post("/register")]
-async fn register(user: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response {
+async fn register(user: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
     let table = config.db().users().await?;
     let argon = config.argon();
     let user = user.register(table, argon).await?;
-    let mut builder = ResponseBuilder::new(StatusCode::CREATED);
-    builder.content_type("application/json");
-    Ok(builder.body(to_string(&user)?))
+    Ok(user)
 }
