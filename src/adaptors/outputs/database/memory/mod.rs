@@ -17,7 +17,14 @@ pub struct Memory {
 }
 
 impl Database for Memory {
+    type Verifications = Verifications;
+    type Organisations = Organisations;
+    type Resources = Resources;
+    type Services = Services;
+    type Members = Members;
+    type Scopes = Scopes;
     type Users = Users;
+    type Roles = Roles;
     type Config = ();
     type Error = Error;
 
@@ -26,7 +33,35 @@ impl Database for Memory {
         Ok(Memory { users })
     }
 
+    async fn verifications<'a>(&'a self) -> Result<&'a Self::Verifications, Self::Error> {
+        todo!()
+    }
+
+    async fn organisations<'a>(&'a self) -> Result<&'a Self::Organisations, Self::Error> {
+        todo!()
+    }
+
+    async fn resources<'a>(&'a self) -> Result<&'a Self::Resources, Self::Error> {
+        todo!()
+    }
+
+    async fn services<'a>(&'a self) -> Result<&'a Self::Services, Self::Error> {
+        todo!()
+    }
+
+    async fn members<'a>(&'a self) -> Result<&'a Self::Members, Self::Error> {
+        todo!()
+    }
+
+    async fn scopes<'a>(&'a self) -> Result<&'a Self::Scopes, Self::Error> {
+        todo!()
+    }
+
     async fn users<'a>(&'a self) -> Result<&'a Self::Users, Self::Error> {
         Ok(&self.users)
+    }
+
+    async fn roles<'a>(&'a self) -> Result<&'a Self::Roles, Self::Error> {
+        todo!()
     }
 }
