@@ -66,9 +66,6 @@ impl<'de> Deserialize<'de> for Phone {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        #[serde(field_identifier, rename_all = "lowercase")]
-        enum Field { Phone, Verified }
 
         struct PhoneVisitor;
 
@@ -87,7 +84,7 @@ impl<'de> Deserialize<'de> for Phone {
                 let mut phone_verified = None;
                 while let Some(key) = map.next_key()? {
                     match key {
-                        Field::Phone => {
+                        "phone" => {
                             if phone.is_some() {
                                 return Err(de::Error::duplicate_field("phone"));
                             }
@@ -97,16 +94,19 @@ impl<'de> Deserialize<'de> for Phone {
                             }
                             phone = Some(phone_str);
                         }
-                        Field::Verified => {
+                        "phone_verified" => {
                             if phone_verified.is_some() {
                                 return Err(de::Error::duplicate_field("phone_verified"));
                             }
                             phone_verified = Some(map.next_value()?);
+                        },
+                        _ => {
+                            let _: de::IgnoredAny = map.next_value()?;
                         }
                     }
                 }
                 let phone = phone.ok_or_else(|| de::Error::missing_field("phone"))?;
-                let phone_verified = phone_verified.ok_or_else(|| de::Error::missing_field("phone_verified"))?;
+                let phone_verified = phone_verified.unwrap_or_default();
                 Ok(if phone_verified {
                     Phone::Verified(phone)
                 } else {
