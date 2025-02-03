@@ -4,8 +4,8 @@ use bson::oid::ObjectId;
 use std::str::FromStr;
 
 
-#[derive(Clone, Debug, Deserialize, Default, PartialEq)]
-pub struct Id(ObjectId);
+#[derive(Clone, Debug, Deserialize, Default, PartialEq, Hash, Eq, Copy)]
+pub struct Id(pub ObjectId);
 
 
 
