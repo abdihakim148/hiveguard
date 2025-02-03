@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize, Serializer};
 use std::ops::{Deref, DerefMut};
 use bson::oid::ObjectId;
 use std::str::FromStr;
+use super::Error;
 
 
 #[derive(Clone, Debug, Deserialize, Default, PartialEq, Hash, Eq, Copy)]
@@ -24,9 +25,13 @@ impl DerefMut for Id {
 
 
 impl FromStr for Id {
-    type Err = Box<dyn std::error::Error>;
+    type Err = Error;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(Id(ObjectId::from_str(s)?))
+        let id = match s.parse() {
+            Ok(id) => id,
+            Err(_) => Err(Error::conversion_error(Some("invalid id")))?
+        };
+        Ok(Id(id))
     }
 }
 
