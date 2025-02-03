@@ -1,11 +1,14 @@
 mod organisation;
 mod paseto_keys;
 mod permission;
+mod grant_type;
 mod resource;
+mod service;
 mod number;
 mod either;
 mod member;
 mod config;
+mod scope;
 mod error;
 mod value;
 mod grant;
@@ -18,17 +21,22 @@ mod key;
 mod id;
 
 /// Re-exporting types for external access.
+pub use organisation::*;
 pub use paseto_keys::*;
 pub use permission::*;
+pub use grant_type::*;
 pub use resource::*;
 pub use either::*;
+pub use member::*;
 pub use config::*;
+pub use scope::*;
 pub use error::*;
 pub use value::*;
 pub use grant::*;
 pub use email::*;
 pub use token::*;
 pub use user::*;
+pub use role::*;
 pub use mail::*;
 pub use key::*;
 pub use id::*;
