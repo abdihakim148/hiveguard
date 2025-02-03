@@ -1,5 +1,5 @@
 use crate::domain::types::Error;
-use crate::domain::types::{Either, EmailAddress, Key, User, Value};
+use crate::domain::types::{Either, Contact, Key, User, Value};
 use crate::ports::outputs::database::{Item, Table}; // Importing necessary traits and types
 use bson::oid::ObjectId;
 use std::collections::HashMap;
@@ -8,40 +8,47 @@ use std::sync::RwLock;
 /// A struct representing a collection of users stored in memory.
 #[derive(Debug, Default)]
 pub struct Users {
-    emails: RwLock<HashMap<<User as Item>::SK, <User as Item>::PK>>,
+    contacts: RwLock<HashMap<<User as Item>::SK, <User as Item>::PK>>,
     users: RwLock<HashMap<<User as Item>::PK, User>>,
 }
 
 impl Users {
-    const USER: &'static str = "user";
-    /// Checks if a user with the given email exists.
+    /// Checks if a user with the given contact exists.
     ///
     /// # Arguments
     ///
-    /// * `email` - A string slice that holds the email to check.
+    /// * `contact` - either an contactAddress or a phone number or both
     ///
     /// # Returns
     ///
-    /// * `Result<bool>` - Returns `Ok(true)` if the email exists, `Ok(false)` otherwise.
-    async fn exists(&self, email: &EmailAddress) -> Result<bool, Error> {
-        let emails = self.emails.read()?;
-        Ok(emails.contains_key(email))
+    /// * `Result<bool>` - Returns `Ok(true)` if the contact exists, `Ok(false)` otherwise.
+    async fn exists(&self, contact: &<User as Item>::SK) -> Result<bool, Error> {
+        let contacts = self.contacts.read()?;
+        match contact {
+            Contact::Phone(_) => Ok(contacts.contains_key(contact)),
+            Contact::Email(_) => Ok(contacts.contains_key(contact)),
+            Contact::Both(phone, contact) => {
+                let phone = Contact::Phone(phone.clone());
+                let contact = Contact::Email(contact.clone());
+                Ok(contacts.contains_key(&phone) || contacts.contains_key(&contact))
+            }
+        }
     }
 
-    /// Retrieves the email associated with a given user ID.
+    /// Retrieves the contact associated with a given user ID.
     ///
     /// # Arguments
     ///
-    /// * `id` - A reference to the ID of the user whose email is to be retrieved.
+    /// * `id` - A reference to the ID of the user whose contact is to be retrieved.
     ///
     /// # Returns
     ///
-    /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
-    async fn email(&self, id: &<User as Item>::PK) -> Result<Option<EmailAddress>, Error> {
+    /// * `Result<Option<String>>` - Returns the contact if found, otherwise `None`, wrapped in a `Result`.
+    async fn contact(&self, id: &<User as Item>::PK) -> Result<Option<Contact>, Error> {
         let users = self.users.read()?;
         match users.get(id) {
             None => Ok(None),
-            Some(user) => Ok(Some(user.email.clone())),
+            Some(user) => Ok(Some(user.contact.clone())),
         }
     }
 }
@@ -60,7 +67,7 @@ impl Table for Users {
     /// * `Result<Self>` - Returns a new `Users` instance wrapped in a `Result`.
     async fn new() -> Result<Self, Self::Error> {
         Ok(Users {
-            emails: RwLock::new(HashMap::new()),
+            contacts: RwLock::new(HashMap::new()),
             users: RwLock::new(HashMap::new()),
         })
     }
@@ -75,21 +82,27 @@ impl Table for Users {
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the created user wrapped in a `Result`.
     async fn create(&self, user: &User) -> Result<<User as Item>::PK, Self::Error> {
-        if self.exists(&user.email).await? {
-            return Err(Error::Conflict(User::NAME));
+        if self.exists(&user.contact).await? {
+            return Err(Error::Conflict(Self::Item::NAME));
         }
 
-        if let Some(existing_email) = self.email(&user.id).await? {
-            if existing_email != user.email && self.exists(&user.email).await? {
-                return Err(Error::Conflict(User::NAME));
+        if let Some(existing_contact) = self.contact(&user.id).await? {
+            if existing_contact != user.contact && self.exists(&user.contact).await? {
+                return Err(Error::Conflict(Self::Item::NAME));
             }
         }
 
         let mut users = self.users.write()?;
-        let mut emails = self.emails.write()?;
-
+        let mut contacts = self.contacts.write()?;
         users.insert(user.id.clone(), user.clone());
-        emails.insert(user.email.clone(), user.id.clone());
+        if let Contact::Both(phone, email) = &user.contact {
+            let phone = Contact::Phone(phone.clone());
+            let email = Contact::Email(email.clone());
+            contacts.insert(phone, user.id.clone());
+            contacts.insert(email, user.id.clone());
+        }else {
+            contacts.insert(user.contact.clone(), user.id.clone());
+        }
 
         Ok(user.id)
     }
@@ -112,9 +125,9 @@ impl Table for Users {
                 let users = self.users.read()?;
                 Ok(users.get(id).cloned())
             }
-            Either::Right(email) => {
-                let emails = self.emails.read()?;
-                match emails.get(email) {
+            Either::Right(contact) => {
+                let contacts = self.contacts.read()?;
+                match contacts.get(contact) {
                     Some(id) => {
                         let users = self.users.read()?;
                         Ok(users.get(id).cloned())
@@ -164,9 +177,9 @@ impl Table for Users {
                 Some(name) => name.try_into()?,
                 None => user.last_name,
             };
-            let email = match map.remove("email") {
-                Some(name) => name.try_into()?,
-                None => user.email,
+            let contact = match map.remove("contact") {
+                Some(value) => value.try_into()?,
+                None => user.contact,
             };
             let password = match map.remove("password") {
                 Some(name) => name.try_into()?,
@@ -177,14 +190,14 @@ impl Table for Users {
                 username,
                 first_name,
                 last_name,
-                email,
+                contact,
                 password,
             };
             let mut users = self.users.write()?;
             users.insert(id, user.clone());
             return Ok(user);
         }
-        Err(Error::NotFound(Self::USER))
+        Err(Error::NotFound(Self::Item::NAME))
     }
 
     /// Updates an existing user.
@@ -198,18 +211,18 @@ impl Table for Users {
     /// * `Result<<User as Item>::PK>` - Returns the ID of the updated user wrapped in a `Result`.
     async fn update(&self, user: &User) -> Result<(), Self::Error> {
         let mut users = self.users.write()?;
-        let mut emails = self.emails.write()?;
+        let mut contacts = self.contacts.write()?;
 
-        if let Some(id) = emails.get(&user.email) {
+        if let Some(id) = contacts.get(&user.contact) {
             if id != &user.id {
-                return Err(Error::Conflict(User::NAME));
+                return Err(Error::Conflict(Self::Item::NAME));
             }
         }
 
         if let Some(existing_user) = users.get_mut(&user.id) {
-            emails.remove(&existing_user.email);
+            contacts.remove(&existing_user.contact);
             *existing_user = user.clone();
-            emails.insert(user.email.clone(), user.id.clone());
+            contacts.insert(user.contact.clone(), user.id.clone());
         }
 
         Ok(())
@@ -226,50 +239,57 @@ impl Table for Users {
     /// * `Result<<User as Item>::PK>` - Returns the ID of the deleted user wrapped in a `Result`.
     async fn delete(&self, id: &<User as Item>::PK) -> Result<(), Self::Error> {
         let mut users = self.users.write()?;
-        let mut emails = self.emails.write()?;
+        let mut contacts = self.contacts.write()?;
 
         if let Some(user) = users.remove(id) {
-            emails.remove(&user.email);
+            match user.contact {
+                Contact::Phone(phone) => contacts.remove(&Contact::Phone(phone)),
+                Contact::Email(email) => contacts.remove(&Contact::Email(email)),
+                Contact::Both(phone, email) => {
+                    contacts.remove(&Contact::Email(email));
+                    contacts.remove(&Contact::Phone(phone))
+                }
+            };
             Ok(())
         } else {
-            Err(Error::NotFound(Self::USER))
+            Err(Error::NotFound(Self::Item::NAME))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::types::{Either, EmailAddress, User, Value, Id};
+    use crate::domain::types::{Either, EmailAddress, User, Value, Id, Contact};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
     use super::Users;
     use tokio;
 
     #[tokio::test]
-    async fn test_exists_user_email() {
+    async fn test_exists_user_contact() {
         let users = Users::new().await.unwrap();
         let user = User {
             id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 
-        // Initially, the email should not exist
-        assert_eq!(users.exists(&user.email).await.unwrap(), false);
+        // Initially, the contact should not exist
+        assert_eq!(users.exists(&user.contact).await.unwrap(), false);
 
         // Create the user
         users.create(&user).await.unwrap();
 
-        // Now, the email should exist
-        assert_eq!(users.exists(&user.email).await.unwrap(), true);
+        // Now, the contact should exist
+        assert_eq!(users.exists(&user.contact).await.unwrap(), true);
 
-        // Test with a different email
+        // Test with a different contact
         assert_eq!(
             users
-                .exists(&EmailAddress::new("nonexistent@example.com").unwrap())
+                .exists(&Contact::Email(EmailAddress::new("nonexistent@example.com").unwrap()))
                 .await
                 .unwrap(),
             false
@@ -277,32 +297,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_email_retrieval() {
+    async fn test_contact_retrieval() {
         let users = Users::new().await.unwrap();
         let user = User {
             id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 
-        // Initially, retrieving email by ID should return None
-        assert_eq!(users.email(&user.id).await.unwrap(), None);
+        // Initially, retrieving contact by ID should return None
+        assert_eq!(users.contact(&user.id).await.unwrap(), None);
 
         // Create the user
         users.create(&user).await.unwrap();
 
-        // Now, retrieving email by ID should return the correct email
+        // Now, retrieving contact by ID should return the correct contact
         assert_eq!(
-            users.email(&user.id).await.unwrap(),
-            Some(user.email.clone())
+            users.contact(&user.id).await.unwrap(),
+            Some(user.contact.clone())
         );
 
         // Test with a different ID
         let new_id = Id::default();
-        assert_eq!(users.email(&new_id).await.unwrap(), None);
+        assert_eq!(users.contact(&new_id).await.unwrap(), None);
     }
 
     #[tokio::test]
@@ -313,7 +333,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 
@@ -329,7 +349,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 
@@ -347,7 +367,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 
@@ -361,7 +381,7 @@ mod tests {
             Value::String("updateduser".to_string()),
         );
         changes.insert(
-            "email".to_string(),
+            "contact".to_string(),
             Value::String("updated@example.com".to_string()),
         );
 
@@ -371,8 +391,8 @@ mod tests {
         // Verify the changes
         assert_eq!(patched_user.username, "updateduser");
         assert_eq!(
-            patched_user.email,
-            EmailAddress::new("updated@example.com").unwrap()
+            patched_user.contact,
+            Contact::Email(EmailAddress::new("updated@example.com").unwrap())
         );
     }
 
@@ -384,13 +404,13 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 
         let id = users.create(&user).await.unwrap();
         let key = Either::Left(&id);
-        user.email = EmailAddress::new("newemail@example.com").unwrap();
+        user.contact = Contact::Email(EmailAddress::new("newcontact@example.com").unwrap());
         let update_result = users.update(&user).await;
         assert!(update_result.is_ok());
 
@@ -406,7 +426,7 @@ mod tests {
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
-            email: EmailAddress::new("test@example.com").unwrap(),
+            contact: Contact::Email(EmailAddress::new("test@example.com").unwrap()),
             password: "password".to_string(),
         };
 

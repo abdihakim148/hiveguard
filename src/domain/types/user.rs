@@ -1,4 +1,4 @@
-use super::{EmailAddress, Id};
+use super::{Contact, Id};
 use crate::ports::outputs::database::Item;
 #[cfg(feature = "http")]
 use actix_web::{
@@ -23,7 +23,7 @@ pub struct User {
     pub last_name: String,
     /// The email address of the user.
     #[serde(flatten)]
-    pub email: EmailAddress,
+    pub contact: Contact,
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
@@ -51,5 +51,5 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 impl Item for User {
     const NAME: &'static str = "user";
     type PK = Id;
-    type SK = EmailAddress;
+    type SK = Contact;
 }

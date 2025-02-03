@@ -26,9 +26,9 @@ impl Registration for User {
         let username = self.username.clone();
         let first_name = self.first_name.clone();
         let last_name = self.last_name.clone();
-        let email =self.email.clone();
+        let contact = self.contact.clone();
         let password = self.password.hash(argon2)?;
-        let mut user = Self{id, username, first_name, last_name, email, password};
+        let mut user = Self{id, username, first_name, last_name, contact, password};
         let result = table.create(&user).await;
         user.id = match result {
             Ok(id) => id,
