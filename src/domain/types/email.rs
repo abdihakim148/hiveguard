@@ -38,11 +38,11 @@ impl Serialize for EmailAddress {
         match self {
             EmailAddress::New(email) => {
                 state.serialize_field::<str>("email", email.as_ref())?;
-                state.serialize_field("verified", &false)?;
+                state.serialize_field("email_verified", &false)?;
             },
             EmailAddress::Verified(email) => {
                 state.serialize_field::<str>("email", email.as_ref())?;
-                state.serialize_field("verified", &true)?;
+                state.serialize_field("email_verified", &true)?;
             }
         }
         state.end()
@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
             type Value = EmailAddress;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a string or a map with an email and verified status")
+                formatter.write_str("a string or a map with an email and email_verified status")
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
                 M: MapAccess<'de>,
             {
                 let mut email = None;
-                let mut verified = None;
+                let mut email_verified = None;
                 while let Some(key) = map.next_key()? {
                     match key {
                         "email" => {
@@ -84,11 +84,11 @@ impl<'de> Deserialize<'de> for EmailAddress {
                             }
                             email = Some(map.next_value()?);
                         }
-                        "verified" => {
-                            if verified.is_some() {
-                                return Err(de::Error::duplicate_field("verified"));
+                        "email_verified" => {
+                            if email_verified.is_some() {
+                                return Err(de::Error::duplicate_field("email_verified"));
                             }
-                            verified = Some(map.next_value()?);
+                            email_verified = Some(map.next_value()?);
                         }
                         _ => {
                             let _: de::IgnoredAny = map.next_value()?;
@@ -96,9 +96,9 @@ impl<'de> Deserialize<'de> for EmailAddress {
                     }
                 }
                 let email: String = email.ok_or_else(|| de::Error::missing_field("email"))?;
-                let verified: bool = verified.unwrap_or(false);
+                let email_verified: bool = email_verified.unwrap_or(false);
                 let address: Address = email.parse().map_err(de::Error::custom)?;
-                if verified {
+                if email_verified {
                     Ok(EmailAddress::Verified(address))
                 } else {
                     Ok(EmailAddress::New(address))
@@ -123,13 +123,13 @@ impl TryFrom<Value> for EmailAddress {
             }
             Value::Object(ref mut map) => {
                 if let Some(email) = map.remove("email") {
-                    let verified = match map.remove("verified") {
+                    let email_verified = match map.remove("email_verified") {
                         Some(value) => value.try_into()?,
                         None => false,
                     };
                     let email_str: String = email.try_into()?;
                     let address: Address = email_str.parse()?;
-                    return match verified {
+                    return match email_verified {
                         true => Ok(EmailAddress::Verified(address)),
                         false => Ok(EmailAddress::New(address)),
                     };
@@ -174,14 +174,14 @@ mod tests {
     fn test_serialize_new_email() {
         let email = EmailAddress::new("test@example.com").unwrap();
         let serialized = serde_json::to_string(&email).unwrap();
-        assert_eq!(serialized, "{\"email\":\"test@example.com\",\"verified\":false}");
+        assert_eq!(serialized, "{\"email\":\"test@example.com\",\"email_verified\":false}");
     }
 
     #[test]
-    fn test_serialize_verified_email() {
-        let email = EmailAddress::Verified("verified@example.com".parse().unwrap());
+    fn test_serialize_email_verified_email() {
+        let email = EmailAddress::Verified("email_verified@example.com".parse().unwrap());
         let serialized = serde_json::to_string(&email).unwrap();
-        assert_eq!(serialized, "{\"email\":\"verified@example.com\",\"verified\":true}");
+        assert_eq!(serialized, "{\"email\":\"email_verified@example.com\",\"email_verified\":true}");
     }
 
     #[test]
@@ -192,9 +192,9 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_verified_email() {
-        let data = "{\"email\":\"verified@example.com\",\"verified\":true}";
+    fn test_deserialize_email_verified_email() {
+        let data = "{\"email\":\"email_verified@example.com\",\"email_verified\":true}";
         let email: EmailAddress = serde_json::from_str(data).unwrap();
-        assert_eq!(email, EmailAddress::Verified("verified@example.com".parse().unwrap()));
+        assert_eq!(email, EmailAddress::Verified("email_verified@example.com".parse().unwrap()));
     }
 }
