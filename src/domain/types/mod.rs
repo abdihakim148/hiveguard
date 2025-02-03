@@ -1,4 +1,5 @@
 mod organisation;
+mod verification;
 mod paseto_keys;
 mod permission;
 mod grant_type;
@@ -22,6 +23,7 @@ mod id;
 
 /// Re-exporting types for external access.
 pub use organisation::*;
+pub use verification::*;
 pub use paseto_keys::*;
 pub use permission::*;
 pub use grant_type::*;
