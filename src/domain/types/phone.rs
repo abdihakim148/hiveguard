@@ -1,10 +1,13 @@
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::{self, Visitor, MapAccess};
 use serde::ser::SerializeStruct;
+use std::collections::HashMap;
+use super::{Value, Error};
+use std::any::TypeId;
 use std::fmt;
 
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Phone {
     New(String),
     Verified(String)
@@ -60,6 +63,7 @@ impl Serialize for Phone {
         state.end()
     }
 }
+
 
 impl<'de> Deserialize<'de> for Phone {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -117,6 +121,47 @@ impl<'de> Deserialize<'de> for Phone {
 
         const FIELDS: &'static [&'static str] = &["phone", "phone_verified"];
         deserializer.deserialize_struct("Phone", FIELDS, PhoneVisitor)
+    }
+}
+
+
+impl TryFrom<Value> for Phone {
+    type Error = Error;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(phone) => {
+                if Self::valid(&phone) {
+                    return Ok(Phone::New(phone))
+                }
+                Err(Error::conversion_error(Some("invalid phone number")))?
+            },
+            Value::Object(map) => map.try_into(),
+            _ => Err(Error::conversion_error(Some("invalid format for phone number")))?
+        }
+    }
+}
+
+
+
+impl TryFrom<HashMap<String, Value>> for Phone {
+    type Error = Error;
+    fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
+        let phone: String = match map.remove("phone") {
+            Some(value) => value.try_into()?,
+            None => Err(Error::conversion_error(Some("field phone not found")))?
+        };
+        let verified = match map.remove("phone_veified") {
+            Some(value) => value.try_into()?,
+            None => Err(Error::conversion_error(Some("field phone_verified not found")))?
+        };
+        if !Self::valid(&phone) {
+            Err(Error::conversion_error(Some("invalid phone number")))?;
+        }
+        if verified {
+            return Ok(Phone::Verified(phone));
+        }
+        Ok(Phone::New(phone))
     }
 }
 

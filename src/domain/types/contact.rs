@@ -1,10 +1,10 @@
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
-use serde::ser::SerializeStruct;
+use super::{Phone, EmailAddress, Value, Error};
 use serde::de::{self, Visitor, MapAccess};
+use serde::ser::SerializeStruct;
 use std::fmt;
-use super::{Phone, EmailAddress};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Contact {
     Phone(Phone),
     Email(EmailAddress),
@@ -66,6 +66,25 @@ impl<'de> Deserialize<'de> for Contact {
             (Some(phone), None) => Ok(Contact::Phone(phone)),
             (None, Some(email)) => Ok(Contact::Email(email)),
             (None, None) => Err(de::Error::custom("Neither phone nor email provided")),
+        }
+    }
+}
+
+
+impl TryFrom<Value> for Contact {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let result = value.clone().try_into();
+        if let Ok(phone) = result {
+            match value.try_into() {
+                Ok(email) => Ok(Contact::Both(phone, email)),
+                Err(_) => Ok(Contact::Phone(phone))
+            }
+        }else {
+            match value.try_into() {
+                Ok(email) => Ok(Contact::Email(email)),
+                Err(err) => Err(err)?
+            }
         }
     }
 }
