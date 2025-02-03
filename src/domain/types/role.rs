@@ -2,17 +2,16 @@
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
 use serde::{Deserialize, Serialize};
-use bson::oid::ObjectId;
-use super::Grant;
+use super::{Grant, Id};
 
 /// A struct representing a role with specific permissions on resources.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Role {
     /// The unique identifier for the role.
-    pub id: ObjectId,
+    pub id: Id,
     /// This is the role owner.
     /// it might be a user, an organisation or a service.
-    pub owner_id: ObjectId,
+    pub owner_id: Id,
     /// The name of the role
     pub name: String,
     /// The list of resources and their associated permissions.
@@ -38,7 +37,7 @@ impl Responder for Role {
 impl Item for Role {
     const NAME: &'static str = "role";
     /// This is the role id
-    type PK = ObjectId;
+    type PK = Id;
     /// This is the Role's owner_id
-    type SK = ObjectId;
+    type SK = Id;
 }

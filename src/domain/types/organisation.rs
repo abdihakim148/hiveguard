@@ -2,18 +2,17 @@
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
 use serde::{Deserialize, Serialize};
-use bson::oid::ObjectId;
-use super::EmailAddress;
+use super::{EmailAddress, Id};
 
 /// A struct representing an organisation.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Organisation {
     /// The unique identifier for the organisation.
-    pub id: ObjectId,
+    pub id: Id,
     /// The name of the organisation.
     pub name: String,
     /// The user ids of the founders of the Organisation.
-    pub owners: Vec<ObjectId>,
+    pub owners: Vec<Id>,
     /// A list of named email addresses associated with the organisation.
     pub emails: Vec<(String, EmailAddress)>,
     /// The domain of the organisation, if available.
@@ -43,7 +42,7 @@ impl Responder for Organisation {
 impl Item for Organisation {
     const NAME: &'static str = "organisation";
     /// This is the Organisation id.
-    type PK = ObjectId;
+    type PK = Id;
     /// This is the name of the organisation.
     type SK = String;
 }

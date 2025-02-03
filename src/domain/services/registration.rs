@@ -1,8 +1,8 @@
 /// A trait representing the registration process.
 use crate::ports::outputs::database::Table;
 use crate::ports::outputs::database::Item;
-use crate::domain::types::{User, Error};
-use bson::oid::ObjectId;
+use crate::domain::types::{User, Error, Id};
+// use bson::oid::ObjectId;
 use argon2::PasswordHasher;
 
 use super::Password;
@@ -19,7 +19,7 @@ pub trait Registration: Sized + Item {
 }
 
 impl Registration for User {
-    type Id = ObjectId;
+    type Id = Id;
     type Error = Error;
     async fn register<T: Table<Item = Self, Error: Into<Self::Error>>, H: PasswordHasher>(&self, table: &T, argon2: &H) -> Result<Self, Self::Error> {
         let id = self.id;

@@ -1,19 +1,16 @@
-use crate::domain::types::{User, Value, EmailAddress, Either, Key};
-use crate::ports::outputs::database::{Table, Item}; // Importing necessary traits and types
-use std::collections::HashMap;
 use crate::domain::types::Error;
+use crate::domain::types::{Either, EmailAddress, Key, User, Value};
+use crate::ports::outputs::database::{Item, Table}; // Importing necessary traits and types
 use bson::oid::ObjectId;
+use std::collections::HashMap;
 use std::sync::RwLock;
-
 
 /// A struct representing a collection of users stored in memory.
 #[derive(Debug, Default)]
 pub struct Users {
-    emails: RwLock<HashMap<EmailAddress, ObjectId>>,
-    users: RwLock<HashMap<ObjectId, User>>,
+    emails: RwLock<HashMap<<User as Item>::SK, <User as Item>::PK>>,
+    users: RwLock<HashMap<<User as Item>::PK, User>>,
 }
-
-
 
 impl Users {
     const USER: &'static str = "user";
@@ -31,7 +28,6 @@ impl Users {
         Ok(emails.contains_key(email))
     }
 
-
     /// Retrieves the email associated with a given user ID.
     ///
     /// # Arguments
@@ -41,16 +37,14 @@ impl Users {
     /// # Returns
     ///
     /// * `Result<Option<String>>` - Returns the email if found, otherwise `None`, wrapped in a `Result`.
-    async fn email(&self, id: &ObjectId) -> Result<Option<EmailAddress>, Error> {
+    async fn email(&self, id: &<User as Item>::PK) -> Result<Option<EmailAddress>, Error> {
         let users = self.users.read()?;
         match users.get(id) {
             None => Ok(None),
-            Some(user) => Ok(Some(user.email.clone()))
+            Some(user) => Ok(Some(user.email.clone())),
         }
     }
 }
-
-
 
 impl Table for Users {
     type Map = HashMap<String, Value>;
@@ -70,7 +64,6 @@ impl Table for Users {
             users: RwLock::new(HashMap::new()),
         })
     }
-
 
     /// Creates a new user.
     ///
@@ -110,20 +103,23 @@ impl Table for Users {
     /// # Returns
     ///
     /// * `Result<Option<User>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
-    async fn get(&self, key: Either<&<User as Item>::PK, &<User as Item>::SK>) -> Result<Option<User>, Self::Error> {
+    async fn get(
+        &self,
+        key: Either<&<User as Item>::PK, &<User as Item>::SK>,
+    ) -> Result<Option<User>, Self::Error> {
         match key {
             Either::Left(id) => {
                 let users = self.users.read()?;
                 Ok(users.get(id).cloned())
-            },
+            }
             Either::Right(email) => {
                 let emails = self.emails.read()?;
                 match emails.get(email) {
                     Some(id) => {
                         let users = self.users.read()?;
                         Ok(users.get(id).cloned())
-                    },
-                    None => Ok(None)
+                    }
+                    None => Ok(None),
                 }
             }
         }
@@ -131,10 +127,12 @@ impl Table for Users {
 
     /// This function does nothing and whill always return None.
     /// NOT TO BE USED. IMPLEMENTED JUST FOR FORMALITY.
-    async fn get_many(&self, _: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error> {
+    async fn get_many(
+        &self,
+        _: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>,
+    ) -> Result<Option<Vec<Self::Item>>, Self::Error> {
         Ok(None)
     }
-
 
     /// Patches an existing user with the provided map of changes.
     ///
@@ -146,16 +144,42 @@ impl Table for Users {
     /// # Returns
     ///
     /// * `Result<User>` - Returns the updated user item wrapped in a `Result`.
-    async fn patch(&self, id: &<User as Item>::PK, mut map: Self::Map) -> Result<User, Self::Error> {
+    async fn patch(
+        &self,
+        id: &<User as Item>::PK,
+        mut map: Self::Map,
+    ) -> Result<User, Self::Error> {
         let key = Either::Left(id);
         if let Some(user) = self.get(key).await? {
             let id = *id;
-            let username = match map.remove("username") {Some(name) => name.try_into()?, None => user.username};
-            let first_name = match map.remove("first_name") {Some(first_name) => first_name.try_into()?, None => user.first_name};
-            let last_name = match map.remove("last_name") {Some(name) => name.try_into()?, None => user.last_name};
-            let email = match map.remove("email") {Some(name) => name.try_into()?, None => user.email};
-            let password = match map.remove("password") {Some(name) => name.try_into()?, None => user.password};
-            let user = User{id, username, first_name, last_name, email,password};
+            let username = match map.remove("username") {
+                Some(name) => name.try_into()?,
+                None => user.username,
+            };
+            let first_name = match map.remove("first_name") {
+                Some(first_name) => first_name.try_into()?,
+                None => user.first_name,
+            };
+            let last_name = match map.remove("last_name") {
+                Some(name) => name.try_into()?,
+                None => user.last_name,
+            };
+            let email = match map.remove("email") {
+                Some(name) => name.try_into()?,
+                None => user.email,
+            };
+            let password = match map.remove("password") {
+                Some(name) => name.try_into()?,
+                None => user.password,
+            };
+            let user = User {
+                id,
+                username,
+                first_name,
+                last_name,
+                email,
+                password,
+            };
             let mut users = self.users.write()?;
             users.insert(id, user.clone());
             return Ok(user);
@@ -213,23 +237,19 @@ impl Table for Users {
     }
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
-    use super::Users;
-    use crate::domain::types::{User, Value, EmailAddress, Either};
+    use crate::domain::types::{Either, EmailAddress, User, Value, Id};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
-    use bson::oid::ObjectId;
+    use super::Users;
     use tokio;
 
     #[tokio::test]
     async fn test_exists_user_email() {
         let users = Users::new().await.unwrap();
         let user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
@@ -247,14 +267,20 @@ mod tests {
         assert_eq!(users.exists(&user.email).await.unwrap(), true);
 
         // Test with a different email
-        assert_eq!(users.exists(&EmailAddress::new("nonexistent@example.com").unwrap()).await.unwrap(), false);
+        assert_eq!(
+            users
+                .exists(&EmailAddress::new("nonexistent@example.com").unwrap())
+                .await
+                .unwrap(),
+            false
+        );
     }
 
     #[tokio::test]
     async fn test_email_retrieval() {
         let users = Users::new().await.unwrap();
         let user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
@@ -269,10 +295,13 @@ mod tests {
         users.create(&user).await.unwrap();
 
         // Now, retrieving email by ID should return the correct email
-        assert_eq!(users.email(&user.id).await.unwrap(), Some(user.email.clone()));
+        assert_eq!(
+            users.email(&user.id).await.unwrap(),
+            Some(user.email.clone())
+        );
 
         // Test with a different ID
-        let new_id = ObjectId::new();
+        let new_id = Id::default();
         assert_eq!(users.email(&new_id).await.unwrap(), None);
     }
 
@@ -280,7 +309,7 @@ mod tests {
     async fn test_create_user() {
         let users = Users::new().await.unwrap();
         let user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
@@ -296,7 +325,7 @@ mod tests {
     async fn test_read_user() {
         let users = Users::new().await.unwrap();
         let user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
@@ -314,7 +343,7 @@ mod tests {
     async fn test_patch_user() {
         let users = Users::new().await.unwrap();
         let user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
@@ -327,22 +356,31 @@ mod tests {
 
         // Prepare a map with changes
         let mut changes = HashMap::new();
-        changes.insert("username".to_string(), Value::String("updateduser".to_string()));
-        changes.insert("email".to_string(), Value::String("updated@example.com".to_string()));
+        changes.insert(
+            "username".to_string(),
+            Value::String("updateduser".to_string()),
+        );
+        changes.insert(
+            "email".to_string(),
+            Value::String("updated@example.com".to_string()),
+        );
 
         // Patch the user
         let patched_user = users.patch(&user.id, changes).await.unwrap();
 
         // Verify the changes
         assert_eq!(patched_user.username, "updateduser");
-        assert_eq!(patched_user.email, EmailAddress::new("updated@example.com").unwrap());
+        assert_eq!(
+            patched_user.email,
+            EmailAddress::new("updated@example.com").unwrap()
+        );
     }
 
     #[tokio::test]
     async fn test_update_user() {
         let users = Users::new().await.unwrap();
         let mut user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
@@ -364,7 +402,7 @@ mod tests {
     async fn test_delete_user() {
         let users = Users::new().await.unwrap();
         let user = User {
-            id: ObjectId::new(),
+            id: Id::default(),
             username: "testuser".to_string(),
             first_name: "Test".to_string(),
             last_name: "User".to_string(),

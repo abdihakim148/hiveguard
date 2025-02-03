@@ -1,12 +1,12 @@
-use bson::oid::ObjectId;
-use super::Permission;
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self, Visitor};
-use std::fmt;
+use super::Permission;
 use std::str::FromStr;
+use super::Id;
+use std::fmt;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Grant(pub ObjectId, pub Permission);
+pub struct Grant(pub Id, pub Permission);
 
 impl Serialize for Grant {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -41,7 +41,7 @@ impl<'de> Deserialize<'de> for Grant {
                 if parts.len() != 2 {
                     return Err(de::Error::invalid_value(de::Unexpected::Str(value), &self));
                 }
-                let object_id = ObjectId::from_str(parts[0]).map_err(de::Error::custom)?;
+                let object_id = Id::from_str(parts[0]).map_err(de::Error::custom)?;
                 let permission = parts[1].parse().map_err(de::Error::custom)?;
                 Ok(Grant(object_id, permission))
             }
@@ -51,18 +51,15 @@ impl<'de> Deserialize<'de> for Grant {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use serde_json::{to_string, from_str};
-    use super::{Grant, super::Permission};
+    use super::{super::{Permission, Id}, Grant};
+    use serde_json::{from_str, to_string};
     use bson::oid::ObjectId;
-
 
     #[test]
     fn test_serialization() {
-        let id = ObjectId::default();
+        let id = Id::default();
         let id_str = id.to_hex();
         let permission = Permission::Delete;
         let grant = Grant(id, permission);
@@ -74,7 +71,7 @@ mod tests {
     fn test_deserialization() {
         let json = "\"000000000000000000000000:update\"";
         let grant = from_str::<Grant>(json).unwrap();
-        let id = ObjectId::from_bytes([0u8; 12]);
+        let id = Id(ObjectId::from_bytes([0u8; 12]));
         let permission = Permission::Update;
         assert_eq!(Grant(id, permission), grant);
     }
