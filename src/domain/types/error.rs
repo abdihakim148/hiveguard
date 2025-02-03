@@ -7,6 +7,7 @@ use lettre::transport::smtp::Error as SmtpError;
 use lettre::error::Error as LettreError;
 use rusty_paseto::core::PasetoError;
 use std::error::Error as StdError;
+use std::marker::PhantomData;
 use std::sync::PoisonError;
 use serde::Serialize;
 use std::any::TypeId;
@@ -19,7 +20,7 @@ impl<T: ResponseError + StdError + Serialize> ErrorTrait for T {}
 
 
 #[derive(Debug)]
-pub enum Error {
+pub enum Error<E = (), F = ()> {
     NotFound(&'static str),
     Conflict(&'static str),
     Internal(Box<dyn StdError>),
@@ -29,11 +30,12 @@ pub enum Error {
     /// expected type, found type, field name, http status code, custom message
     ConversionError(TypeId, TypeId, Option<&'static str>, u16, Option<&'static str>),
     #[cfg(feature = "http")]
-    Custom(Box<dyn ErrorTrait>)
+    Custom(Box<dyn ErrorTrait>),
+    Empty(PhantomData<(E, F)>)
 }
 
 
-impl Error {
+impl<E: 'static, F: 'static> Error<E, F> {
     fn msg(&self) -> String {
         match self {
             NotFound(name) => format!("{} not found", name),
@@ -57,7 +59,7 @@ impl Error {
                 }
                 String::from("invalid data format")
             },
-            Custom(_) => String::new()
+            _ => String::new()
         }
     }
 
@@ -74,6 +76,11 @@ impl Error {
             ConversionError(expected, found, field, _, message) => ConversionError(expected, found, field, status, message),
             _ => self
         }
+    }
+
+
+    pub fn conversion_error(message: Option<&'static str>) -> Self {
+        ConversionError(TypeId::of::<E>(), TypeId::of::<E>(), None, 400, message)
     }
 }
 
@@ -93,7 +100,8 @@ impl Display for Error {
                     None => write!(f, "expected {:?} instead got {:?}", expected, found),
                 }
             },
-            Custom(err) => Display::fmt(err, f)
+            Custom(err) => Display::fmt(err, f),
+            Empty(_) => write!(f, "EMPTY")
         }
     }
 }
@@ -121,7 +129,7 @@ impl ResponseError for Error {
         match self {
             NotFound(_) => StatusCode::NOT_FOUND,
             Conflict(_) => StatusCode::CONFLICT,
-            Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Internal(_) | Empty(_) => StatusCode::INTERNAL_SERVER_ERROR,
             InvalidEmailAddress => StatusCode::BAD_REQUEST,
             InvalidToken => StatusCode::UNAUTHORIZED,
             ExpiredToken => StatusCode::UNAUTHORIZED,
