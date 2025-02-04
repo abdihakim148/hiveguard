@@ -180,12 +180,12 @@ impl Table for Users {
                 Some(name) => name.try_into()?,
                 None => user.password,
             };
-            let contact = if map.contains_key("email") || map.contains_key("phone") || map.contains_key("phone_verified") || map.contains_key("email_verified") {
+            let contact = if map.contains_key("email") || map.contains_key("phone") || map.contains_key("phone_verified") || map.contains_key("email_verified"){
                 map.try_into()?
             } else {
                 user.contact
             };
-            let user = User {
+            let item = User {
                 id,
                 username,
                 first_name,
@@ -193,9 +193,8 @@ impl Table for Users {
                 contact,
                 password,
             };
-            let mut users = self.users.write()?;
-            users.insert(id, user.clone());
-            return Ok(user);
+            self.update(&item).await?;
+            return Ok(item);
         }
         Err(Error::NotFound(Self::Item::NAME))
     }
@@ -243,19 +242,15 @@ impl Table for Users {
         let mut users = self.users.write()?;
         let mut contacts = self.contacts.write()?;
 
-        if let Some(user) = users.remove(id) {
-            match user.contact {
-                Contact::Phone(phone) => contacts.remove(&Contact::Phone(phone)),
-                Contact::Email(email) => contacts.remove(&Contact::Email(email)),
-                Contact::Both(phone, email) => {
-                    contacts.remove(&Contact::Email(email));
-                    contacts.remove(&Contact::Phone(phone))
-                }
-            };
-            Ok(())
-        } else {
-            Err(Error::NotFound(Self::Item::NAME))
+        let item = match users.remove(id){
+            Some(item) => item,
+            None => return  Ok(())
+        };
+        match &item.contact {
+            Contact::Both(phone, email) => {(contacts.remove(&Contact::Phone(phone.clone())), contacts.remove(&Contact::Email(email.clone())));},
+            _ => {contacts.remove(&item.contact);},
         }
+        Ok(())
     }
 }
 
@@ -383,7 +378,7 @@ mod tests {
             Value::String("updateduser".to_string()),
         );
         changes.insert(
-            "contact".to_string(),
+            "email".to_string(),
             Value::String("updated@example.com".to_string()),
         );
 
