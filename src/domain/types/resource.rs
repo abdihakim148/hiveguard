@@ -7,11 +7,11 @@ use super::Id;
 /// A struct representing a resource.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
-    /// The unique identifier for the resource.
-    pub id: Id,
     /// The unique identifier for the resouce owner.
     /// This might be a user or an organisation or even a service
     pub owner_id: Id,
+    /// The unique identifier for the resource.
+    pub id: Id,
     /// The name of the resource.
     pub name: String,
     /// The URL of the resource, if available.
@@ -37,8 +37,8 @@ impl Responder for Resource {
 impl Item for Resource {
     const NAME: &'static str = "resource";
     const FIELDS: &'static [&'static str] = &["id", "owner_id", "name", "url"];
-    /// This is the resource id
-    type PK = Id;
     /// This is the resource's owner_id
+    type PK = Id;
+    /// This is the resource id
     type SK = Id;
 }

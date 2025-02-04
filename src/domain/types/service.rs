@@ -8,8 +8,8 @@ use chrono::Duration;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Service {
-    pub id: Id,
     pub owner_id: Id,
+    pub id: Id,
     pub name: String,
     pub client_secret: String,
     pub redirect_uris: Vec<String>,
@@ -39,8 +39,8 @@ impl Responder for Service {
 impl Item for Service {
     const NAME: &'static str = "service";
     const FIELDS: &'static [&'static str] = &["id", "owner_id", "name", "client_secret", "redirect_uris", "scopes", "grant_types", "token_expiry"];
-    /// This is the service id.
-    type PK = Id;
     /// This is the owner_id.
+    type PK = Id;
+    /// This is the service id.
     type SK = Id;
 }

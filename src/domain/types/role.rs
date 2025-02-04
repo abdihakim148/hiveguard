@@ -7,11 +7,11 @@ use super::{Grant, Id};
 /// A struct representing a role with specific permissions on resources.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Role {
-    /// The unique identifier for the role.
-    pub id: Id,
     /// This is the role owner.
     /// it might be a user, an organisation or a service.
     pub owner_id: Id,
+    /// The unique identifier for the role.
+    pub id: Id,
     /// The name of the role
     pub name: String,
     /// The list of resources and their associated permissions.
@@ -37,8 +37,8 @@ impl Responder for Role {
 impl Item for Role {
     const NAME: &'static str = "role";
     const FIELDS: &'static [&'static str] = &["id", "owner_id", "name", "grants"];
-    /// This is the role id
-    type PK = Id;
     /// This is the Role's owner_id
+    type PK = Id;
+    /// This is the role id
     type SK = Id;
 }

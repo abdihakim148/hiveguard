@@ -17,11 +17,11 @@ pub enum VerificationMedia {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Verification {
-    /// This is the Id of the verification code
-    pub id: Id,
     /// This is the owner of the verification code.
     /// In other words. This is the user being verified
     pub owner_id: Id,
+    /// This is the Id of the verification code
+    pub id: Id,
     /// This is the actual verification
     pub code: u32,
     /// The media on which the verification code was delivered with.
@@ -51,8 +51,8 @@ impl Responder for Verification {
 impl Item for Verification {
     const NAME: &'static str = "verification code";
     const FIELDS: &'static [&'static str] = &["id", "owner_id", "code", "media", "expires"];
-    /// This is the verification code id.
+    /// This is the owner id
     type PK = Id;
-    /// This is the owner_id.
+    /// This is the verification id
     type SK = Id;
 }
