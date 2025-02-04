@@ -2,6 +2,7 @@
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
 use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
 use super::Id;
 
 
@@ -23,7 +24,9 @@ pub struct Verification {
     /// This is the actual verification
     pub code: u32,
     /// The media on which the verification code was delivered with.
-    pub media: VerificationMedia
+    pub media: VerificationMedia,
+    /// This the time when the verification code become invalid.
+    pub expires: DateTime<Utc>,
 }
 
 
