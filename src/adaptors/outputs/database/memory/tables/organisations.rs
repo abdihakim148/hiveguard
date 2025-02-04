@@ -6,8 +6,8 @@ use std::sync::RwLock;
 
 #[derive(Default, Debug)]
 pub struct Organisations {
-    organisations: RwLock<HashMap<<Organisation as Item>::PK, Organisation>>,
-    names: RwLock<HashMap<<Organisation as Item>::SK, <Organisation as Item>::PK>>
+    primary: RwLock<HashMap<<Organisation as Item>::PK, Organisation>>,
+    secondary: RwLock<HashMap<<Organisation as Item>::SK, <Organisation as Item>::PK>>
 }
 
 
@@ -23,15 +23,15 @@ impl Table for Organisations {
 
     async fn create(&self, item: &Self::Item) -> Result<<Self::Item as Item>::PK, Self::Error> {
         let (name, id) = (item.name.clone(), item.id);
-        let (mut names, mut organisations) = (self.names.write()?, self.organisations.write()?);
-        if let Some(_) = names.get(&name) {
+        let (mut secondary, mut primary) = (self.secondary.write()?, self.primary.write()?);
+        if let Some(_) = secondary.get(&name) {
             return Err(Error::Conflict(Self::Item::NAME))
         }
-        if let Some(_) = organisations.get(&id) {
+        if let Some(_) = primary.get(&id) {
             return Err(Error::Conflict(Self::Item::NAME))
         }
-        names.insert(name, id);
-        organisations.insert(id, item.clone());
+        secondary.insert(name, id);
+        primary.insert(id, item.clone());
         Ok(id)
     }
 
@@ -39,13 +39,13 @@ impl Table for Organisations {
         let pk = match key {
             Either::Left(pk) => *pk,
             Either::Right(sk) => {
-                match self.names.read()?.get(sk) {
+                match self.secondary.read()?.get(sk) {
                     None => return Ok(None),
                     Some(pk) => *pk
                 }
             }
         };
-        Ok(self.organisations.read()?.get(&pk).cloned())
+        Ok(self.primary.read()?.get(&pk).cloned())
     }
 
     async fn get_many(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error> {
@@ -84,19 +84,19 @@ impl Table for Organisations {
     }
 
     async fn update(&self, item: &Self::Item) -> Result<(), Self::Error> {
-        let mut organisations = self.organisations.write()?;
-        let mut names = self.names.write()?;
+        let mut primary = self.primary.write()?;
+        let mut secondary = self.secondary.write()?;
 
-        if let Some(id) = names.get(&item.name) {
+        if let Some(id) = secondary.get(&item.name) {
             if id != &item.id {
                 return Err(Error::Conflict(Self::Item::NAME));
             }
         }
 
-        if let Some(existing_organisation) = organisations.get_mut(&item.id) {
-            names.remove(&existing_organisation.name);
+        if let Some(existing_organisation) = primary.get_mut(&item.id) {
+            secondary.remove(&existing_organisation.name);
             *existing_organisation = item.clone();
-            names.insert(item.name.clone(), item.id.clone());
+            secondary.insert(item.name.clone(), item.id.clone());
         }else {
             self.create(item).await?;
         }
@@ -105,12 +105,12 @@ impl Table for Organisations {
     }
 
     async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error> {
-        let (mut organisations, mut names) = (self.organisations.write()?, self.names.write()?);
-        let item = match organisations.remove(id) {
+        let (mut primary, mut secondary) = (self.primary.write()?, self.secondary.write()?);
+        let item = match primary.remove(id) {
             Some(item) => item,
             None => return Ok(())
         };
-        names.remove(&item.name);
+        secondary.remove(&item.name);
         Ok(())
     }
 }

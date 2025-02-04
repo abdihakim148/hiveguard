@@ -7,8 +7,8 @@ use std::sync::RwLock;
 /// A struct representing a collection of users stored in memory.
 #[derive(Debug, Default)]
 pub struct Users {
-    contacts: RwLock<HashMap<<User as Item>::SK, <User as Item>::PK>>,
-    users: RwLock<HashMap<<User as Item>::PK, User>>,
+    primary: RwLock<HashMap<<User as Item>::PK, User>>,
+    secondary: RwLock<HashMap<<User as Item>::SK, <User as Item>::PK>>,
 }
 
 impl Users {
@@ -22,14 +22,14 @@ impl Users {
     ///
     /// * `Result<bool>` - Returns `Ok(true)` if the contact exists, `Ok(false)` otherwise.
     async fn exists(&self, contact: &<User as Item>::SK) -> Result<bool, Error> {
-        let contacts = self.contacts.read()?;
+        let secondary = self.secondary.read()?;
         match contact {
-            Contact::Phone(_) => Ok(contacts.contains_key(contact)),
-            Contact::Email(_) => Ok(contacts.contains_key(contact)),
+            Contact::Phone(_) => Ok(secondary.contains_key(contact)),
+            Contact::Email(_) => Ok(secondary.contains_key(contact)),
             Contact::Both(phone, contact) => {
                 let phone = Contact::Phone(phone.clone());
                 let contact = Contact::Email(contact.clone());
-                Ok(contacts.contains_key(&phone) || contacts.contains_key(&contact))
+                Ok(secondary.contains_key(&phone) || secondary.contains_key(&contact))
             }
         }
     }
@@ -44,8 +44,8 @@ impl Users {
     ///
     /// * `Result<Option<String>>` - Returns the contact if found, otherwise `None`, wrapped in a `Result`.
     async fn contact(&self, id: &<User as Item>::PK) -> Result<Option<Contact>, Error> {
-        let users = self.users.read()?;
-        match users.get(id) {
+        let primary = self.primary.read()?;
+        match primary.get(id) {
             None => Ok(None),
             Some(user) => Ok(Some(user.contact.clone())),
         }
@@ -66,8 +66,8 @@ impl Table for Users {
     /// * `Result<Self>` - Returns a new `Users` instance wrapped in a `Result`.
     async fn new() -> Result<Self, Self::Error> {
         Ok(Users {
-            contacts: RwLock::new(HashMap::new()),
-            users: RwLock::new(HashMap::new()),
+            primary: RwLock::new(HashMap::new()),
+            secondary: RwLock::new(HashMap::new()),
         })
     }
 
@@ -91,16 +91,16 @@ impl Table for Users {
             }
         }
 
-        let mut users = self.users.write()?;
-        let mut contacts = self.contacts.write()?;
-        users.insert(user.id.clone(), user.clone());
+        let mut primary = self.primary.write()?;
+        let mut secondary = self.secondary.write()?;
+        primary.insert(user.id.clone(), user.clone());
         if let Contact::Both(phone, email) = &user.contact {
             let phone = Contact::Phone(phone.clone());
             let email = Contact::Email(email.clone());
-            contacts.insert(phone, user.id.clone());
-            contacts.insert(email, user.id.clone());
+            secondary.insert(phone, user.id.clone());
+            secondary.insert(email, user.id.clone());
         }else {
-            contacts.insert(user.contact.clone(), user.id.clone());
+            secondary.insert(user.contact.clone(), user.id.clone());
         }
 
         Ok(user.id)
@@ -121,15 +121,15 @@ impl Table for Users {
     ) -> Result<Option<User>, Self::Error> {
         match key {
             Either::Left(id) => {
-                let users = self.users.read()?;
-                Ok(users.get(id).cloned())
+                let primary = self.primary.read()?;
+                Ok(primary.get(id).cloned())
             }
             Either::Right(contact) => {
-                let contacts = self.contacts.read()?;
-                match contacts.get(contact) {
+                let secondary = self.secondary.read()?;
+                match secondary.get(contact) {
                     Some(id) => {
-                        let users = self.users.read()?;
-                        Ok(users.get(id).cloned())
+                        let primary = self.primary.read()?;
+                        Ok(primary.get(id).cloned())
                     }
                     None => Ok(None),
                 }
@@ -209,19 +209,19 @@ impl Table for Users {
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the updated user wrapped in a `Result`.
     async fn update(&self, item: &Self::Item) -> Result<(), Self::Error> {
-        let mut users = self.users.write()?;
-        let mut contacts = self.contacts.write()?;
+        let mut primary = self.primary.write()?;
+        let mut secondary = self.secondary.write()?;
 
-        if let Some(id) = contacts.get(&item.contact) {
+        if let Some(id) = secondary.get(&item.contact) {
             if id != &item.id {
                 return Err(Error::Conflict(Self::Item::NAME));
             }
         }
 
-        if let Some(existing_user) = users.get_mut(&item.id) {
-            contacts.remove(&existing_user.contact);
+        if let Some(existing_user) = primary.get_mut(&item.id) {
+            secondary.remove(&existing_user.contact);
             *existing_user = item.clone();
-            contacts.insert(item.contact.clone(), item.id.clone());
+            secondary.insert(item.contact.clone(), item.id.clone());
         }else {
             self.create(item).await?;
         }
@@ -239,16 +239,16 @@ impl Table for Users {
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the deleted user wrapped in a `Result`.
     async fn delete(&self, id: &<User as Item>::PK) -> Result<(), Self::Error> {
-        let mut users = self.users.write()?;
-        let mut contacts = self.contacts.write()?;
+        let mut primary = self.primary.write()?;
+        let mut secondary = self.secondary.write()?;
 
-        let item = match users.remove(id){
+        let item = match primary.remove(id){
             Some(item) => item,
             None => return  Ok(())
         };
         match &item.contact {
-            Contact::Both(phone, email) => {(contacts.remove(&Contact::Phone(phone.clone())), contacts.remove(&Contact::Email(email.clone())));},
-            _ => {contacts.remove(&item.contact);},
+            Contact::Both(phone, email) => {(secondary.remove(&Contact::Phone(phone.clone())), secondary.remove(&Contact::Email(email.clone())));},
+            _ => {secondary.remove(&item.contact);},
         }
         Ok(())
     }
