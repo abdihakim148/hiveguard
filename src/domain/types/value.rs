@@ -7,8 +7,9 @@ use bson::oid::ObjectId;
 use std::any::TypeId;
 
 /// Enum representing various possible object types.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub enum Value {
+    #[default]
     None,
     Bool(bool),
     Number(Number),
@@ -124,14 +125,15 @@ impl<T: TryFrom<Value, Error = Error> + 'static> TryFrom<Value> for Vec<T> {
     }
 }
 
-impl TryFrom<Value> for ObjectId {
+impl<T: TryFrom<Value, Error = Error>, U: TryFrom<Value, Error = Error>> TryFrom<Value> for (T, U) {
     type Error = Error;
-
     fn try_from(value: Value) -> Result<Self, Self::Error> {
-        if let Value::String(s) = value {
-            ObjectId::parse_str(&s).map_err(|_| Error::ConversionError(TypeId::of::<ObjectId>(), TypeId::of::<()>(), None, 400, Some("invalid id format")))
-        } else {
-            Err(Error::ConversionError(TypeId::of::<ObjectId>(), TypeId::of::<()>(), None, 400, Some("invalid id format")))
+        match value {
+            Value::Vec(array) => {
+                let (t, u) = (array.get(0).cloned().unwrap_or_default(), array.get(1).cloned().unwrap_or_default());
+                Ok((t.try_into()?, u.try_into()?))
+            },
+            _ => Err(Error::conversion_error(Some("invalid data format")))
         }
     }
 }

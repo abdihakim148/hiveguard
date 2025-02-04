@@ -13,8 +13,6 @@ pub struct Organisation {
     pub name: String,
     /// The user ids of the founders of the Organisation.
     pub owners: Vec<Id>,
-    /// A list of named email addresses associated with the organisation.
-    pub emails: Vec<(String, EmailAddress)>,
     /// The domain of the organisation, if available.
     pub domain: Option<String>,
     /// The home URL of the organisation, if available.
@@ -41,7 +39,7 @@ impl Responder for Organisation {
 
 impl Item for Organisation {
     const NAME: &'static str = "organisation";
-    const FIELDS: &'static [&'static str] = &["id", "name", "owners", "emails", "domains","home", "contacts"];
+    const FIELDS: &'static [&'static str] = &["id", "name", "owners", "domains","home", "contacts"];
     /// This is the Organisation id.
     type PK = Id;
     /// This is the name of the organisation.
