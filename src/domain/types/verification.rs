@@ -50,6 +50,7 @@ impl Responder for Verification {
 
 impl Item for Verification {
     const NAME: &'static str = "verification code";
+    const FIELDS: &'static [&'static str] = &["id", "owner_id", "code", "media", "expires"];
     /// This is the verification code id.
     type PK = Id;
     /// This is the owner_id.

@@ -38,6 +38,7 @@ impl Responder for Service {
 
 impl Item for Service {
     const NAME: &'static str = "service";
+    const FIELDS: &'static [&'static str] = &["id", "owner_id", "name", "client_secret", "redirect_uris", "scopes", "grant_types", "token_expiry"];
     /// This is the service id.
     type PK = Id;
     /// This is the owner_id.

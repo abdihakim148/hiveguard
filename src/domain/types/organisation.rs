@@ -1,8 +1,8 @@
 #[cfg(feature = "http")]
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
+use super::{EmailAddress, Id, Contact};
 use serde::{Deserialize, Serialize};
-use super::{EmailAddress, Id};
 
 /// A struct representing an organisation.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -19,8 +19,8 @@ pub struct Organisation {
     pub domain: Option<String>,
     /// The home URL of the organisation, if available.
     pub home: Option<String>,
-    /// A list of named phone numbers associated with the organisation.
-    pub phone: Vec<(String, String)>,
+    /// A list of named contact information associated with the organisation.
+    pub contacts: Vec<(String, Contact)>,
 }
 
 #[cfg(feature = "http")]
@@ -41,6 +41,7 @@ impl Responder for Organisation {
 
 impl Item for Organisation {
     const NAME: &'static str = "organisation";
+    const FIELDS: &'static [&'static str] = &["id", "name", "owners", "emails", "domains","home", "contacts"];
     /// This is the Organisation id.
     type PK = Id;
     /// This is the name of the organisation.

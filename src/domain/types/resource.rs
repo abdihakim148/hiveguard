@@ -36,6 +36,7 @@ impl Responder for Resource {
 
 impl Item for Resource {
     const NAME: &'static str = "resource";
+    const FIELDS: &'static [&'static str] = &["id", "owner_id", "name", "url"];
     /// This is the resource id
     type PK = Id;
     /// This is the resource's owner_id

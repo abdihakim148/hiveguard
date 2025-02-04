@@ -50,6 +50,7 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 
 impl Item for User {
     const NAME: &'static str = "user";
+    const FIELDS: &'static [&'static str] = &["id", "user_name", "username", "first_name", "last_name", "conatct", "email", "phone"];
     type PK = Id;
     type SK = Contact;
 }

@@ -6,19 +6,19 @@ use super::{Id, Permission, Error};
 use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Scope(
+pub struct Scope{
     /// This would be the Id of the service where the resource belongs to
-    Id,
+    pub id: Id,
     /// This would be the name of the resource.
-    String,
+    pub name: String,
     /// This would be the permission of the scope.
-    Permission
-);
+    pub permission: Permission
+}
 
 
 impl From<Scope> for String {
     fn from(scope: Scope) -> Self {
-        format!("{}:{}:{}", scope.0.to_hex(), scope.1, scope.2)
+        format!("{}:{}:{}", scope.id.to_hex(), scope.name, scope.permission)
     }
 }
 
@@ -31,7 +31,8 @@ impl FromStr for Scope {
             return  Err(Error::conversion_error(Some("invalid scope")));
         }
         let (id, name, permission) = (splits[0], splits[1], splits[2]);
-        Ok(Scope(id.parse()?, name.to_string(), permission.parse()?))
+        let (id, name, permission) = (id.parse()?, name.to_string(), permission.parse()?);
+        Ok(Scope{id, name, permission})
     }
 }
 
@@ -55,6 +56,7 @@ impl Responder for Scope {
 
 impl Item for Scope {
     const NAME: &'static str = "scope";
+    const FIELDS: &'static [&'static str] = &["id", "name", "permission"];
     /// This is the id of the Owner of the scope.
     type PK = Id;
     /// This is the name of the scope.
