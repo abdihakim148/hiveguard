@@ -176,13 +176,14 @@ impl Table for Users {
                 Some(name) => name.try_into()?,
                 None => user.last_name,
             };
-            let contact = match map.remove("contact") {
-                Some(value) => value.try_into()?,
-                None => user.contact,
-            };
             let password = match map.remove("password") {
                 Some(name) => name.try_into()?,
                 None => user.password,
+            };
+            let contact = if map.contains_key("email") || map.contains_key("phone") || map.contains_key("phone_verified") || map.contains_key("email_verified") {
+                map.try_into()?
+            } else {
+                user.contact
             };
             let user = User {
                 id,
@@ -208,20 +209,22 @@ impl Table for Users {
     /// # Returns
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the updated user wrapped in a `Result`.
-    async fn update(&self, user: &User) -> Result<(), Self::Error> {
+    async fn update(&self, item: &Self::Item) -> Result<(), Self::Error> {
         let mut users = self.users.write()?;
         let mut contacts = self.contacts.write()?;
 
-        if let Some(id) = contacts.get(&user.contact) {
-            if id != &user.id {
+        if let Some(id) = contacts.get(&item.contact) {
+            if id != &item.id {
                 return Err(Error::Conflict(Self::Item::NAME));
             }
         }
 
-        if let Some(existing_user) = users.get_mut(&user.id) {
+        if let Some(existing_user) = users.get_mut(&item.id) {
             contacts.remove(&existing_user.contact);
-            *existing_user = user.clone();
-            contacts.insert(user.contact.clone(), user.id.clone());
+            *existing_user = item.clone();
+            contacts.insert(item.contact.clone(), item.id.clone());
+        }else {
+            self.create(item).await?;
         }
 
         Ok(())
