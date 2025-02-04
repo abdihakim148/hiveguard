@@ -6,15 +6,16 @@ use chrono::{DateTime, Utc};
 use super::Id;
 
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub enum VerificationMedia {
-    SMS,
+    #[default]
+    Email,
     Whatsapp,
-    Email
+    SMS,
 }
 
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Verification {
     /// This is the Id of the verification code
     pub id: Id,

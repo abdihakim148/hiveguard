@@ -1,7 +1,6 @@
-use crate::domain::types::Error;
 use crate::domain::types::{Either, Contact, Key, User, Value};
 use crate::ports::outputs::database::{Item, Table}; // Importing necessary traits and types
-use bson::oid::ObjectId;
+use crate::domain::types::Error;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
