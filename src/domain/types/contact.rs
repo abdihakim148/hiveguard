@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use super::{Phone, EmailAddress, Value, Error};
 use serde::de::{self, Visitor, MapAccess};
 use serde::ser::SerializeStruct;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -86,6 +87,14 @@ impl TryFrom<Value> for Contact {
                 Err(err) => Err(err)?
             }
         }
+    }
+}
+
+
+impl TryFrom<HashMap<String, Value>> for Contact {
+    type Error = Error;
+    fn try_from(map: HashMap<String, Value>) -> Result<Self, Self::Error> {
+        Value::Object(map).try_into()
     }
 }
 
