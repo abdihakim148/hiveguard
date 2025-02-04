@@ -14,6 +14,8 @@ pub use tables::*;
 pub struct Memory {
     #[serde(skip)]
     users: Users,
+    #[serde(skip)]
+    verifications: Verifications
 }
 
 impl Database for Memory {
@@ -30,11 +32,12 @@ impl Database for Memory {
 
     async fn new(_config: ()) -> Result<Self, Self::Error> {
         let users = Users::new().await?;
-        Ok(Memory { users })
+        let verifications = Verifications::new().await?;
+        Ok(Memory{users, verifications})
     }
 
     async fn verifications<'a>(&'a self) -> Result<&'a Self::Verifications, Self::Error> {
-        todo!()
+        Ok(&self.verifications)
     }
 
     async fn organisations<'a>(&'a self) -> Result<&'a Self::Organisations, Self::Error> {
