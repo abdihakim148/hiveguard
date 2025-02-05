@@ -21,6 +21,8 @@ pub struct Memory {
     #[serde(skip)]
     services: Services,
     #[serde(skip)]
+    members: Members,
+    #[serde(skip)]
     users: Users
 }
 
@@ -41,8 +43,9 @@ impl Database for Memory {
         let organisations = Organisations::new().await?;
         let resources = Resources::new().await?;
         let services = Services::new().await?;
+        let members = Members::new().await?;
         let users = Users::new().await?;
-        Ok(Memory{verifications, organisations, resources, services, users})
+        Ok(Memory{verifications, organisations, resources, services, members, users})
     }
 
     async fn verifications<'a>(&'a self) -> Result<&'a Self::Verifications, Self::Error> {
@@ -62,7 +65,7 @@ impl Database for Memory {
     }
 
     async fn members<'a>(&'a self) -> Result<&'a Self::Members, Self::Error> {
-        todo!()
+        Ok(&self.members)
     }
 
     async fn scopes<'a>(&'a self) -> Result<&'a Self::Scopes, Self::Error> {
