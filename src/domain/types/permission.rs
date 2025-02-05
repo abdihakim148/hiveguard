@@ -2,13 +2,14 @@ use std::fmt::{Display, Formatter, self};
 use serde::{Serializer, Deserializer};
 use serde::{Serialize, Deserialize};
 use serde::de::{self, Visitor};
+use super::{Error, Value};
 use std::str::FromStr;
 use std::any::TypeId;
-use super::Error;
 
 /// Enum representing various permissions.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub enum Permission {
+    #[default]
     Read,
     Write,
     Update,
@@ -91,6 +92,17 @@ impl FromStr for Permission {
             "update" | "3" => Ok(Self::Update),
             "delete" | "4" => Ok(Self::Delete),
             _ => Err(Error::conversion_error(Some("invalid permission")))
+        }
+    }
+}
+
+
+impl TryFrom<Value> for Permission {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(string) => string.as_str().parse(),
+            _ => Err(Error::conversion_error(Some("invalid data format for permission")))
         }
     }
 }

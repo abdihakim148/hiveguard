@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use super::number::Number;
 use bson::oid::ObjectId;
 use std::any::TypeId;
+use chrono::Duration;
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -146,6 +147,17 @@ impl<T: TryFrom<Number, Error = Error> + 'static> TryFrom<Value> for (T,) {
             Ok((n.try_into()?,))
         } else {
             Err(Error::ConversionError(TypeId::of::<T>(), From::from(&value), None, 400, Some("invalid data format")))
+        }
+    }
+}
+
+
+impl TryFrom<Value> for Duration {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Number(number) => number.try_into(),
+            _ => Err(Error::conversion_error(Some("invalid duration format")))?
         }
     }
 }

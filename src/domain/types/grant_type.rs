@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::error::Error as StdError;
+use super::{Value, Error};
 use std::str::FromStr;
 
 
@@ -12,7 +12,7 @@ pub enum GrantType {
 }
 
 impl FromStr for GrantType {
-    type Err = Box<dyn StdError + 'static>;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -20,7 +20,18 @@ impl FromStr for GrantType {
             "implicit" => Ok(GrantType::Implicit),
             "password" => Ok(GrantType::Password),
             "client_credentials" => Ok(GrantType::ClientCredentials),
-            _ => Err(format!("'{}' is not a valid grant type", s))?,
+            _ => Err(Error::conversion_error(Some("invalid grant_type")))?,
+        }
+    }
+}
+
+
+impl TryFrom<Value> for GrantType {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(string) => string.as_str().parse(),
+            _ => Err(Error::conversion_error(Some("invalid grant_type format")))?
         }
     }
 }

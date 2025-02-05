@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 use crate::domain::types::Error;
 use std::convert::TryFrom; // Importing TryFrom trait for conversions
 use std::any::TypeId;
+use chrono::Duration;
 use std::fmt;
 
 /// Enum representing various numerical types.
@@ -122,7 +123,13 @@ impl From<&Number> for TypeId {
 }
 
 
-
+impl TryFrom<Number> for Duration {
+    type Error = Error;
+    fn try_from(number: Number) -> Result<Self, Self::Error> {
+        let seconds = number.try_into()?;
+        Ok(Duration::seconds(seconds))
+    }
+}
 
 
 #[cfg(test)]

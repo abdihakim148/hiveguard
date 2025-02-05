@@ -1,11 +1,12 @@
 #[cfg(feature = "http")]
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::database::Item;
+use super::{Id, Permission, Error, Value};
 use serde::{Serialize, Deserialize};
-use super::{Id, Permission, Error};
+use std::collections::HashMap;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Scope{
     /// This would be the Id of the service where the resource belongs to
     pub id: Id,
@@ -61,4 +62,28 @@ impl Item for Scope {
     type PK = Id;
     /// This is the name of the scope.
     type SK = String;
+}
+
+
+impl TryFrom<Value> for Scope {
+    type Error = Error;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::String(string) => string.as_str().parse(),
+            Value::Object(map) => map.try_into(),
+            _ => Err(Error::conversion_error(Some("invalid data format for scope")))
+        }
+    }
+}
+
+
+impl TryFrom<HashMap<String, Value>> for Scope {
+    type Error = Error;
+
+    fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
+        let id = map.remove("id").ok_or(Error::conversion_error(Some("missing id field for the scope")))?.try_into()?;
+        let name = map.remove("name").ok_or(Error::conversion_error(Some("missing name field for the scope")))?.try_into()?;
+        let permission = map.remove("permission").ok_or(Error::conversion_error(Some("missing permission field for the scope")))?.try_into()?;
+        Ok(Scope{id, name, permission})
+    }
 }
