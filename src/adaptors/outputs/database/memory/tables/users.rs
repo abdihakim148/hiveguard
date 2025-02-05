@@ -117,31 +117,27 @@ impl Table for Users {
     /// * `Result<Option<User>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
     async fn get(
         &self,
-        key: Either<&<User as Item>::PK, &<User as Item>::SK>,
+        key: Key<&<User as Item>::PK, &<User as Item>::SK>,
     ) -> Result<Option<User>, Self::Error> {
-        match key {
-            Either::Left(id) => {
-                let primary = self.primary.read()?;
-                Ok(primary.get(id).cloned())
-            }
-            Either::Right(contact) => {
+        let pk = match key {
+            Key::Pk(pk) => *pk,
+            Key::Sk(sk) => {
                 let secondary = self.secondary.read()?;
-                match secondary.get(contact) {
-                    Some(id) => {
-                        let primary = self.primary.read()?;
-                        Ok(primary.get(id).cloned())
-                    }
-                    None => Ok(None),
+                match secondary.get(sk) {
+                    Some(pk) => *pk,
+                    None => return Ok(None),
                 }
-            }
-        }
+            },
+            Key::Both((pk, _)) => *pk,
+        };
+        Ok(self.primary.read()?.get(&pk).cloned())
     }
 
     /// This function does nothing and whill always return None.
     /// NOT TO BE USED. IMPLEMENTED JUST FOR FORMALITY.
     async fn get_many(
         &self,
-        _: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>,
+        _: Either<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>,
     ) -> Result<Option<Vec<Self::Item>>, Self::Error> {
         Ok(None)
     }
@@ -161,7 +157,7 @@ impl Table for Users {
         id: &<User as Item>::PK,
         mut map: Self::Map,
     ) -> Result<User, Self::Error> {
-        let key = Either::Left(id);
+        let key = Key::Pk(id);
         if let Some(user) = self.get(key).await? {
             let id = *id;
             let username = match map.remove("username") {
@@ -256,7 +252,7 @@ impl Table for Users {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::types::{Either, EmailAddress, User, Value, Id, Contact};
+    use crate::domain::types::{Key, EmailAddress, User, Value, Id, Contact};
     use crate::ports::outputs::database::Table;
     use std::collections::HashMap;
     use super::Users;
@@ -351,7 +347,7 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let key = Either::Left(&id);
+        let key = Key::Pk(&id);
         let read_user = users.get(key).await.unwrap();
         assert_eq!(Some(user), read_user);
     }
@@ -406,7 +402,7 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let key = Either::Left(&id);
+        let key = Key::Pk(&id);
         user.contact = Contact::Email(EmailAddress::new("newcontact@example.com").unwrap());
         let update_result = users.update(&user).await;
         assert!(update_result.is_ok());
@@ -428,7 +424,7 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let key = Either::Left(&id);
+        let key = Key::Pk(&id);
         let delete_result = users.delete(&id).await;
         assert!(delete_result.is_ok());
 

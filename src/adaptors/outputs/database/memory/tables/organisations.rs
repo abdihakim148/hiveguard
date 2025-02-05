@@ -35,25 +35,26 @@ impl Table for Organisations {
         Ok(id)
     }
 
-    async fn get(&self, key: Either<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
+    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
         let pk = match key {
-            Either::Left(pk) => *pk,
-            Either::Right(sk) => {
+            Key::Pk(pk) => *pk,
+            Key::Sk(sk) => {
                 match self.secondary.read()?.get(sk) {
                     None => return Ok(None),
                     Some(pk) => *pk
                 }
-            }
+            },
+            Key::Both((pk, _)) => *pk
         };
         Ok(self.primary.read()?.get(&pk).cloned())
     }
 
-    async fn get_many(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error> {
+    async fn get_many(&self, key: Either<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error> {
         unimplemented!()
     }
 
     async fn patch(&self, id: &<Self::Item as Item>::PK, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
-        let key = Either::Left(id);
+        let key = Key::Pk(id);
         if let Some(organisation) = self.get(key).await? {
             let id = *id;
             let name = match map.remove("name") {

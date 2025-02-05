@@ -39,7 +39,7 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<Option<Item>>` - Returns the item if found, otherwise `None`, wrapped in a `Result`.
-    async fn get(&self, key: Either<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error>;
+    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error>;
 
 
     /// Reads multiple items by a composite key from the table.
@@ -51,7 +51,7 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<Option<Vec<impl Iterator<Item = Self::Item>>>>` - Returns an iterator over the items if found, otherwise `None`, wrapped in a `Result`.
-    async fn get_many(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error>;
+    async fn get_many(&self, key: Either<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Vec<Self::Item>>, Self::Error>;
 
 
     /// Partially updates an existing item in the table.
