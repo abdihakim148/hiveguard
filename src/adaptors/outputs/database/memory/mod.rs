@@ -13,11 +13,13 @@ pub use tables::*;
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Memory {
     #[serde(skip)]
-    users: Users,
-    #[serde(skip)]
     verifications: Verifications,
     #[serde(skip)]
-    organisations: Organisations
+    organisations: Organisations,
+    #[serde(skip)]
+    resources: Resources,
+    #[serde(skip)]
+    users: Users
 }
 
 impl Database for Memory {
@@ -33,10 +35,11 @@ impl Database for Memory {
     type Error = Error;
 
     async fn new(_config: ()) -> Result<Self, Self::Error> {
-        let users = Users::new().await?;
         let verifications = Verifications::new().await?;
         let organisations = Organisations::new().await?;
-        Ok(Memory{users, verifications, organisations})
+        let resources = Resources::new().await?;
+        let users = Users::new().await?;
+        Ok(Memory{verifications, organisations, resources, users})
     }
 
     async fn verifications<'a>(&'a self) -> Result<&'a Self::Verifications, Self::Error> {
@@ -48,7 +51,7 @@ impl Database for Memory {
     }
 
     async fn resources<'a>(&'a self) -> Result<&'a Self::Resources, Self::Error> {
-        todo!()
+        Ok(&self.resources)
     }
 
     async fn services<'a>(&'a self) -> Result<&'a Self::Services, Self::Error> {
