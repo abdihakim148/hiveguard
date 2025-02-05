@@ -66,7 +66,7 @@ impl Table for Services {
     /// The SK is not used here because the SK represents the `owner_id`, and an owner can have
     /// multiple services. The function is designed to retrieve a single service, which is
     /// uniquely identified by the primary key (`id`).
-    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
+    async fn get(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
         let pk = match key {
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => return Ok(None),
@@ -120,10 +120,9 @@ impl Table for Services {
     /// # Returns
     ///
     /// * `Result<Self::Item, Self::Error>` - The updated service or an error.
-    async fn patch(&self, id: &<Self::Item as Item>::PK, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
-        let key = Key::Pk(id);
+    async fn patch(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
         if let Some(service) = self.get(key).await? {
-            let id = *id;
+            let id = service.id;
             let name = map.remove("name").and_then(|v| v.try_into().ok()).unwrap_or(service.name.clone());
             let client_secret = map.remove("client_secret").and_then(|v| v.try_into().ok()).unwrap_or(service.client_secret.clone());
             let redirect_uris = map.remove("redirect_uris").and_then(|v| v.try_into().ok()).unwrap_or(service.redirect_uris.clone());
@@ -171,7 +170,12 @@ impl Table for Services {
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - An empty result or an error.
-    async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error> {
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error> {
+        let id = match key {
+            Key::Pk(pk) => pk,
+            Key::Both((pk, _)) => pk,
+            _ => return  Ok(())
+        };
         let (mut secondary, mut primary) = (self.secondary.write()?, self.primary.write()?);
         if let Some(service) = primary.remove(id) {
             if let Some(set) = secondary.get_mut(&service.owner_id) {
@@ -189,7 +193,7 @@ impl Table for Services {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::types::{Id, Service, Scope, GrantType};
+    use crate::domain::types::{Id, Service, Scope, GrantType, Key};
     use std::collections::HashMap;
     use chrono::Duration;
 
@@ -226,7 +230,7 @@ mod tests {
         };
 
         services.create(&service).await.unwrap();
-        let result = services.get(Key::Pk(&service.id)).await.unwrap();
+        let result = services.get(&Key::Pk(service.id)).await.unwrap();
         assert_eq!(result, Some(service));
     }
 
@@ -278,7 +282,7 @@ mod tests {
         services.create(&service).await.unwrap();
         let mut map = HashMap::new();
         map.insert("name".to_string(), Value::String("Updated Service".to_string()));
-        let updated_service = services.patch(&service.id, map).await.unwrap();
+        let updated_service = services.patch(&Key::Pk(service.id), map).await.unwrap();
         assert_eq!(updated_service.name, "Updated Service");
     }
 
@@ -299,7 +303,7 @@ mod tests {
         services.create(&service).await.unwrap();
         service.name = "Updated Service".to_string();
         services.update(&service).await.unwrap();
-        let result = services.get(Key::Pk(&service.id)).await.unwrap();
+        let result = services.get(&Key::Pk(service.id)).await.unwrap();
         assert_eq!(result.unwrap().name, "Updated Service");
     }
 
@@ -318,8 +322,8 @@ mod tests {
         };
 
         services.create(&service).await.unwrap();
-        services.delete(&service.id).await.unwrap();
-        let result = services.get(Key::Pk(&service.id)).await.unwrap();
+        services.delete(&Key::Pk(service.id)).await.unwrap();
+        let result = services.get(&Key::Pk(service.id)).await.unwrap();
         assert!(result.is_none());
     }
 }

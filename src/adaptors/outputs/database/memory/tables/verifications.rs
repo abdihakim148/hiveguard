@@ -70,7 +70,7 @@ impl Table for Verifications {
     ///
     /// * `Result<Option<Self::Item>, Self::Error>` - The found item or
     ///   `None` if no item matches the key, or an error if retrieval fails.
-    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
+    async fn get(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
         let pk = match key {
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => {
@@ -89,7 +89,7 @@ impl Table for Verifications {
         unimplemented!()
     }
 
-    async fn patch(&self, id: &<Self::Item as Item>::PK, map: Self::Map) -> Result<Self::Item, Self::Error> {
+    async fn patch(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>, map: Self::Map) -> Result<Self::Item, Self::Error> {
         unimplemented!()
     }
 
@@ -107,7 +107,12 @@ impl Table for Verifications {
     ///
     /// * `Result<(), Self::Error>` - An empty result indicating success
     ///   or an error if deletion fails.
-    async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error> {
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error> {
+        let id = match key {
+            Key::Pk(pk) => pk,
+            Key::Both((pk, _)) => pk,
+            _ => return  Ok(())
+        };
         let (mut primary, mut secondary) = (self.primary.write()?, self.secondary.write()?);
         let verification = match primary.remove(id) {
             Some(verification) => verification,
@@ -123,7 +128,7 @@ impl Table for Verifications {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::types::{Id, Verification};
+    use crate::domain::types::{Id, Verification, Key};
     use chrono::Utc;
 
     #[tokio::test]
@@ -136,11 +141,11 @@ mod tests {
         assert_eq!(pk, verification.id);
 
         // Test retrieval by primary key
-        let retrieved = primary.get(Key::Pk(&verification.id)).await.unwrap();
+        let retrieved = primary.get(&Key::Pk(verification.id)).await.unwrap();
         assert_eq!(retrieved, Some(verification.clone()));
 
         // Test retrieval by secondary key
-        let retrieved_by_sk = primary.get(Key::Sk(&verification.owner_id)).await.unwrap();
+        let retrieved_by_sk = primary.get(&Key::Sk(verification.owner_id)).await.unwrap();
         assert_eq!(retrieved_by_sk, Some(verification));
     }
 
@@ -151,10 +156,10 @@ mod tests {
 
         // Create and then delete the verification
         primary.create(&verification).await.unwrap();
-        primary.delete(&verification.id).await.unwrap();
+        primary.delete(&Key::Pk(verification.id)).await.unwrap();
 
         // Ensure it cannot be retrieved
-        let retrieved = primary.get(Key::Pk(&verification.id)).await.unwrap();
+        let retrieved = primary.get(&Key::Pk(verification.id)).await.unwrap();
         assert!(retrieved.is_none());
     }
 }

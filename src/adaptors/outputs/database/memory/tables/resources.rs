@@ -90,7 +90,7 @@ impl Table for Resources {
     /// # Returns
     ///
     /// * `Result<Option<Self::Item>, Self::Error>` - The resource if found, or None if not found.
-    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
+    async fn get(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
         let pk = match key {
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => return Ok(None),
@@ -145,10 +145,9 @@ impl Table for Resources {
     /// # Returns
     ///
     /// * `Result<Self::Item, Self::Error>` - The updated resource or an error.
-    async fn patch(&self, id: &<Self::Item as Item>::PK, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
-        let key = Key::Pk(id);
+    async fn patch(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
         if let Some(resource) = self.get(key).await? {
-            let id = *id;
+            let id = resource.id;
             let owner_id = match map.remove("owner_id") {
                 Some(value) => value.try_into()?,
                 None => resource.owner_id.clone()
@@ -195,7 +194,12 @@ impl Table for Resources {
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - An empty result or an error.
-    async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error> {
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error> {
+        let id = match key {
+            Key::Pk(pk) => pk,
+            Key::Both((pk, _)) => pk,
+            _ => return  Ok(())
+        };
         if let Some(item) = self.primary.write()?.remove(id) {
             if let Some(set) = self.secondary.write()?.get_mut(&item.owner_id) {
                 set.remove(&item.id);
@@ -210,7 +214,7 @@ impl Table for Resources {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::types::{Id, Resource};
+    use crate::domain::types::{Id, Resource, Key};
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -238,7 +242,7 @@ mod tests {
         };
 
         resources.create(&resource).await.unwrap();
-        let result = resources.get(Key::Pk(&resource.id)).await.unwrap();
+        let result = resources.get(&Key::Pk(resource.id)).await.unwrap();
         assert_eq!(result, Some(resource));
     }
 
@@ -278,7 +282,7 @@ mod tests {
         resources.create(&resource).await.unwrap();
         let mut map = HashMap::new();
         map.insert("name".to_string(), Value::String("Updated Resource".to_string()));
-        let updated_resource = resources.patch(&resource.id, map).await.unwrap();
+        let updated_resource = resources.patch(&Key::Pk(resource.id), map).await.unwrap();
         assert_eq!(updated_resource.name, "Updated Resource");
     }
 
@@ -295,7 +299,7 @@ mod tests {
         resources.create(&resource).await.unwrap();
         resource.name = "Updated Resource".to_string();
         resources.update(&resource).await.unwrap();
-        let result = resources.get(Key::Pk(&resource.id)).await.unwrap();
+        let result = resources.get(&Key::Pk(resource.id)).await.unwrap();
         assert_eq!(result.unwrap().name, "Updated Resource");
     }
 
@@ -310,8 +314,8 @@ mod tests {
         };
 
         resources.create(&resource).await.unwrap();
-        resources.delete(&resource.id).await.unwrap();
-        let result = resources.get(Key::Pk(&resource.id)).await.unwrap();
+        resources.delete(&Key::Pk(resource.id)).await.unwrap();
+        let result = resources.get(&Key::Pk(resource.id)).await.unwrap();
         assert!(result.is_none());
     }
 }

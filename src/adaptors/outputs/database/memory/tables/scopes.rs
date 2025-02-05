@@ -20,7 +20,7 @@ impl Table for Scopes {
         todo!()
     }
 
-    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
+    async fn get(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
         todo!()
     }
 
@@ -28,7 +28,7 @@ impl Table for Scopes {
         todo!()
     }
 
-    async fn patch(&self, id: &<Self::Item as Item>::PK, map: Self::Map) -> Result<Self::Item, Self::Error> {
+    async fn patch(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>, map: Self::Map) -> Result<Self::Item, Self::Error> {
         todo!()
     }
 
@@ -36,7 +36,7 @@ impl Table for Scopes {
         todo!()
     }
 
-    async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error> {
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error> {
         todo!()
     }
 }

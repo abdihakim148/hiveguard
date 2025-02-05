@@ -117,7 +117,7 @@ impl Table for Users {
     /// * `Result<Option<User>>` - Returns the user item if found, otherwise `None`, wrapped in a `Result`.
     async fn get(
         &self,
-        key: Key<&<User as Item>::PK, &<User as Item>::SK>,
+        key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>,
     ) -> Result<Option<User>, Self::Error> {
         let pk = match key {
             Key::Pk(pk) => *pk,
@@ -154,12 +154,11 @@ impl Table for Users {
     /// * `Result<User>` - Returns the updated user item wrapped in a `Result`.
     async fn patch(
         &self,
-        id: &<User as Item>::PK,
+        key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>,
         mut map: Self::Map,
     ) -> Result<User, Self::Error> {
-        let key = Key::Pk(id);
         if let Some(user) = self.get(key).await? {
-            let id = *id;
+            let id = user.id;
             let username = match map.remove("username") {
                 Some(name) => name.try_into()?,
                 None => user.username,
@@ -234,7 +233,12 @@ impl Table for Users {
     /// # Returns
     ///
     /// * `Result<<User as Item>::PK>` - Returns the ID of the deleted user wrapped in a `Result`.
-    async fn delete(&self, id: &<User as Item>::PK) -> Result<(), Self::Error> {
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error> {
+        let id = match key {
+            Key::Pk(pk) => pk,
+            Key::Both((pk, _)) => pk,
+            _ => return  Ok(())
+        };
         let mut primary = self.primary.write()?;
         let mut secondary = self.secondary.write()?;
 
@@ -347,7 +351,7 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let key = Key::Pk(&id);
+        let key = &Key::Pk(id);
         let read_user = users.get(key).await.unwrap();
         assert_eq!(Some(user), read_user);
     }
@@ -379,7 +383,7 @@ mod tests {
         );
 
         // Patch the user
-        let patched_user = users.patch(&user.id, changes).await.unwrap();
+        let patched_user = users.patch(&Key::Pk(user.id), changes).await.unwrap();
 
         // Verify the changes
         assert_eq!(patched_user.username, "updateduser");
@@ -402,7 +406,7 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let key = Key::Pk(&id);
+        let key = &Key::Pk(id);
         user.contact = Contact::Email(EmailAddress::new("newcontact@example.com").unwrap());
         let update_result = users.update(&user).await;
         assert!(update_result.is_ok());
@@ -424,8 +428,8 @@ mod tests {
         };
 
         let id = users.create(&user).await.unwrap();
-        let key = Key::Pk(&id);
-        let delete_result = users.delete(&id).await;
+        let key = &Key::Pk(id);
+        let delete_result = users.delete(key).await;
         assert!(delete_result.is_ok());
 
         let deleted_user = users.get(key).await.unwrap();

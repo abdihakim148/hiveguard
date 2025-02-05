@@ -39,7 +39,7 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<Option<Item>>` - Returns the item if found, otherwise `None`, wrapped in a `Result`.
-    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error>;
+    async fn get(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error>;
 
 
     /// Reads multiple items by a composite key from the table.
@@ -64,7 +64,7 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<Item>` - Returns the updated item wrapped in a `Result`.
-    async fn patch(&self, id: &<Self::Item as Item>::PK, map: Self::Map) -> Result<Self::Item, Self::Error>;
+    async fn patch(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>, map: Self::Map) -> Result<Self::Item, Self::Error>;
     /// Replaces an existing item in the table with a new one.
     ///
     /// # Arguments
@@ -84,5 +84,5 @@ pub trait Table: Sized {
     /// # Returns
     ///
     /// * `Result<()>` - Returns an empty result on success.
-    async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error>;
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error>;
 }

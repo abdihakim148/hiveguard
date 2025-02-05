@@ -70,7 +70,7 @@ impl Table for Organisations {
     /// * `Result<Option<Self::Item>, Self::Error>` - The organisation if found, or None if not found.
     ///
     /// The SK is used here to resolve the primary key if only the SK is provided.
-    async fn get(&self, key: Key<&<Self::Item as Item>::PK, &<Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
+    async fn get(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<Option<Self::Item>, Self::Error> {
         let pk = match key {
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => {
@@ -109,11 +109,10 @@ impl Table for Organisations {
     /// # Returns
     ///
     /// * `Result<Self::Item, Self::Error>` - The updated organisation or an error.
-    async fn patch(&self, id: &<Self::Item as Item>::PK, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
+    async fn patch(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>, mut map: Self::Map) -> Result<Self::Item, Self::Error> {
         // Retrieve the existing organisation and update the specified fields.
-        let key = Key::Pk(id);
         if let Some(organisation) = self.get(key).await? {
-            let id = *id;
+            let id = organisation.id;
             let name = match map.remove("name") {
                 Some(value) => value.try_into()?,
                 None => organisation.name.clone()
@@ -181,7 +180,12 @@ impl Table for Organisations {
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - An empty result or an error.
-    async fn delete(&self, id: &<Self::Item as Item>::PK) -> Result<(), Self::Error> {
+    async fn delete(&self, key: &Key<<Self::Item as Item>::PK, <Self::Item as Item>::SK>) -> Result<(), Self::Error> {
+        let id = match key {
+            Key::Pk(pk) => pk,
+            Key::Both((pk, _)) => pk,
+            _ => return  Ok(())
+        };
         // Remove the organisation from both primary and secondary indices.
         let (mut primary, mut secondary) = (self.primary.write()?, self.secondary.write()?);
         let item = match primary.remove(id) {
@@ -198,7 +202,7 @@ impl Table for Organisations {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::types::{Id, Organisation};
+    use crate::domain::types::{Id, Organisation, Key};
     use std::collections::HashMap;
 
     #[tokio::test]
@@ -230,7 +234,7 @@ mod tests {
         };
 
         organisations.create(&organisation).await.unwrap();
-        let result = organisations.get(Key::Pk(&organisation.id)).await.unwrap();
+        let result = organisations.get(&Key::Pk(organisation.id)).await.unwrap();
         assert_eq!(result, Some(organisation));
     }
 
@@ -249,7 +253,7 @@ mod tests {
         organisations.create(&organisation).await.unwrap();
         organisation.name = "Updated Organisation".to_string();
         organisations.update(&organisation).await.unwrap();
-        let result = organisations.get(Key::Pk(&organisation.id)).await.unwrap();
+        let result = organisations.get(&Key::Pk(organisation.id)).await.unwrap();
         assert_eq!(result.unwrap().name, "Updated Organisation");
     }
 
@@ -266,8 +270,8 @@ mod tests {
         };
 
         organisations.create(&organisation).await.unwrap();
-        organisations.delete(&organisation.id).await.unwrap();
-        let result = organisations.get(Key::Pk(&organisation.id)).await.unwrap();
+        organisations.delete(&Key::Pk(organisation.id)).await.unwrap();
+        let result = organisations.get(&Key::Pk(organisation.id)).await.unwrap();
         assert!(result.is_none());
     }
 }
