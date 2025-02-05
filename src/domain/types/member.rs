@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::Id;
 
 /// A struct representing a member with roles in an organisation.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Member {
     /// The unique identifier for the organisation.
     pub org_id: Id,

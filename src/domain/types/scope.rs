@@ -10,7 +10,7 @@ use std::str::FromStr;
 pub struct Scope{
     /// This would be the Id of the service where the resource belongs to
     pub id: Id,
-    /// This would be the name of the resource.
+    /// This would be the name of the scope.
     pub name: String,
     /// This would be the permission of the scope.
     pub permission: Permission
