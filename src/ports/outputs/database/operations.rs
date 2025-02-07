@@ -10,7 +10,7 @@ pub trait CreateItem<I: Item>: Sized {
 
 pub trait GetItem<I: Item, O: Item = I>: Sized {
     type Error: Into<Error>;
-    async fn get_item(&self, key: Key<I::PK, I::SK>) -> Result<Option<O>, Self::Error>;
+    async fn get_item(&self, key: &Key<I::PK, I::SK>) -> Result<Option<O>, Self::Error>;
 }
 
 
@@ -22,14 +22,14 @@ pub trait GetItems<I: Item, O: Item = I>: Sized {
 
 pub trait UpdateItem<I: Item, O: Item = I>: Sized {
     type Error: Into<Error>;
-    async fn update_item(&self, key: Key<I::PK, I::SK>) -> Result<Option<O>, Self::Error>;
+    async fn update_item(&self, key: &Key<I::PK, I::SK>) -> Result<Option<O>, Self::Error>;
 }
 
 
 pub trait DeleteItem<I: Item>: Sized {
     type Error: Into<Error>;
-    async fn delete_item(&self, key: Key<I::PK, I::SK>) -> Result<(), Self::Error>;
-    async fn delete_items(&self, keys: Vec<Key<I::PK, I::SK>>) -> Result<(), Self::Error> {
+    async fn delete_item(&self, key: &Key<I::PK, I::SK>) -> Result<(), Self::Error>;
+    async fn delete_items(&self, keys: &Vec<Key<I::PK, I::SK>>) -> Result<(), Self::Error> {
         for key in keys {
             self.delete_item(key).await?;
         }
