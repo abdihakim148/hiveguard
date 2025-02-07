@@ -1,7 +1,6 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
 use crate::ports::inputs::config::Config as ConfigTrait;
 use super::{argon::Argon, Paseto, mail::MailConfig};
-use crate::ports::outputs::database::Database;
 use crate::ports::outputs::mailer::Mailer;
 use crate::domain::types::Mail;
 use std::io::{Read, Write};
@@ -22,7 +21,7 @@ pub struct Config<DB, M> {
 
 impl<DB, M> Config<DB, M>
 where 
-    DB: Database + Default + Serialize + DeserializeOwned,
+    DB: Default + Serialize + DeserializeOwned,
     M: Mailer + TryFrom<Mail>,
     <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
@@ -84,9 +83,9 @@ impl<DB: Serialize, M: Mailer + TryFrom<Mail>> Serialize for Config<DB, M> {
 }
 
 
-impl<DB: Database + Default + Serialize + DeserializeOwned, M> ConfigTrait for Config<DB, M> 
+impl<DB: Default + Serialize + DeserializeOwned, M> ConfigTrait for Config<DB, M> 
 where 
-    DB: Database + Default + Serialize + DeserializeOwned,
+    DB: Default + Serialize + DeserializeOwned,
     M: Mailer + TryFrom<Mail>,
     <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
@@ -104,7 +103,7 @@ where
 }
 
 
-impl<DB: Default + Database, M: Mailer + TryFrom<Mail>> Default for Config<DB, M> 
+impl<DB: Default , M: Mailer + TryFrom<Mail>> Default for Config<DB, M> 
 where 
     <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
@@ -123,7 +122,7 @@ where
 
 impl<'de, DB, M> Deserialize<'de> for Config<DB, M> 
 where
-    DB: Database + Default + Deserialize<'de>,
+    DB: Default + Deserialize<'de>,
     M: Mailer + TryFrom<Mail>,
     <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
@@ -137,7 +136,7 @@ where
 
         impl<'de, DB, M> Visitor<'de> for ConfigVisitor<DB, M> 
         where
-            DB: Database + Default + Deserialize<'de>,
+            DB: Default + Deserialize<'de>,
             M: Mailer + TryFrom<Mail>,
             <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
         {

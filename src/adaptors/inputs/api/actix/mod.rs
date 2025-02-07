@@ -2,7 +2,6 @@ use actix_web::{get, post, web::{Data, Json}, App, HttpServer, Responder, HttpRe
 use crate::adaptors::outputs::database::memory::Memory;
 use crate::adaptors::outputs::mailer::smtp::SmtpMailer;
 use crate::ports::inputs::config::Config as Conf;
-use crate::ports::outputs::database::Database;
 use crate::domain::services::Registration;
 use crate::domain::types::{User, Config};
 use std::error::Error as StdError;
@@ -52,9 +51,10 @@ async fn greet() -> impl Responder {
 
 
 #[post("/register")]
-async fn register(user: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
-    let table = config.db().users().await?;
+async fn register(json: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
+    let db = config.db();
     let argon = config.argon();
-    let user = user.register(table, argon).await?;
+    let user = json.0;
+    let user = user.register(db, argon).await?;
     Ok(user)
 }
