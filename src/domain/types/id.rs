@@ -29,7 +29,7 @@ impl FromStr for Id {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let id = match s.parse() {
             Ok(id) => id,
-            Err(_) => Err(Error::conversion_error(Some("invalid id")))?
+            Err(_) => Err(Error::invalid_format("ObjectId", "invalid string", Some("id".to_string())))?
         };
         Ok(Id(id))
     }
@@ -49,7 +49,7 @@ impl TryFrom<Value> for Id {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(string) => string.as_str().parse(),
-            _ => Err(Error::conversion_error(Some("invalid data format")))
+            _ => Err(Error::invalid_format("Id", "invalid data format", None))
         }
     }
 }

@@ -36,8 +36,6 @@ impl Responder for Member {
 }
 
 impl Item for Member {
-    const NAME: &'static str = "member";
-    const FIELDS: &'static [&'static str] = &["org_id", "user_id", "title", "owner", "roles"];
     /// This is the org_id
     type PK = Id;
     /// This is the user_id

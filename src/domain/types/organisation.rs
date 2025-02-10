@@ -38,8 +38,6 @@ impl Responder for Organisation {
 }
 
 impl Item for Organisation {
-    const NAME: &'static str = "organisation";
-    const FIELDS: &'static [&'static str] = &["id", "name", "owners", "domains","home", "contacts"];
     /// This is the Organisation id.
     type PK = Id;
     /// This is the name of the organisation.

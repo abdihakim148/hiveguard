@@ -112,7 +112,7 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
         
         let key = From::from(&key);
         // Serialize the token to a JSON string.
-        let json = serde_json::to_string(&self).map_err(|err|Error::Internal(Box::new(err)))?;
+        let json = serde_json::to_string(&self).map_err(|err|Error::internal(err))?;
         
         // Create a payload from the JSON string.
         let payload = Payload::from(json.as_str());

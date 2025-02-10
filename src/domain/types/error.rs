@@ -1,197 +1,206 @@
+use crate::ports::ErrorTrait;
 #[cfg(feature = "http")]
-use actix_web::{http::StatusCode, HttpResponse, body::BoxBody, error::ResponseError};
-use lettre::address::AddressError as EmailAddressError;
-use argon2::password_hash::errors::Error as HashError;
-use std::fmt::{Display, Formatter, Result, Debug};
-use lettre::transport::smtp::Error as SmtpError;
-use lettre::error::Error as LettreError;
-use rusty_paseto::core::PasetoError;
+use actix_web::http::StatusCode;
+use std::fmt::{self, Display, Debug};
 use std::error::Error as StdError;
-use std::marker::PhantomData;
-use std::sync::PoisonError;
 use serde::Serialize;
-use std::any::TypeId;
-use Error::*;
+use lettre::address::AddressError;
+use lettre::error::Error as LettreError;
+use lettre::transport::smtp::Error as SmtpError;
+use argon2::password_hash::Error as HashError;
+use rusty_paseto::core::PasetoError;
+use std::sync::PoisonError;
 
-#[cfg(feature = "http")]
-pub trait ErrorTrait: ResponseError + StdError + Display + Debug {}
-#[cfg(feature = "http")]
-impl<T: ResponseError + StdError + Serialize> ErrorTrait for T {}
-
-
-#[derive(Debug)]
-pub enum Error<E = (), F = ()> {
-    NotFound(&'static str),
-    Conflict(&'static str),
-    Internal(Box<dyn StdError>),
-    InvalidEmailAddress,
+#[derive(Debug, Serialize)]
+pub enum Error {
+    // Authentication errors
+    WrongPassword,
+    InvalidEmail,
+    InvalidPhone,
+    TokenExpired,
     InvalidToken,
-    ExpiredToken,
-    /// expected type, found type, field name, http status code, custom message
-    ConversionError(TypeId, TypeId, Option<&'static str>, u16, Option<&'static str>),
-    #[cfg(feature = "http")]
-    Custom(Box<dyn ErrorTrait>),
-    Empty(PhantomData<(E, F)>)
+    
+    // Resource errors
+    ResourceNotFound { resource: String },
+    DuplicateResource { resource: String },
+    
+    // Validation errors
+    ValidationError { 
+        field: String, 
+        message: String 
+    },
+    
+    // Format errors
+    InvalidFormat { 
+        expected: String,
+        found: String,
+        field: Option<String>
+    },
+    
+    // Internal errors (not serialized to user)
+    #[serde(skip)]
+    Internal { 
+        message: String,
+        #[serde(skip)]
+        source: Option<Box<dyn StdError + Send + Sync>>
+    },
+
 }
 
-
-impl<E: 'static, F: 'static> Error<E, F> {
-    fn msg(&self) -> String {
-        match self {
-            NotFound(name) => format!("{} not found", name),
-            Conflict(name) => format!("{} already exists", name),
-            Internal(_) => String::from("internal server error"),
-            InvalidEmailAddress => String::from("invalid email address"),
-            InvalidToken => String::from("invalid token"),
-            ExpiredToken => String::from("expired token"),
-            ConversionError(_, _, field, status, message) => {
-                if *status >= 500u16 {
-                    return String::from("internal server Error")
-                }
-                if let Some(message) = message {
-                    if let Some(field) = field {
-                        return format!("{message} for field `{field}`")
-                    }
-                    return String::from(*message)
-                }
-                if let Some(field) = field {
-                    return  format!("invalid data format for field {field}");
-                }
-                String::from("invalid data format")
-            },
-            _ => String::new()
-        }
-    }
-
-    fn set_field(self, field: &'static str) -> Self {
-        let field = Some(field);
-        match self {
-            ConversionError(expected, found, _, status, message) => ConversionError(expected, found, field, status, message),
-            _ => self
-        }
-    }
-
-    fn set_status(self, status: u16) -> Self {
-        match self {
-            ConversionError(expected, found, field, _, message) => ConversionError(expected, found, field, status, message),
-            _ => self
-        }
-    }
-
-
-    pub fn conversion_error(message: Option<&'static str>) -> Self {
-        ConversionError(TypeId::of::<E>(), TypeId::of::<E>(), None, 400, message)
+// Email-related error conversions
+impl From<AddressError> for Error {
+    fn from(_: AddressError) -> Self {
+        Error::InvalidEmail
     }
 }
-
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            NotFound(name) => write!(f, "{} not found", name),
-            Conflict(name) => write!(f, "{} already exists", name),
-            Internal(err) => write!(f, "internal: {}", err),
-            InvalidEmailAddress => write!(f, "invalid email address"),
-            InvalidToken => write!(f, "invalid token"),
-            ExpiredToken => write!(f, "expired token"),
-            ConversionError(expected, found, field, _status, _) => {
-                match field {
-                    Some(field) => write!(f, "expected {:?} instead got {:?} for field `{}`", expected, found, field),
-                    None => write!(f, "expected {:?} instead got {:?}", expected, found),
-                }
-            },
-            Custom(err) => Display::fmt(err, f),
-            Empty(_) => write!(f, "EMPTY")
-        }
-    }
-}
-
-
-impl StdError for Error {}
-
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer {
-        #[derive(Serialize)]
-        struct Serializer {
-            msg: String
-        }
-
-        let ser = Serializer{msg: self.msg()};
-        ser.serialize(serializer)
-    }
-}
-
-#[cfg(feature = "http")]
-impl ResponseError for Error {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            NotFound(_) => StatusCode::NOT_FOUND,
-            Conflict(_) => StatusCode::CONFLICT,
-            Internal(_) | Empty(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            InvalidEmailAddress => StatusCode::BAD_REQUEST,
-            InvalidToken => StatusCode::UNAUTHORIZED,
-            ExpiredToken => StatusCode::UNAUTHORIZED,
-            ConversionError(_, _, _, status, _) => StatusCode::from_u16(*status).unwrap_or_default(),
-            Custom(err) => err.status_code()
-        }
-    }
-
-    fn error_response(&self) -> HttpResponse<BoxBody> {
-        if let Custom(err) = self {
-            return  err.error_response();
-        }
-        let status = self.status_code();
-        let json = serde_json::to_string(&self).unwrap_or(String::from("INTERNAL SERVER ERROR"));
-        let body = BoxBody::new(json);
-        HttpResponse::build(status).content_type("application/json").body(body)
-    }
-}
-
-
-impl From<HashError> for Error {
-    fn from(err: HashError) -> Self {
-        Self::Internal(err.into())
-    }
-}
-
-
-impl From<EmailAddressError> for Error {
-    fn from(_: EmailAddressError) -> Self {
-        InvalidEmailAddress
-    }
-}
-
 
 impl From<LettreError> for Error {
     fn from(err: LettreError) -> Self {
         match err {
-            LettreError::Io(err) => Internal(Box::new(err)),
-            _ => InvalidEmailAddress
+            LettreError::Io(err) => Error::internal(err),
+            _ => Error::InvalidEmail
         }
     }
 }
-
-
-impl From<PasetoError> for Error {
-    fn from(err: PasetoError) -> Self {
-        match err {
-            PasetoError::InvalidSignature => InvalidToken,
-            _ => Error::Internal(Box::new(err)),
-        }
-    }
-}
-
 
 impl From<SmtpError> for Error {
     fn from(err: SmtpError) -> Self {
-        Self::Internal(Box::new(err))
+        Error::internal(err)
     }
 }
 
-impl<T> From<PoisonError<T>> for Error {
-    fn from(_: PoisonError<T>) -> Self {
-        Internal("lock poison error".into())
+// Password-related error conversions
+impl From<HashError> for Error {
+    fn from(err: HashError) -> Self {
+        Error::internal(err)
     }
 }
+
+// Token-related error conversions
+impl From<PasetoError> for Error {
+    fn from(err: PasetoError) -> Self {
+        match err {
+            PasetoError::InvalidSignature => Error::InvalidToken,
+            _ => Error::internal(err),
+        }
+    }
+}
+
+// Thread safety error conversions
+impl<T: Send + Sync + 'static> From<PoisonError<T>> for Error {
+    fn from(err: PoisonError<T>) -> Self {
+        Error::internal(err)
+    }
+}
+
+// Standard error conversions
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::internal(err)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Error::internal(err)
+    }
+}
+
+impl Error {
+    pub fn internal<E>(error: E) -> Self 
+    where 
+        E: StdError + Send + Sync + 'static 
+    {
+        Self::Internal { 
+            message: "An internal error occurred".to_string(),
+            source: Some(Box::new(error))
+        }
+    }
+
+    pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
+        Self::ValidationError {
+            field: field.into(),
+            message: message.into()
+        }
+    }
+
+    pub fn invalid_format(expected: impl Into<String>, found: impl Into<String>, field: Option<String>) -> Self {
+        Self::InvalidFormat {
+            expected: expected.into(),
+            found: found.into(),
+            field
+        }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::WrongPassword => write!(f, "Invalid password"),
+            Self::InvalidEmail => write!(f, "Invalid email format"),
+            Self::InvalidPhone => write!(f, "Invalid phone number format"),
+            Self::TokenExpired => write!(f, "Token has expired"),
+            Self::InvalidToken => write!(f, "Invalid token"),
+            Self::ResourceNotFound { resource } => write!(f, "{} not found", resource),
+            Self::DuplicateResource { resource } => write!(f, "{} already exists", resource),
+            Self::ValidationError { field, message } => write!(f, "{}: {}", field, message),
+            Self::InvalidFormat { expected, found, field } => {
+                if let Some(field) = field {
+                    write!(f, "Expected {} but found {} for field {}", expected, found, field)
+                } else {
+                    write!(f, "Expected {} but found {}", expected, found)
+                }
+            },
+            Self::Internal { message, .. } => write!(f, "{}", message),
+        }
+    }
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Self::Internal { source, .. } => source.as_ref().map(|e| e.as_ref() as &(dyn StdError + 'static)),
+            _ => None
+        }
+    }
+}
+
+impl ErrorTrait for Error {
+    fn log_message(&self) -> String {
+        match self {
+            Self::Internal { message, source } => {
+                if let Some(err) = source {
+                    format!("Internal error: {}. Cause: {}", message, err)
+                } else {
+                    format!("Internal error: {}", message)
+                }
+            }
+            _ => self.to_string()
+        }
+    }
+
+    fn user_message(&self) -> String {
+        match self {
+            Self::Internal { .. } => "An internal error occurred".to_string(),
+            _ => self.to_string()
+        }
+    }
+
+    #[cfg(feature = "http")]
+    fn status(&self) -> StatusCode {
+        match self {
+            Self::WrongPassword |
+            Self::TokenExpired | 
+            Self::InvalidToken => StatusCode::UNAUTHORIZED,
+            Self::InvalidEmail |
+            Self::InvalidPhone |
+            Self::ValidationError { .. } |
+            Self::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
+            Self::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
+            Self::DuplicateResource { .. } => StatusCode::CONFLICT,
+            Self::Internal { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+

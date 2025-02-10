@@ -54,7 +54,11 @@ macro_rules! impl_from_for_number {
                         Number::I128(value) if value >= <$t>::MIN as i128 && value <= <$t>::MAX as i128 => Ok(value as $t),
                         Number::F32(value) if value >= <$t>::MIN as f32 && value <= <$t>::MAX as f32 => Ok(value as $t),
                         Number::F64(value) if value >= <$t>::MIN as f64 && value <= <$t>::MAX as f64 => Ok(value as $t),
-                        _ => Err(Error::ConversionError(TypeId::of::<$t>(), From::from(&number), None, 400, Some("integer out of range"))),
+                        _ => Err(Error::invalid_format(
+                            stringify!($t),
+                            format!("{:?}", number),
+                            None
+                        )),
                     }
                 }
             }

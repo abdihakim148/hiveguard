@@ -134,10 +134,10 @@ impl TryFrom<Value> for Phone {
                 if Self::valid(&phone) {
                     return Ok(Phone::New(phone))
                 }
-                Err(Error::conversion_error(Some("invalid phone number")))?
+                Err(Error::InvalidPhone)?
             },
             Value::Object(map) => map.try_into(),
-            _ => Err(Error::conversion_error(Some("invalid format for phone number")))?
+            _ => Err(Error::InvalidPhone)?
         }
     }
 }
@@ -149,14 +149,14 @@ impl TryFrom<HashMap<String, Value>> for Phone {
     fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
         let phone: String = match map.remove("phone") {
             Some(value) => value.try_into()?,
-            None => Err(Error::conversion_error(Some("field phone not found")))?
+            None => Err(Error::validation("phone", "field not found"))?
         };
         let verified = match map.remove("phone_veified") {
             Some(value) => value.try_into()?,
-            None => Err(Error::conversion_error(Some("field phone_verified not found")))?
+            None => false
         };
         if !Self::valid(&phone) {
-            Err(Error::conversion_error(Some("invalid phone number")))?;
+            Err(Error::InvalidPhone)?;
         }
         if verified {
             return Ok(Phone::Verified(phone));

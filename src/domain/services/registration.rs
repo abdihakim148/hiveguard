@@ -1,9 +1,9 @@
 /// A trait representing the registration process.
 use crate::ports::outputs::database::{CreateItem};
+use crate::domain::types::{User, Id};
 use crate::ports::outputs::database::Item;
-use crate::domain::types::{User, Error, Id};
-// use bson::oid::ObjectId;
 use argon2::PasswordHasher;
+use crate::ports::Error;
 
 use super::Password;
 
@@ -21,7 +21,7 @@ impl Registration for User {
     type Error = Error;
     async fn register<T: CreateItem<Self>, H: PasswordHasher>(mut self, db: &T, argon2: &H) -> Result<Self, Self::Error> {
         self.password = self.password.hash(argon2)?;
-        let mut user = db.create_item(self).await.map_err(|err|{Into::<Self::Error>::into(err)})?;
+        let mut user = db.create_item(self).await?;
         user.password = Default::default();
         Ok(user)
     }

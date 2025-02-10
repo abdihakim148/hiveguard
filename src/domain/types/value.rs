@@ -68,7 +68,7 @@ impl TryFrom<Value> for () {
         if let Value::None = value {
             Ok(())
         } else {
-            Err(Error::ConversionError(TypeId::of::<()>(), TypeId::from(&value), None, 400, Some("invalid data format")))
+            Err(Error::invalid_format("()", format!("{:?}", value), None))
         }
     }
 }
@@ -80,7 +80,7 @@ impl TryFrom<Value> for bool {
         if let Value::Bool(b) = value {
             Ok(b)
         } else {
-            Err(Error::ConversionError(TypeId::of::<bool>(), TypeId::from(&value), None, 400, Some("invalid data format")))
+            Err(Error::invalid_format("bool", format!("{:?}", value), None))
         }
     }
 }
@@ -92,7 +92,7 @@ impl TryFrom<Value> for String {
         if let Value::String(s) = value {
             Ok(s)
         } else {
-            Err(Error::ConversionError(TypeId::of::<String>(), TypeId::from(&value), None, 400, Some("invalid data format")))
+            Err(Error::invalid_format("String", format!("{:?}", value), None))
         }
     }
 }
@@ -104,7 +104,7 @@ impl TryFrom<Value> for HashMap<String, Value> {
         if let Value::Object(o) = value {
             Ok(o)
         } else {
-            Err(Error::ConversionError(TypeId::of::<HashMap<String, Value>>(), TypeId::from(&value), None, 400, Some("invalid data format")))
+            Err(Error::invalid_format("HashMap<String, Value>", format!("{:?}", value), None))
         }
     }
 }
@@ -121,7 +121,7 @@ impl<T: TryFrom<Value, Error = Error> + 'static> TryFrom<Value> for Vec<T> {
             }
             Ok(array)
         } else {
-            Err(Error::ConversionError(TypeId::of::<Vec<T>>(), TypeId::from(&value), None, 400, Some("invalid data format")))
+            Err(Error::invalid_format("Vec<T>", format!("{:?}", value), None))
         }
     }
 }
@@ -134,7 +134,7 @@ impl<T: TryFrom<Value, Error = Error>, U: TryFrom<Value, Error = Error>> TryFrom
                 let (t, u) = (array.get(0).cloned().unwrap_or_default(), array.get(1).cloned().unwrap_or_default());
                 Ok((t.try_into()?, u.try_into()?))
             },
-            _ => Err(Error::conversion_error(Some("invalid data format")))
+            _ => Err(Error::invalid_format("Tuple", format!("{:?}", value), None))
         }
     }
 }
@@ -146,7 +146,7 @@ impl<T: TryFrom<Number, Error = Error> + 'static> TryFrom<Value> for (T,) {
         if let Value::Number(n) = value {
             Ok((n.try_into()?,))
         } else {
-            Err(Error::ConversionError(TypeId::of::<T>(), From::from(&value), None, 400, Some("invalid data format")))
+            Err(Error::invalid_format("Number", format!("{:?}", value), None))
         }
     }
 }
@@ -157,7 +157,7 @@ impl TryFrom<Value> for Duration {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Number(number) => number.try_into(),
-            _ => Err(Error::conversion_error(Some("invalid duration format")))?
+            _ => Err(Error::invalid_format("Duration", format!("{:?}", value), None))?
         }
     }
 }

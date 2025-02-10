@@ -20,7 +20,7 @@ impl FromStr for GrantType {
             "implicit" => Ok(GrantType::Implicit),
             "password" => Ok(GrantType::Password),
             "client_credentials" => Ok(GrantType::ClientCredentials),
-            _ => Err(Error::conversion_error(Some("invalid grant_type")))?,
+            _ => Err(Error::invalid_format("GrantType", s, None))?,
         }
     }
 }
@@ -31,7 +31,7 @@ impl TryFrom<Value> for GrantType {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(string) => string.as_str().parse(),
-            _ => Err(Error::conversion_error(Some("invalid grant_type format")))?
+            _ => Err(Error::invalid_format("GrantType", "non-string value", None))?
         }
     }
 }

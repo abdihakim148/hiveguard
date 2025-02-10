@@ -29,7 +29,7 @@ impl FromStr for Scope {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let splits = s.split(':').collect::<Vec<&str>>();
         if splits.len() != 3 {
-            return  Err(Error::conversion_error(Some("invalid scope")));
+            return Err(Error::invalid_format("scope", "invalid format", None));
         }
         let (id, name, permission) = (splits[0], splits[1], splits[2]);
         let (id, name, permission) = (id.parse()?, name.to_string(), permission.parse()?);
@@ -56,8 +56,6 @@ impl Responder for Scope {
 
 
 impl Item for Scope {
-    const NAME: &'static str = "scope";
-    const FIELDS: &'static [&'static str] = &["id", "name", "permission"];
     /// This is the id of the Owner of the scope.
     type PK = Id;
     /// This is the name of the scope.
@@ -71,7 +69,7 @@ impl TryFrom<Value> for Scope {
         match value {
             Value::String(string) => string.as_str().parse(),
             Value::Object(map) => map.try_into(),
-            _ => Err(Error::conversion_error(Some("invalid data format for scope")))
+            _ => Err(Error::invalid_format("Scope", "invalid data format", None))
         }
     }
 }
@@ -81,9 +79,9 @@ impl TryFrom<HashMap<String, Value>> for Scope {
     type Error = Error;
 
     fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
-        let id = map.remove("id").ok_or(Error::conversion_error(Some("missing id field for the scope")))?.try_into()?;
-        let name = map.remove("name").ok_or(Error::conversion_error(Some("missing name field for the scope")))?.try_into()?;
-        let permission = map.remove("permission").ok_or(Error::conversion_error(Some("missing permission field for the scope")))?.try_into()?;
+        let id = map.remove("id").ok_or(Error::validation("id", "missing field"))?.try_into()?;
+        let name = map.remove("name").ok_or(Error::validation("name", "missing field"))?.try_into()?;
+        let permission = map.remove("permission").ok_or(Error::validation("permission", "missing field"))?.try_into()?;
         Ok(Scope{id, name, permission})
     }
 }

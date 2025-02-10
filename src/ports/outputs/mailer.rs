@@ -1,10 +1,10 @@
-use crate::domain::types::Error;
+use crate::ports::ErrorTrait;
 
 
 pub trait Mailer: Sized {
     type Config;
     type Mail;
-    type Error: Into<Error>;
+    type Error: ErrorTrait;
 
     /// Creates a new instance of the mailer with the given configuration.
     ///

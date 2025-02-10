@@ -1,5 +1,5 @@
-use super::{Contact, Id};
 use crate::ports::outputs::database::Item;
+use super::{Contact, Id};
 #[cfg(feature = "http")]
 use actix_web::{
     http::{Method, StatusCode},
@@ -49,8 +49,6 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 }
 
 impl Item for User {
-    const NAME: &'static str = "user";
-    const FIELDS: &'static [&'static str] = &["id", "user_name", "username", "first_name", "last_name", "conatct", "email", "phone"];
     type PK = Id;
     type SK = Contact;
 }

@@ -91,7 +91,7 @@ impl FromStr for Permission {
             "create" | "2" => Ok(Self::Write),
             "update" | "3" => Ok(Self::Update),
             "delete" | "4" => Ok(Self::Delete),
-            _ => Err(Error::conversion_error(Some("invalid permission")))
+            _ => Err(Error::invalid_format("Permission", s, None))
         }
     }
 }
@@ -102,7 +102,7 @@ impl TryFrom<Value> for Permission {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(string) => string.as_str().parse(),
-            _ => Err(Error::conversion_error(Some("invalid data format for permission")))
+            _ => Err(Error::invalid_format("Permission", format!("{:?}", value), None))
         }
     }
 }

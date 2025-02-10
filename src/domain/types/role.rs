@@ -35,8 +35,6 @@ impl Responder for Role {
 }
 
 impl Item for Role {
-    const NAME: &'static str = "role";
-    const FIELDS: &'static [&'static str] = &["id", "owner_id", "name", "grants"];
     /// This is the Role's owner_id
     type PK = Id;
     /// This is the role id

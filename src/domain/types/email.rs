@@ -25,7 +25,7 @@ impl EmailAddress {
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
     pub fn new(email: &str) -> Result<Self, Error> {
-        let address: Address = email.parse().map_err(|_| Error::ConversionError(TypeId::of::<Address>(), TypeId::of::<()>(), None, 400, Some("invalid email format")))?;
+        let address: Address = email.parse().map_err(|_| Error::InvalidEmail)?;
         Ok(EmailAddress::New(address))
     }
 }
@@ -119,11 +119,11 @@ impl TryFrom<Value> for EmailAddress {
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(string) => {
-                let address: Address = string.parse()?;
+                let address: Address = string.parse().map_err(|_| Error::InvalidEmail)?;
                 Ok(EmailAddress::New(address))
             }
             Value::Object(map) => Ok(map.try_into()?),
-            _ => Err(Error::ConversionError(TypeId::of::<EmailAddress>(), TypeId::from(&value), None, 400, Some("invalid data format"))),
+            _ => Err(Error::invalid_format("EmailAddress", format!("{:?}", value), None)),
         }
     }
 }
@@ -145,7 +145,7 @@ impl TryFrom<HashMap<String, Value>> for EmailAddress {
             };
         }
         let value = Value::Object(map);
-        Err(Error::ConversionError(TypeId::of::<EmailAddress>(), TypeId::from(&value), None, 400, Some("invalid data format")))
+        Err(Error::invalid_format("EmailAddress", format!("{:?}", value), None))
     }
 }
 
