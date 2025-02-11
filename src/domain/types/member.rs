@@ -37,7 +37,7 @@ impl Responder for Member {
 
 impl Item for Member {
     /// This is the org_id
-    type PK = Id;
+    type PK = (Id, Id);
     /// This is the user_id
-    type SK = Id;
+    type SK = String;
 }

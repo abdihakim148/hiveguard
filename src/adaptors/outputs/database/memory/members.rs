@@ -4,10 +4,10 @@
 //! in memory with thread-safe access and index management.
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
-use crate::domain::types::{Member, Id, Key, Value};
-use super::error::Error;
+use crate::domain::types::{Member, Id, Key, Value, User, Organisation};
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
+use super::error::Error;
 
 /// Thread-safe, indexed storage for member records
 /// 
@@ -22,13 +22,13 @@ use std::sync::RwLock as Lock;
 #[derive(Debug, Default)]
 pub struct Members {
     /// Primary storage of members, keyed by (org_id, user_id)
-    pub members: Lock<HashMap<(<Member as Item>::PK, <Member as Item>::SK), Member>>,
+    pub members: Lock<HashMap<<Member as Item>::PK, Member>>,
     
     /// Secondary index mapping organisation IDs to user IDs
-    pub org_index: Lock<HashMap<<Member as Item>::PK, Vec<<Member as Item>::SK>>>,
+    pub org_index: Lock<HashMap<<Organisation as Item>::PK, Vec<<User as Item>::PK>>>,
     
     /// Secondary index mapping user IDs to organisation IDs
-    pub user_index: Lock<HashMap<<Member as Item>::SK, Vec<<Member as Item>::PK>>>,
+    pub user_index: Lock<HashMap<<User as Item>::PK, Vec<<Organisation as Item>::PK>>>,
 }
 
 impl Members {
@@ -101,51 +101,28 @@ impl CreateItem<Member> for Members {
     }
 }
 
-impl GetItem<Member> for Members {
+impl GetItem<(Organisation, User), Member> for Members {
     type Error = Error;
-    
-    async fn get_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<Option<Member>, Self::Error> {
+
+    async fn get_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>) -> Result<Option<Member>, Self::Error> {
         match key {
-            Key::Pk(pk) => {
-                // Get first user for an organisation
-                let user_id = self.org_index.read()?
-                    .get(pk)
-                    .and_then(|user_ids| user_ids.first().cloned());
-                
-                match user_id {
-                    Some(user_id) => {
-                        Ok(self.members.read()?.get(&(*pk, user_id)).cloned())
-                    },
-                    None => Ok(None)
-                }
-            },
-            Key::Sk(sk) => {
-                // Get first organisation for a user
-                let org_id = self.user_index.read()?
-                    .get(sk)
-                    .and_then(|org_ids| org_ids.first().cloned());
-                
-                match org_id {
-                    Some(org_id) => {
-                        Ok(self.members.read()?.get(&(org_id, *sk)).cloned())
-                    },
-                    None => Ok(None)
-                }
-            },
-            Key::Both((org_id, user_id)) => {
-                // Get specific member by organisation and user ID
-                Ok(self.members.read()?.get(&(*org_id, *user_id)).cloned())
-            }
+            Key::Pk(pk) | Key::Both((pk, _)) => Ok(self.members.read()?.get(pk).cloned()),
+            _ => Ok(None)
         }
     }
 }
 
-impl UpdateItem<Member> for Members {
+impl UpdateItem<(Organisation, User), Member> for Members {
     type Error = Error;
 
-    async fn update_item(&self, _: Key<&<Member as Item>::PK, &<Member as Item>::SK>, member: Member) -> Result<Member, Self::Error> {
+    async fn update_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, member: Member) -> Result<Member, Self::Error> {
+        let pk = match key {
+            Key::Pk(pk) | Key::Both((pk, _)) => *pk,
+            _ => return Err(Error::MemberNotFound),
+        };
+
         // Remove old indexes
-        if let Some(old_member) = self.members.read()?.get(&(member.org_id, member.user_id)) {
+        if let Some(old_member) = self.members.read()?.get(&pk) {
             self.remove_from_indexes(old_member)?;
         }
         
@@ -153,19 +130,18 @@ impl UpdateItem<Member> for Members {
         self.update_indexes(&member)?;
         
         // Store updated member
-        self.members.write()?.insert((member.org_id, member.user_id), member.clone());
+        self.members.write()?.insert(pk, member.clone());
         Ok(member)
     }
 
-    async fn patch_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>, mut map: HashMap<String, Value>) -> Result<Member, Self::Error> {
-        let (org_id, user_id) = match key {
-            Key::Both((org_id, user_id)) => (*org_id, *user_id),
-            Key::Pk(org_id) => return Err(Error::MemberNotFound),
-            Key::Sk(user_id) => return Err(Error::MemberNotFound),
+    async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, mut map: HashMap<String, Value>) -> Result<Member, Self::Error> {
+        let org_id = match key {
+            Key::Pk(org_id) | Key::Both((org_id, _)) => org_id,
+            _ => return Err(Error::MemberNotFound),
         };
 
         let mut members = self.members.write()?;
-        let member = members.get_mut(&(org_id, user_id)).ok_or(Error::MemberNotFound)?;
+        let member = members.get_mut(&org_id).ok_or(Error::MemberNotFound)?;
         
         // Update basic fields
         if let Some(value) = map.remove("title") {
@@ -190,19 +166,18 @@ impl DeleteItem<Member> for Members {
     type Error = Error;
     
     async fn delete_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<(), Self::Error> {
-        let (org_id, user_id) = match key {
-            Key::Both((org_id, user_id)) => (*org_id, *user_id),
-            Key::Pk(org_id) => return Err(Error::MemberNotFound),
-            Key::Sk(user_id) => return Err(Error::MemberNotFound),
+        let pk = match key {
+            Key::Pk(pk) | Key::Both((pk, _)) => *pk,
+            _ => return Err(Error::MemberNotFound),
         };
 
         // Remove from indexes
-        if let Some(member) = self.members.read()?.get(&(org_id, user_id)) {
+        if let Some(member) = self.members.read()?.get(&pk) {
             self.remove_from_indexes(member)?;
         }
 
         // Remove member
-        self.members.write()?.remove(&(org_id, user_id));
+        self.members.write()?.remove(&pk);
         Ok(())
     }
 }
@@ -249,7 +224,7 @@ mod tests {
         let member = create_test_member();
         let _ = members.create_item(member.clone()).await;
         
-        let result = members.get_item(Key::Pk(&member.org_id)).await;
+        let result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Some(member));
     }
@@ -260,7 +235,7 @@ mod tests {
         let member = create_test_member();
         let _ = members.create_item(member.clone()).await;
 
-        let result = members.get_item(Key::Sk(&member.user_id)).await;
+        let result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Some(member));
     }
@@ -272,7 +247,7 @@ mod tests {
         let _ = members.create_item(member.clone()).await;
         
         member.title = "Updated Member".to_string();
-        let result = members.update_item(Key::Both((&member.org_id, &member.user_id)), member.clone()).await;
+        let result = members.update_item(Key::Pk(&(member.org_id, member.user_id)), member.clone()).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), member);
     }
@@ -283,10 +258,10 @@ mod tests {
         let member = create_test_member();
         let _ = members.create_item(member.clone()).await;
         
-        let result = members.delete_item(Key::Both((&member.org_id, &member.user_id))).await;
+        let result = members.delete_item(Key::Pk(&(member.org_id, member.user_id))).await;
         assert!(result.is_ok());
         
-        let get_result = members.get_item(Key::Both((&member.org_id, &member.user_id))).await;
+        let get_result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
         assert_eq!(get_result.unwrap(), None);
     }
 }

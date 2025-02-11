@@ -196,26 +196,26 @@ impl CreateItem<Member> for Memory {
     }
 }
 
-impl GetItem<Member> for Memory {
+impl GetItem<(Organisation, User), Member> for Memory {
     type Error = Error;
     /// Retrieves a member by organisation ID, user ID, or both
     /// 
     /// # Returns
     /// - `Some(Member)` if found
     /// - `None` if no matching member exists
-    async fn get_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<Option<Member>, Self::Error> {
+    async fn get_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>) -> Result<Option<Member>, Self::Error> {
         self.members.get_item(key).await
     }
 }
 
-impl UpdateItem<Member> for Memory {
+impl UpdateItem<(Organisation, User), Member> for Memory {
     type Error = Error;
     /// Updates an existing member's information
     /// 
     /// # Behavior
     /// - Allows full replacement of member data
     /// - Maintains index consistency
-    async fn update_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>, member: Member) -> Result<Member, Self::Error> {
+    async fn update_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, member: Member) -> Result<Member, Self::Error> {
         self.members.update_item(key, member).await
     }
 
@@ -225,7 +225,7 @@ impl UpdateItem<Member> for Memory {
     /// - Title
     /// - Owner status
     /// - Roles
-    async fn patch_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>, map: HashMap<String, Value>) -> Result<Member, Self::Error> {
+    async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, map: HashMap<String, Value>) -> Result<Member, Self::Error> {
         self.members.patch_item(key, map).await
     }
 }
@@ -423,3 +423,138 @@ impl GetItems<User, (Member, Organisation)> for Memory {
 // - Verification
 // - Resource
 // - Scope
+
+#[cfg(test)]
+mod tests {
+    use crate::domain::types::{Id, User, Organisation, Member, Contact, EmailAddress, Phone};
+    use bson::oid::ObjectId;
+    use super::*;
+
+    fn create_test_user() -> User {
+        User {
+            id: Id(ObjectId::new()),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            password: "hashedpassword".to_string(),
+            contact: Contact::Both(
+                Phone::New("1234567890".to_string()),
+                EmailAddress::New("test@example.com".parse().unwrap())
+            )
+        }
+    }
+
+    fn create_test_organisation() -> Organisation {
+        Organisation {
+            id: Id(ObjectId::new()),
+            name: "Test Organisation".to_string(),
+            domain: None,
+            home: None,
+            contacts: Default::default(),
+        }
+    }
+
+    fn create_test_member(org: &Organisation, user: &User) -> Member {
+        Member {
+            org_id: org.id,
+            user_id: user.id,
+            title: "Test Member".to_string(),
+            owner: false,
+            roles: vec![Id(ObjectId::new())],
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_user_organisations() {
+        let db = Memory::default();
+        let user = create_test_user();
+        let org = create_test_organisation();
+        let member = create_test_member(&org, &user);
+
+        // Create test data
+        db.create_item(user.clone()).await.unwrap();
+        db.create_item(org.clone()).await.unwrap();
+        db.create_item(member).await.unwrap();
+
+        // Test getting all organisations
+        let orgs: Option<Vec<Organisation>> = GetItems::<User, Organisation>::get_items(&db, Key::Pk(&user.id), false).await.unwrap();
+        assert!(orgs.is_some());
+        assert_eq!(orgs.unwrap().len(), 1);
+
+        // Test getting owned organisations only (should be empty as member.owner = false)
+        let owned_orgs: Option<Vec<Organisation>> = GetItems::<User, Organisation>::get_items(&db, Key::Pk(&user.id), true).await.unwrap();
+        assert!(owned_orgs.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_organisation_users() {
+        let db = Memory::default();
+        let user = create_test_user();
+        let org = create_test_organisation();
+        let member = create_test_member(&org, &user);
+
+        // Create test data
+        db.create_item(user.clone()).await.unwrap();
+        db.create_item(org.clone()).await.unwrap();
+        db.create_item(member).await.unwrap();
+
+        // Test getting all users
+        let users: Option<Vec<User>> = GetItems::<Organisation, User>::get_items(&db, Key::Pk(&org.id), false).await.unwrap();
+        assert!(users.is_some());
+        assert_eq!(users.unwrap().len(), 1);
+
+        // Test getting owners only (should be empty as member.owner = false)
+        let owners: Option<Vec<User>> = GetItems::<Organisation, User>::get_items(&db, Key::Pk(&org.id), true).await.unwrap();
+        assert!(owners.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_organisation_members_and_users() {
+        let db = Memory::default();
+        let user = create_test_user();
+        let org = create_test_organisation();
+        let member = create_test_member(&org, &user);
+
+        // Create test data
+        db.create_item(user.clone()).await.unwrap();
+        db.create_item(org.clone()).await.unwrap();
+        db.create_item(member.clone()).await.unwrap();
+
+        // Test getting all members and users
+        let members: Option<Vec<(Member, User)>> = GetItems::<Organisation, (Member, User)>::get_items(&db, Key::Pk(&org.id), false).await.unwrap();
+        assert!(members.is_some());
+        let members = members.unwrap();
+        assert_eq!(members.len(), 1);
+        assert_eq!(members[0].0, member);
+        assert_eq!(members[0].1, user);
+
+        // Test getting owner members only (should be empty as member.owner = false)
+        let owners: Option<Vec<(Member, User)>> = GetItems::<Organisation, (Member, User)>::get_items(&db, Key::Pk(&org.id), true).await.unwrap();
+        assert!(owners.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_user_members_and_organisations() {
+        let db = Memory::default();
+        let user = create_test_user();
+        let org = create_test_organisation();
+        let member = create_test_member(&org, &user);
+
+        // Create test data
+        db.create_item(user.clone()).await.unwrap();
+        db.create_item(org.clone()).await.unwrap();
+        db.create_item(member.clone()).await.unwrap();
+
+        // Test getting all members and organisations
+        let members: Option<Vec<(Member, Organisation)>> = GetItems::<User, (Member, Organisation)>::get_items(&db, Key::Pk(&user.id), false).await.unwrap();
+        assert!(members.is_some());
+        let members = members.unwrap();
+        assert_eq!(members.len(), 1);
+        assert_eq!(members[0].0, member);
+        assert_eq!(members[0].1, org);
+
+        // Test getting owner memberships only (should be empty as member.owner = false)
+        let owners: Option<Vec<(Member, Organisation)>> = GetItems::<User, (Member, Organisation)>::get_items(&db, Key::Pk(&user.id), true).await.unwrap();
+        assert!(owners.is_none());
+    }
+}
