@@ -12,43 +12,77 @@
 
 # Beekeeper
 
-Beekeeper is an open-source Authentication, Authorization, and User Management system. It supports both third-party and custom OAuth2.0 and OpenID Connect (OpenIDC) implementations. Built with Rust, it leverages the hexagonal architecture to allow easy swapping of adaptors, databases, and input methods.
+Beekeeper is an open-source Authentication, Authorization, and User Management system built with Rust. It provides a robust, flexible, and secure solution for identity and access management using modern software design principles.
+
+## Technology Stack
+
+- **Language**: Rust
+- **Web Framework**: Actix Web
+- **Authentication**: 
+  - PASETO (Platform-Agnostic Security Tokens)
+  - Ed25519 Signatures
+- **Password Hashing**: Argon2
+- **Serialization**: Serde
+- **Database**: In-Memory (with plans for multiple backends)
+
+## Architecture
+
+Beekeeper implements a Hexagonal (Ports and Adapters) Architecture, which provides:
+- Clear separation of concerns
+- Flexibility in swapping components
+- Ease of testing
+- Decoupled domain logic from infrastructure
+
+Key architectural components:
+- **Domain**: Core business logic and types
+- **Ports**: Interfaces for input and output operations
+- **Adaptors**: Concrete implementations of ports
 
 ## Features
 
-- **Security**: Utilizes Argon2 for password hashing and PASETO for secure token management.
-- **Flexible Architecture**: Hexagonal architecture for easy integration and adaptability.
-- **In-Memory Database**: Currently supports an in-memory database for quick setup and testing.
-- **HTTP API**: Built with Actix for handling HTTP requests.
-
-## Planned Features
-
-### Databases
-- [x] In-Memory database support
-- [ ] SQLite database support
-- [ ] MongoDB database support
-- [ ] DynamoDB database support
-- [ ] PostgreSQL database support
-
-### Domain
-- [ ] Third-party OAuth2.0 and OpenID Connect integration
-- [ ] Own OAuth2.0 and OpenID Connect implementation
-- [ ] Email validation
-- [ ] Logging
-- [ ] Organization Management
-- [ ] Service Management
-- [ ] Comprehensive Roles and Permissions Strategy
-
-### Interface
-- [x] HTTP API with Actix
-- [ ] GRPC input method
-- [ ] Lambda input method
-- [ ] YAML configuration support
+### Completed
+- [x] Secure password hashing with Argon2
+- [x] PASETO token generation and validation
+- [x] In-Memory database with thread-safe operations
+- [x] HTTP API with Actix Web
 - [x] JSON configuration support
+- [x] User registration and management
+- [x] Flexible error handling
+- [x] Comprehensive type system with strong serialization
+
+### Planned
+- [ ] Multiple database backend support
+- [ ] OAuth2.0 and OpenID Connect implementation
+- [ ] Enhanced logging
+- [ ] More authentication methods
+- [ ] Advanced role and permission management
+
+## Configuration
+
+Beekeeper supports JSON-based configuration with flexible secret management:
+- Environment variable secrets
+- Multi-level secret retrieval
+- Default configuration generation
+
+Example configuration structure:
+```json
+{
+  "database": { ... },
+  "argon": {
+    "algorithm": "Argon2id",
+    "version": 19,
+    "params": { ... }
+  },
+  "paseto": { ... },
+  "mailer": { ... }
+}
+```
 
 ## Installation
 
-To install Beekeeper, ensure you have Rust installed on your system. Clone the repository and build the project using Cargo:
+Prerequisites:
+- Rust (stable version)
+- Cargo
 
 ```bash
 git clone https://github.com/abdihakim148/beekeeper.git
@@ -58,18 +92,22 @@ cargo build --release
 
 ## Getting Started
 
-To get started with Beekeeper, clone the repository and follow the setup instructions in the [documentation](docs/SETUP.md).
+1. Clone the repository
+2. Configure your settings
+3. Run the application
+4. Explore the API documentation
 
 ## Contributing
 
-Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to get started.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - See [LICENSE](LICENSE) for complete details.
 
-## Contact
+## Contact & Support
 
-For questions or suggestions, please open an issue or contact the maintainers.
+- GitHub Issues: Report bugs or request features
+- Email: [Maintainer Email]
 
 ---
