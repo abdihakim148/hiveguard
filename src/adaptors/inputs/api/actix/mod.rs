@@ -5,7 +5,7 @@ use crate::ports::inputs::config::Config as Conf;
 use crate::domain::services::Registration;
 use crate::domain::types::{User, Config};
 use std::error::Error as StdError;
-use crate::domain::types::Error;
+use crate::ports::Error;
 use std::sync::Arc;
 
 
