@@ -22,13 +22,13 @@ use std::sync::RwLock as Lock;
 #[derive(Debug, Default)]
 pub struct Members {
     /// Primary storage of members, keyed by (org_id, user_id)
-    members: Lock<HashMap<(<Member as Item>::PK, <Member as Item>::SK), Member>>,
+    pub members: Lock<HashMap<(<Member as Item>::PK, <Member as Item>::SK), Member>>,
     
     /// Secondary index mapping organisation IDs to user IDs
-    org_index: Lock<HashMap<<Member as Item>::PK, Vec<<Member as Item>::SK>>>,
+    pub org_index: Lock<HashMap<<Member as Item>::PK, Vec<<Member as Item>::SK>>>,
     
     /// Secondary index mapping user IDs to organisation IDs
-    user_index: Lock<HashMap<<Member as Item>::SK, Vec<<Member as Item>::PK>>>,
+    pub user_index: Lock<HashMap<<Member as Item>::SK, Vec<<Member as Item>::PK>>>,
 }
 
 impl Members {
@@ -39,7 +39,7 @@ impl Members {
     /// 
     /// # Behavior
     /// - Adds/updates member in organisation and user indexes
-    fn update_indexes(&self, member: &Member) -> Result<(), Error> {
+    pub fn update_indexes(&self, member: &Member) -> Result<(), Error> {
         // Update organisation index
         let mut org_index = self.org_index.write()?;
         org_index.entry(member.org_id)
@@ -65,7 +65,7 @@ impl Members {
     /// 
     /// # Arguments
     /// * `member`: The member being removed
-    fn remove_from_indexes(&self, member: &Member) -> Result<(), Error> {
+    pub fn remove_from_indexes(&self, member: &Member) -> Result<(), Error> {
         // Remove from organisation index
         let mut org_index = self.org_index.write()?;
         if let Some(org_members) = org_index.get_mut(&member.org_id) {

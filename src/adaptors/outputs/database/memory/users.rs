@@ -22,15 +22,15 @@ use std::sync::RwLock as Lock;
 #[derive(Debug, Default)]
 pub struct Users {
     /// Primary storage of users, keyed by their unique identifier
-    users: Lock<HashMap<<User as Item>::PK, User>>,
+    pub users: Lock<HashMap<<User as Item>::PK, User>>,
     
     /// Secondary index mapping email addresses to user IDs
     /// Enables fast lookups of users by their email
-    emails_index: Lock<HashMap<EmailAddress, <User as Item>::PK>>,
+    pub emails_index: Lock<HashMap<EmailAddress, <User as Item>::PK>>,
     
     /// Secondary index mapping phone numbers to user IDs
     /// Enables fast lookups of users by their phone number
-    phones_index: Lock<HashMap<Phone, <User as Item>::PK>>,
+    pub phones_index: Lock<HashMap<Phone, <User as Item>::PK>>,
 }
 
 
@@ -45,7 +45,7 @@ impl Users {
     /// - Removes old email/phone indexes
     /// - Adds new email/phone indexes
     /// - Handles partial updates (email or phone only)
-    fn update_indexes(&self, pk: <User as Item>::PK, sk: <User as Item>::SK) -> Result<(), Error> {
+    pub fn update_indexes(&self, pk: <User as Item>::PK, sk: <User as Item>::SK) -> Result<(), Error> {
         // Retrieve existing user's contact information
         let (old_phone, old_email) = match self.users.read()?.get(&pk) {
             None => (None, None),
@@ -81,7 +81,7 @@ impl Users {
         Ok(())
     }
 
-    fn pk(&self, sk: &<User as Item>::SK) -> Result<Option<<User as Item>::PK>, Error> {
+    pub fn pk(&self, sk: &<User as Item>::SK) -> Result<Option<<User as Item>::PK>, Error> {
         match sk {
             Contact::Phone(phone) => Ok(self.phones_index.read()?.get(phone).cloned()),
             Contact::Email(email) => Ok(self.emails_index.read()?.get(email).cloned()),
@@ -89,7 +89,7 @@ impl Users {
         }
     }
 
-    fn does_not_exist(&self, sk: &<User as Item>::SK) -> Result<(), Error> {
+    pub fn does_not_exist(&self, sk: &<User as Item>::SK) -> Result<(), Error> {
         match sk {
             Contact::Phone(phone) => {
                 if self.phones_index.read()?.contains_key(phone) {
@@ -225,6 +225,7 @@ impl DeleteItem<User> for Users {
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {

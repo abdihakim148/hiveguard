@@ -16,7 +16,7 @@ mod error;
 mod users;
 mod members;
 
-use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
+use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem};
 use crate::domain::types::{User, Key, Value, Organisation, Member};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -238,6 +238,182 @@ impl DeleteItem<Member> for Memory {
     /// - Removes member from primary and secondary indexes
     async fn delete_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<(), Self::Error> {
         self.members.delete_item(key).await
+    }
+}
+
+/// User-related GetItems Operations
+impl GetItems<User, Organisation> for Memory {
+    type Error = Error;
+    type Filter = bool;
+
+    async fn get_items(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, filter: Self::Filter) -> Result<Option<Vec<Organisation>>, Self::Error> {
+        // Find the user ID based on the key
+        let user_id = match key {
+            Key::Pk(pk) => *pk,
+            Key::Sk(sk) => match self.users.pk(sk)? {
+                Some(pk) => pk,
+                None => return Ok(None)
+            },
+            Key::Both((pk, _)) => *pk
+        };
+
+        // Use the Members table to find organisations for this user
+        let org_ids = self.members.user_index.read()?
+            .get(&user_id)
+            .cloned()
+            .unwrap_or_default();
+
+        // If no organisations found, return None
+        if org_ids.is_empty() {
+            return Ok(None);
+        }
+
+        // Retrieve organisations, optionally filtering by ownership
+        let mut result = Vec::new();
+        for org_id in org_ids {
+            if let Some(organisation) = self.organisations.organisations.read()?.get(&org_id) {
+                // If filter is true, only return organisations where the user is an owner
+                if let Some(member) = self.members.members.read()?.get(&(org_id, user_id)) {
+                    if !filter || member.owner {
+                        result.push(organisation.clone());
+                    }
+                }
+            }
+        }
+
+        Ok(if result.is_empty() { None } else { Some(result) })
+    }
+}
+
+/// Organisation-related GetItems Operations
+impl GetItems<Organisation, User> for Memory {
+    type Error = Error;
+    type Filter = bool;
+
+    async fn get_items(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, filter: Self::Filter) -> Result<Option<Vec<User>>, Self::Error> {
+        // Find the organisation ID based on the key
+        let org_id = match key {
+            Key::Pk(pk) => *pk,
+            Key::Sk(sk) => match self.organisations.pk(sk)? {
+                Some(pk) => pk,
+                None => return Ok(None)
+            },
+            Key::Both((pk, _)) => *pk
+        };
+
+        // Use the Members table to find users for this organisation
+        let user_ids = self.members.org_index.read()?
+            .get(&org_id)
+            .cloned()
+            .unwrap_or_default();
+
+        // If no users found, return None
+        if user_ids.is_empty() {
+            return Ok(None);
+        }
+
+        // Retrieve users, optionally filtering by ownership
+        let mut result = Vec::new();
+        for user_id in user_ids {
+            if let Some(user) = self.users.users.read()?.get(&user_id) {
+                // If filter is true, only return users who are owners of the organisation
+                if let Some(member) = self.members.members.read()?.get(&(org_id, user_id)) {
+                    if !filter || member.owner {
+                        result.push(user.clone());
+                    }
+                }
+            }
+        }
+
+        Ok(if result.is_empty() { None } else { Some(result) })
+    }
+}
+
+impl GetItems<Organisation, (Member, User)> for Memory {
+    type Error = Error;
+    type Filter = bool;
+
+    async fn get_items(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, filter: Self::Filter) -> Result<Option<Vec<(Member, User)>>, Self::Error> {
+        // Find the organisation ID based on the key
+        let org_id = match key {
+            Key::Pk(pk) => *pk,
+            Key::Sk(sk) => match self.organisations.pk(sk)? {
+                Some(pk) => pk,
+                None => return Ok(None)
+            },
+            Key::Both((pk, _)) => *pk
+        };
+
+        // Use the Members table to find users for this organisation
+        let user_ids = self.members.org_index.read()?
+            .get(&org_id)
+            .cloned()
+            .unwrap_or_default();
+
+        // If no users found, return None
+        if user_ids.is_empty() {
+            return Ok(None);
+        }
+
+        // Retrieve users and members, optionally filtering by ownership
+        let mut result = Vec::new();
+        for user_id in user_ids {
+            if let (Some(user), Some(member)) = (
+                self.users.users.read()?.get(&user_id).cloned(), 
+                self.members.members.read()?.get(&(org_id, user_id)).cloned()
+            ) {
+                // If filter is true, only return users who are owners of the organisation
+                if !filter || member.owner {
+                    result.push((member, user));
+                }
+            }
+        }
+
+        Ok(if result.is_empty() { None } else { Some(result) })
+    }
+}
+
+impl GetItems<User, (Member, Organisation)> for Memory {
+    type Error = Error;
+    type Filter = bool;
+
+    async fn get_items(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, filter: Self::Filter) -> Result<Option<Vec<(Member, Organisation)>>, Self::Error> {
+        // Find the user ID based on the key
+        let user_id = match key {
+            Key::Pk(pk) => *pk,
+            Key::Sk(sk) => match self.users.pk(sk)? {
+                Some(pk) => pk,
+                None => return Ok(None)
+            },
+            Key::Both((pk, _)) => *pk
+        };
+
+        // Use the Members table to find organisations for this user
+        let org_ids = self.members.user_index.read()?
+            .get(&user_id)
+            .cloned()
+            .unwrap_or_default();
+
+        // If no organisations found, return None
+        if org_ids.is_empty() {
+            return Ok(None);
+        }
+
+        // Retrieve organisations and members, optionally filtering by ownership
+        let mut result = Vec::new();
+        for org_id in org_ids {
+            if let (Some(organisation), Some(member)) = (
+                self.organisations.organisations.read()?.get(&org_id).cloned(),
+                self.members.members.read()?.get(&(org_id, user_id)).cloned()
+            ) {
+                // If filter is true, only return organisations where the user is an owner
+                if !filter || member.owner {
+                    result.push((member, organisation));
+                }
+            }
+        }
+
+        Ok(if result.is_empty() { None } else { Some(result) })
     }
 }
 

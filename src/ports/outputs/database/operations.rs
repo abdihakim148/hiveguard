@@ -28,7 +28,17 @@ pub trait GetItem<I: Item, O: Item = I>: Sized {
 /// the relationship might be `One-to-Many` or `Many-to-Many` relationship.
 pub trait GetItems<I: Item, O: Item = I>: Sized {
     type Error: ErrorTrait;
-    async fn get_items(&self, key: Key<I::PK, I::SK>) -> Result<Option<Vec<O>>, Self::Error>;
+    type Filter;
+    /// Retrieve multiple items based on a key and filter
+    /// 
+    /// # Arguments
+    /// * `key`: The primary or secondary key to filter by
+    /// * `filter`: Additional filtering criteria
+    /// 
+    /// # Returns
+    /// * `Some(Vec<O>)` if items are found
+    /// * `None` if no items match the criteria
+    async fn get_items(&self, key: Key<&I::PK, &I::SK>, filter: Self::Filter) -> Result<Option<Vec<O>>, Self::Error>;
 }
 
 /// This trait is used to update an Item

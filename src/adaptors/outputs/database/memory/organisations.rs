@@ -21,11 +21,11 @@ use std::sync::RwLock as Lock;
 #[derive(Debug, Default)]
 pub struct Organisations {
     /// Primary storage of organisations, keyed by their unique identifier
-    organisations: Lock<HashMap<<Organisation as Item>::PK, Organisation>>,
+    pub organisations: Lock<HashMap<<Organisation as Item>::PK, Organisation>>,
     
     /// Secondary index mapping organisation names to organisation IDs
     /// Enables fast lookups of organisations by their name
-    names_index: Lock<HashMap<String, <Organisation as Item>::PK>>,
+    pub names_index: Lock<HashMap<String, <Organisation as Item>::PK>>,
 }
 
 impl Organisations {
@@ -38,7 +38,7 @@ impl Organisations {
     /// # Behavior
     /// - Removes old name index
     /// - Adds new name index
-    fn update_indexes(&self, pk: <Organisation as Item>::PK, sk: <Organisation as Item>::SK) -> Result<(), Error> {
+    pub fn update_indexes(&self, pk: <Organisation as Item>::PK, sk: <Organisation as Item>::SK) -> Result<(), Error> {
         // Remove old name index if it exists
         if let Some(old_org) = self.organisations.read()?.get(&pk) {
             self.names_index.write()?.remove(&old_org.name);
@@ -50,12 +50,12 @@ impl Organisations {
     }
 
     /// Finds the primary key for a given secondary key (organisation name)
-    fn pk(&self, sk: &<Organisation as Item>::SK) -> Result<Option<<Organisation as Item>::PK>, Error> {
+    pub fn pk(&self, sk: &<Organisation as Item>::SK) -> Result<Option<<Organisation as Item>::PK>, Error> {
         Ok(self.names_index.read()?.get(sk).cloned())
     }
 
     /// Checks if an organisation with the given name already exists
-    fn does_not_exist(&self, sk: &<Organisation as Item>::SK) -> Result<(), Error> {
+    pub fn does_not_exist(&self, sk: &<Organisation as Item>::SK) -> Result<(), Error> {
         if self.names_index.read()?.contains_key(sk) {
             return Err(Error::OrganisationWithNameExists);
         }
@@ -129,6 +129,18 @@ impl UpdateItem<Organisation> for Organisations {
             organisation.name = new_name;
         }
 
+        if let Some(value) = map.remove("domain") {
+            organisation.domain = Some(value.try_into()?);
+        }
+
+        if let Some(value) = map.remove("home") {
+            organisation.home = Some(value.try_into()?);
+        }
+
+        if let Some(value) = map.remove("contacts") {
+            organisation.contacts = value.try_into()?;
+        }
+
         Ok(organisation.clone())
     }
 }
@@ -165,7 +177,6 @@ mod tests {
     fn create_test_organisation() -> Organisation {
         Organisation {
             id: Id(ObjectId::new()),
-            owners: vec![Id(ObjectId::new())],
             name: "Test Organisation".to_string(),
             domain: None,
             home: None,

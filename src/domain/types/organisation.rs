@@ -11,8 +11,6 @@ pub struct Organisation {
     pub id: Id,
     /// The name of the organisation.
     pub name: String,
-    /// The user ids of the founders of the Organisation.
-    pub owners: Vec<Id>,
     /// The domain of the organisation, if available.
     pub domain: Option<String>,
     /// The home URL of the organisation, if available.
