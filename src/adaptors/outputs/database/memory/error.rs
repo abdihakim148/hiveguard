@@ -16,14 +16,16 @@ use std::any::type_name;
 #[derive(Debug)]
 pub enum Error {
     /// User was not found in the database
-    /// User already exists with the given email address
-    /// User already exists with the given phone number
-    /// A thread lock was poisoned, indicating a concurrent access failure
     UserNotFound,
+    /// User already exists with the given email address
     UserWithEmailExists,
+    /// User already exists with the given phone number
     UserWithPhoneExists,
     OrganisationNotFound,
     OrganisationWithNameExists,
+    MemberNotFound,
+    MemberAlreadyExists,
+    /// A thread lock was poisoned, indicating a concurrent access failure
     PoisonedLock(&'static str),
     DomainError(DomainError)
 }
@@ -36,6 +38,8 @@ impl Display for Error {
             Self::UserWithPhoneExists => write!(f, "User with this phone number already exists"),
             Self::OrganisationNotFound => write!(f, "Organisation not found"),
             Self::OrganisationWithNameExists => write!(f, "Organisation with this name already exists"),
+            Self::MemberNotFound => write!(f, "Member not found"),
+            Self::MemberAlreadyExists => write!(f, "Member already exists in the organisation"),
             Self::PoisonedLock(lock_type) => write!(f, "Thread lock poisoned for {}", lock_type),
             Self::DomainError(err) => Display::fmt(err, f)
         }
@@ -66,10 +70,11 @@ impl ErrorTrait for Error {
         match self {
             Self::UserNotFound => StatusCode::NOT_FOUND,
             Self::UserWithEmailExists | 
-            Self::UserWithPhoneExists |
+            Self::UserWithPhoneExists | Self::MemberAlreadyExists |
             Self::OrganisationWithNameExists => StatusCode::CONFLICT,
             Self::UserNotFound |
-            Self::OrganisationNotFound => StatusCode::NOT_FOUND,
+            Self::OrganisationNotFound |
+            Self::MemberNotFound => StatusCode::NOT_FOUND,
             Self::PoisonedLock(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DomainError(err) => err.status()
         }

@@ -14,15 +14,17 @@
 mod organisations;
 mod error;
 mod users;
+mod members;
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
-use crate::domain::types::{User, Key, Value, Organisation};
+use crate::domain::types::{User, Key, Value, Organisation, Member};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
 use organisations::*;
 use error::*;
 use users::*;
+use members::*;
 
 /// An in-memory database implementation for User entities.
 /// 
@@ -44,7 +46,11 @@ pub struct Memory {
     
     /// Internal organisations collection, not serialized
     #[serde(skip)]
-    organisations: Organisations
+    organisations: Organisations,
+    
+    /// Internal members collection, not serialized
+    #[serde(skip)]
+    members: Members
 }
 
 
@@ -122,7 +128,8 @@ impl DeleteItem<User> for Memory {
     }
 }
 
-/// Organisation-related Database Operations
+
+/// # Organisation-related Database Operations
 impl CreateItem<Organisation> for Memory {
     type Error = Error;
     /// Creates a new organisation in the in-memory database
@@ -177,9 +184,65 @@ impl DeleteItem<Organisation> for Memory {
     }
 }
 
+/// # Member-related Database Operations
+impl CreateItem<Member> for Memory {
+    type Error = Error;
+    /// Creates a new member in the in-memory database
+    /// 
+    /// # Errors
+    /// - Returns an error if the member already exists in the organisation
+    async fn create_item(&self, member: Member) -> Result<Member, Self::Error> {
+        self.members.create_item(member).await
+    }
+}
+
+impl GetItem<Member> for Memory {
+    type Error = Error;
+    /// Retrieves a member by organisation ID, user ID, or both
+    /// 
+    /// # Returns
+    /// - `Some(Member)` if found
+    /// - `None` if no matching member exists
+    async fn get_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<Option<Member>, Self::Error> {
+        self.members.get_item(key).await
+    }
+}
+
+impl UpdateItem<Member> for Memory {
+    type Error = Error;
+    /// Updates an existing member's information
+    /// 
+    /// # Behavior
+    /// - Allows full replacement of member data
+    /// - Maintains index consistency
+    async fn update_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>, member: Member) -> Result<Member, Self::Error> {
+        self.members.update_item(key, member).await
+    }
+
+    /// Partially updates a member's information
+    /// 
+    /// # Supported Partial Updates
+    /// - Title
+    /// - Owner status
+    /// - Roles
+    async fn patch_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>, map: HashMap<String, Value>) -> Result<Member, Self::Error> {
+        self.members.patch_item(key, map).await
+    }
+}
+
+impl DeleteItem<Member> for Memory {
+    type Error = Error;
+    /// Deletes a member from the database
+    /// 
+    /// # Behavior
+    /// - Removes member from primary and secondary indexes
+    async fn delete_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<(), Self::Error> {
+        self.members.delete_item(key).await
+    }
+}
+
 // Similar placeholder implementations for other types would follow:
 // - Service
-// - Member
 // - Role
 // - Verification
 // - Resource
