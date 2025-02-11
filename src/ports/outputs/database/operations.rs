@@ -18,7 +18,7 @@ pub trait CreateItem<I: Item>: Sized {
 pub trait GetItem<I: Item, O: Item = I>: Sized {
     type Error: ErrorTrait;
     /// This method gets an Item from the database.
-    async fn get_item(&self, key: &Key<I::PK, I::SK>) -> Result<Option<O>, Self::Error>;
+    async fn get_item(&self, key: Key<&I::PK, &I::SK>) -> Result<Option<O>, Self::Error>;
 }
 
 /// This trait is used to get many items from the database.
@@ -36,18 +36,18 @@ pub trait UpdateItem<I: Item, O: Item = I>: Sized {
     type Error: ErrorTrait;
     /// This method is used to completyley replace an item.
     /// It should also create a new item. if the Item does not exist
-    async fn update_item(&self, key: &Key<I::PK, I::SK>, item: O) -> Result<O, Self::Error>;
+    async fn update_item(&self, key: Key<&I::PK, &I::SK>, item: O) -> Result<O, Self::Error>;
     /// This methods is used to update parts of an Item.
-    async fn patch_item(&self, key: &Key<I::PK, I::SK>, map: HashMap<String, Value>) -> Result<O, Self::Error>;
+    async fn patch_item(&self, key: Key<&I::PK, &I::SK>, map: HashMap<String, Value>) -> Result<O, Self::Error>;
 }
 
 /// This trait is used to delete an Item from the database.
 pub trait DeleteItem<I: Item>: Sized {
     type Error: ErrorTrait;
     /// This method is used to delete one item from the databse.
-    async fn delete_item(&self, key: &Key<I::PK, I::SK>) -> Result<(), Self::Error>;
+    async fn delete_item(&self, key: Key<&I::PK, &I::SK>) -> Result<(), Self::Error>;
     /// This method is used to delete many items from the database.
-    async fn delete_items(&self, keys: &Vec<Key<I::PK, I::SK>>) -> Result<(), Self::Error> {
+    async fn delete_items(&self, keys: Vec<Key<&I::PK, &I::SK>>) -> Result<(), Self::Error> {
         for key in keys {
             self.delete_item(key).await?;
         }
