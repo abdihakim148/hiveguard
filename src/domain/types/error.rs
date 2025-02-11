@@ -9,7 +9,6 @@ use lettre::error::Error as LettreError;
 use lettre::transport::smtp::Error as SmtpError;
 use argon2::password_hash::Error as HashError;
 use rusty_paseto::core::PasetoError;
-use std::sync::PoisonError;
 
 #[derive(Debug, Serialize)]
 pub enum Error {
@@ -86,13 +85,6 @@ impl From<PasetoError> for Error {
     }
 }
 
-// Thread safety error conversions
-impl<T: Send + Sync + 'static> From<PoisonError<T>> for Error {
-    fn from(err: PoisonError<T>) -> Self {
-        Error::internal(err)
-    }
-}
-
 // Standard error conversions
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
@@ -112,7 +104,7 @@ impl Error {
         E: StdError + Send + Sync + 'static 
     {
         Self::Internal { 
-            message: "An internal error occurred".to_string(),
+            message: "an internal error occurred".to_string(),
             source: Some(Box::new(error))
         }
     }
