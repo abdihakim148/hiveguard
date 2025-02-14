@@ -7,6 +7,8 @@ use super::super::PasetoKeys; // Importing PasetoKeys for key management
 
 /// Default file path for storing Paseto keys
 const DEFAULT_PATH: &'static str = "paseto_keys.json";
+///Default ttl time for a Paseto token
+const DEFAULT_TTL: i64 = 60*60*24;
 
 
 #[derive(Debug, Clone, PartialEq)] // Paseto struct with serialization capabilities
@@ -14,7 +16,9 @@ pub struct Paseto {
     /// File path for storing keys
     path: String,
     /// Paseto keys
-    keys: PasetoKeys,
+    pub keys: PasetoKeys,
+    /// Token's Time To Live in seconds
+    pub ttl: i64
 }
 
 
@@ -48,12 +52,12 @@ impl Paseto {
     /// # Returns
     ///
     /// * `Result<Self, Error>` - Result containing the loaded Paseto struct or an error.
-    fn load(path: &str) -> Result<Self, Error> {
+    fn load(path: &str, ttl: i64) -> Result<Self, Error> {
         let mut json = String::new(); // Buffer for file content
         File::open(path)?.read_to_string(&mut json)?;
         let path = path.to_string();
         let keys = serde_json::from_str::<PasetoKeys>(&json)?; // Deserialize JSON to PasetoKeys
-        Ok(Self { path, keys }) // Return Paseto instance
+        Ok(Self {path, keys, ttl}) // Return Paseto instance
     }
 }
 
@@ -62,7 +66,13 @@ impl Serialize for Paseto {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
-        serializer.serialize_str(&self.path)
+        #[derive(Serialize)]
+        struct PrePaseto {
+            path: String,
+            ttl: u64,
+        }
+        let pre_paseto = PrePaseto{path: self.path.clone(), ttl: self.ttl as u64};
+        pre_paseto.serialize(serializer)
     }
 }
 
@@ -78,12 +88,13 @@ impl Default for Paseto {
     /// * `Self` - A default instance of Paseto.
     fn default() -> Self {
         let path = DEFAULT_PATH;
-        match Self::load(path) {
+        let ttl = DEFAULT_TTL;
+        match Self::load(path, ttl) {
             Ok(paseto) => paseto,
             _ => {
                 let path = path.to_string();
                 let keys = PasetoKeys::default();
-                let paseto = Paseto { path, keys }; // Create new Paseto instance
+                let paseto = Paseto {path, keys, ttl}; // Create new Paseto instance
                 // Save the new keys, panicking if it fails
                 paseto.save().unwrap();
                 paseto
@@ -98,7 +109,14 @@ impl<'de> Deserialize<'de> for Paseto {
     where
         D: serde::Deserializer<'de>,
     {
-        let path = String::deserialize(deserializer)?;
-        Ok(Paseto::load(&path).unwrap_or_default())
+        #[derive(Deserialize)]
+        struct PrePaseto {
+            path: String,
+            ttl: u64,
+        }
+        let prepaseto = PrePaseto::deserialize(deserializer)?;
+        let path = if prepaseto.path.is_empty(){DEFAULT_PATH}else{prepaseto.path.as_str()};
+        let ttl = if prepaseto.ttl != 0{prepaseto.ttl as i64}else{DEFAULT_TTL};
+        Ok(Paseto::load(&path, ttl).unwrap_or_default())
     }
 }

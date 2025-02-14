@@ -108,7 +108,7 @@ where
     <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
 {
     fn default() -> Self {
-        let name = Default::default();
+        let name = String::from("Beekeeper");
         let domain = Default::default();
         let database = Default::default();
         let argon = Default::default();
