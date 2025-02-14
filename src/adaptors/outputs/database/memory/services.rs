@@ -79,28 +79,26 @@ impl GetItem<Service> for Services {
     async fn get_item(
         &self,
         key: Key<&<Service as Item>::PK, &<Service as Item>::SK>,
-    ) -> Result<Option<Service>, Self::Error> {
-        match key {
-            Key::Pk(pk) => Ok(self.services.read()?.get(pk).cloned()),
-            Key::Both((pk, sk)) => {
-                let owner_index = self.owner_index.read()?;
-                if let Some(owner_services) = owner_index.get(pk) {
-                    if let Some(service_id) = owner_services.get(sk) {
-                        return Ok(self.services.read()?.get(service_id).cloned());
-                    }
-                }
-                Ok(None)
-            }
+    ) -> Result<Service, Self::Error> {
+        let option = match key {
+            Key::Pk(pk) | Key::Both((pk, _)) => self.services.read()?.get(pk).cloned(),
             Key::Sk(sk) => {
                 let owner_index = self.owner_index.read()?;
+                let mut option = None;
                 for (owner_id, owner_services) in owner_index.iter() {
-                    if let Some(service_id) = owner_services.get(sk) {
-                        return Ok(self.services.read()?.get(service_id).cloned());
-                    }
-                }
-                Ok(None)
+                    match owner_services.get(sk) {
+                        Some(service_id) => option = self.services.read()?.get(service_id).cloned(),
+                        None => (),
+                    };
+                };
+                option
             }
+        };
+
+        if let Some(service) = option {
+            return Ok(service)
         }
+        Err(Error::ServiceNotFound)
     }
 }
 
@@ -310,7 +308,7 @@ mod tests {
 
         let result = services.get_item(Key::Pk(&service.id)).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(service));
+        assert_eq!(result.unwrap(), service);
     }
 
     #[tokio::test]
@@ -323,7 +321,7 @@ mod tests {
 
         let result = services.get_item(key).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(service));
+        assert_eq!(result.unwrap(), service);
     }
 
     #[tokio::test]
@@ -369,6 +367,6 @@ mod tests {
         assert!(result.is_ok());
 
         let get_result = services.get_item(Key::Pk(&service.id)).await;
-        assert_eq!(get_result.unwrap(), None);
+        assert!(get_result.is_err());
     }
 }

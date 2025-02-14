@@ -18,7 +18,7 @@ pub trait CreateItem<I: Item>: Sized {
 pub trait GetItem<I: Item, O: Item = I>: Sized {
     type Error: ErrorTrait;
     /// This method gets an Item from the database.
-    async fn get_item(&self, key: Key<&I::PK, &I::SK>) -> Result<Option<O>, Self::Error>;
+    async fn get_item(&self, key: Key<&I::PK, &I::SK>) -> Result<O, Self::Error>;
 }
 
 /// This trait is used to get many items from the database.
@@ -38,7 +38,7 @@ pub trait GetItems<I: Item, O: Item = I>: Sized {
     /// # Returns
     /// * `Some(Vec<O>)` if items are found
     /// * `None` if no items match the criteria
-    async fn get_items(&self, key: Key<&I::PK, &I::SK>, filter: Self::Filter) -> Result<Option<Vec<O>>, Self::Error>;
+    async fn get_items(&self, key: Key<&I::PK, &I::SK>, filter: Self::Filter) -> Result<Vec<O>, Self::Error>;
 }
 
 /// This trait is used to update an Item

@@ -138,18 +138,22 @@ impl CreateItem<User> for Users {
 impl GetItem<User> for Users {
     type Error = Error;
     
-    async fn get_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>) -> Result<Option<User>, Self::Error> {
-        match key {
-            Key::Pk(pk) => Ok(self.users.read()?.get(pk).cloned()),
-            Key::Both((pk, _)) => Ok(self.users.read()?.get(pk).cloned()),
+    async fn get_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>) -> Result<User, Self::Error> {
+        let option = match key {
+            Key::Pk(pk) => self.users.read()?.get(pk).cloned(),
+            Key::Both((pk, _)) => self.users.read()?.get(pk).cloned(),
             Key::Sk(sk) => {
                 if let Some(pk) = self.pk(sk)? {
-                    Ok(self.users.read()?.get(&pk).cloned())
+                    self.users.read()?.get(&pk).cloned()
                 } else {
-                    Ok(None)
+                    None
                 }
             }
+        };
+        if let Some(user) = option {
+            return Ok(user)
         }
+        Err(Error::UserNotFound)
     }
 }
 
@@ -277,7 +281,7 @@ mod tests {
         
         let result = users.get_item(Key::Pk(&user.id)).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(user));
+        assert_eq!(result.unwrap(), user);
     }
 
     #[tokio::test]
@@ -290,7 +294,7 @@ mod tests {
         
         let result = users.get_item(key).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(user));
+        assert_eq!(result.unwrap(), user);
     }
 
     #[tokio::test]
@@ -315,6 +319,6 @@ mod tests {
         assert!(result.is_ok());
         
         let get_result = users.get_item(Key::Pk(&user.id)).await;
-        assert_eq!(get_result.unwrap(), None);
+        assert!(get_result.is_err());
     }
 }

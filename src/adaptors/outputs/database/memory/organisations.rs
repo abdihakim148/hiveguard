@@ -83,18 +83,23 @@ impl CreateItem<Organisation> for Organisations {
 impl GetItem<Organisation> for Organisations {
     type Error = Error;
     
-    async fn get_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>) -> Result<Option<Organisation>, Self::Error> {
-        match key {
-            Key::Pk(pk) => Ok(self.organisations.read()?.get(pk).cloned()),
-            Key::Both((pk, _)) => Ok(self.organisations.read()?.get(pk).cloned()),
+    async fn get_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>) -> Result<Organisation, Self::Error> {
+        let option = match key {
+            Key::Pk(pk) => self.organisations.read()?.get(pk).cloned(),
+            Key::Both((pk, _)) => self.organisations.read()?.get(pk).cloned(),
             Key::Sk(sk) => {
                 if let Some(pk) = self.pk(sk)? {
-                    Ok(self.organisations.read()?.get(&pk).cloned())
+                    self.organisations.read()?.get(&pk).cloned()
                 } else {
-                    Ok(None)
+                    None
                 }
             }
+        };
+
+        if let Some(service) = option {
+            return Ok(service)
         }
+        Err(Error::ServiceNotFound)
     }
 }
 
@@ -213,7 +218,7 @@ mod tests {
         
         let result = organisations.get_item(Key::Pk(&organisation.id)).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(organisation));
+        assert_eq!(result.unwrap(), organisation);
     }
 
     #[tokio::test]
@@ -226,7 +231,7 @@ mod tests {
         
         let result = organisations.get_item(key).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(organisation));
+        assert_eq!(result.unwrap(), organisation);
     }
 
     #[tokio::test]
@@ -251,6 +256,6 @@ mod tests {
         assert!(result.is_ok());
         
         let get_result = organisations.get_item(Key::Pk(&organisation.id)).await;
-        assert_eq!(get_result.unwrap(), None);
+        assert!(get_result.is_err());
     }
 }

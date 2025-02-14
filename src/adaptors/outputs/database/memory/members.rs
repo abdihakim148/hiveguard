@@ -104,11 +104,16 @@ impl CreateItem<Member> for Members {
 impl GetItem<(Organisation, User), Member> for Members {
     type Error = Error;
 
-    async fn get_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>) -> Result<Option<Member>, Self::Error> {
-        match key {
-            Key::Pk(pk) | Key::Both((pk, _)) => Ok(self.members.read()?.get(pk).cloned()),
-            _ => Ok(None)
+    async fn get_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>) -> Result<Member, Self::Error> {
+        let option = match key {
+            Key::Pk(pk) | Key::Both((pk, _)) => self.members.read()?.get(pk).cloned(),
+            _ => None
+        };
+
+        if let Some(member) = option {
+            return Ok(member)
         }
+        Err(Error::ServiceNotFound)
     }
 }
 
@@ -226,7 +231,7 @@ mod tests {
         
         let result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(member));
+        assert_eq!(result.unwrap(), member);
     }
 
     #[tokio::test]
@@ -237,7 +242,7 @@ mod tests {
 
         let result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(member));
+        assert_eq!(result.unwrap(), member);
     }
 
     #[tokio::test]
@@ -262,6 +267,6 @@ mod tests {
         assert!(result.is_ok());
         
         let get_result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
-        assert_eq!(get_result.unwrap(), None);
+        assert!(get_result.is_err());
     }
 }
