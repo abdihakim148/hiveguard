@@ -6,10 +6,10 @@ use super::{Id, GrantType, Scope};
 use chrono::Duration;
 
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Service {
-    pub owner_id: Id,
     pub id: Id,
+    pub owner_id: Id,
     pub name: String,
     pub client_secret: String,
     pub redirect_uris: Vec<String>,
@@ -37,8 +37,8 @@ impl Responder for Service {
 
 
 impl Item for Service {
-    /// This is the owner_id.
+    /// This is the id.
     type PK = Id;
-    /// This is the service id.
-    type SK = Id;
+    /// This is the service name.
+    type SK = String;
 }

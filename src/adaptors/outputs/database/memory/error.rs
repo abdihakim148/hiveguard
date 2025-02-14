@@ -25,6 +25,8 @@ pub enum Error {
     OrganisationWithNameExists,
     MemberNotFound,
     MemberAlreadyExists,
+    ServiceNotFound,
+    ServiceAlreadyExists,
     /// A thread lock was poisoned, indicating a concurrent access failure
     PoisonedLock(&'static str),
     DomainError(DomainError)
@@ -40,6 +42,8 @@ impl Display for Error {
             Self::OrganisationWithNameExists => write!(f, "Organisation with this name already exists"),
             Self::MemberNotFound => write!(f, "Member not found"),
             Self::MemberAlreadyExists => write!(f, "Member already exists in the organisation"),
+            Self::ServiceNotFound => write!(f, "service not found"),
+            Self::ServiceAlreadyExists => write!(f, "Service with this name already exists"),
             Self::PoisonedLock(lock_type) => write!(f, "Thread lock poisoned for {}", lock_type),
             Self::DomainError(err) => Display::fmt(err, f)
         }
@@ -71,10 +75,10 @@ impl ErrorTrait for Error {
             Self::UserNotFound => StatusCode::NOT_FOUND,
             Self::UserWithEmailExists | 
             Self::UserWithPhoneExists | Self::MemberAlreadyExists |
-            Self::OrganisationWithNameExists => StatusCode::CONFLICT,
+            Self::OrganisationWithNameExists | Self::ServiceAlreadyExists | Self::ServiceAlreadyExists => StatusCode::CONFLICT,
             Self::UserNotFound |
-            Self::OrganisationNotFound |
-            Self::MemberNotFound => StatusCode::NOT_FOUND,
+            Self::OrganisationNotFound | Self::ServiceNotFound |
+            Self::MemberNotFound | Self::ServiceNotFound=> StatusCode::NOT_FOUND,
             Self::PoisonedLock(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DomainError(err) => err.status()
         }

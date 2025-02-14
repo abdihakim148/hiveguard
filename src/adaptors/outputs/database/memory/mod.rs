@@ -15,16 +15,18 @@ mod organisations;
 mod error;
 mod users;
 mod members;
+mod services;
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem};
-use crate::domain::types::{User, Key, Value, Organisation, Member};
+use crate::domain::types::{User, Key, Value, Organisation, Member, Service};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
 use organisations::*;
+use services::*;
+use members::*;
 use error::*;
 use users::*;
-use members::*;
 
 /// An in-memory database implementation for User entities.
 /// 
@@ -50,7 +52,11 @@ pub struct Memory {
     
     /// Internal members collection, not serialized
     #[serde(skip)]
-    members: Members
+    members: Members,
+    
+    /// Internal services collection, not serialized
+    #[serde(skip)]
+    services: Services
 }
 
 
@@ -238,6 +244,67 @@ impl DeleteItem<Member> for Memory {
     /// - Removes member from primary and secondary indexes
     async fn delete_item(&self, key: Key<&<Member as Item>::PK, &<Member as Item>::SK>) -> Result<(), Self::Error> {
         self.members.delete_item(key).await
+    }
+}
+
+/// # Service-related Database Operations
+impl CreateItem<Service> for Memory {
+    type Error = Error;
+    /// Creates a new service in the in-memory database
+    /// 
+    /// # Errors
+    /// - Returns an error if a service with the same name already exists
+    async fn create_item(&self, service: Service) -> Result<Service, Self::Error> {
+        self.services.create_item(service).await
+    }
+}
+
+impl GetItem<Service> for Memory {
+    type Error = Error;
+    /// Retrieves a service by primary key (ID) or secondary key (owner ID)
+    /// 
+    /// # Returns
+    /// - `Some(Service)` if found
+    /// - `None` if no matching service exists
+    async fn get_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>) -> Result<Option<Service>, Self::Error> {
+        self.services.get_item(key).await
+    }
+}
+
+impl UpdateItem<Service> for Memory {
+    type Error = Error;
+    /// Updates an existing service's information
+    /// 
+    /// # Behavior
+    /// - Allows full replacement of service data
+    /// - Maintains index consistency
+    async fn update_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, service: Service) -> Result<Service, Self::Error> {
+        self.services.update_item(key, service).await
+    }
+
+    /// Partially updates a service's information
+    /// 
+    /// # Supported Partial Updates
+    /// - Name
+    /// - Client secret
+    /// - Redirect URIs
+    /// - Scopes
+    /// - Grant types
+    /// - Token expiry
+    /// - Owner ID
+    async fn patch_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, map: HashMap<String, Value>) -> Result<Service, Self::Error> {
+        self.services.patch_item(key, map).await
+    }
+}
+
+impl DeleteItem<Service> for Memory {
+    type Error = Error;
+    /// Deletes a service from the database
+    /// 
+    /// # Behavior
+    /// - Removes service from primary and secondary indexes
+    async fn delete_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>) -> Result<(), Self::Error> {
+        self.services.delete_item(key).await
     }
 }
 

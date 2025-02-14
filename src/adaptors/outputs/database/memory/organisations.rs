@@ -5,9 +5,9 @@
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
 use crate::domain::types::{Organisation, Id, Key, Value};
-use super::error::Error;
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
+use super::error::Error;
 
 /// Thread-safe, indexed storage for organisation records
 /// 
