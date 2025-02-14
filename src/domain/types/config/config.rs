@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 
 
 pub struct Config<DB, M> {
-    name: String,
+    pub name: String,
     domain: String,
     database: DB,
     argon: Argon,

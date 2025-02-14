@@ -1,5 +1,5 @@
+use super::{super::services::Paseto, Contact, Id, Token, Audience};
 use crate::ports::outputs::database::Item;
-use super::{Contact, Id};
 #[cfg(feature = "http")]
 use actix_web::{
     http::{Method, StatusCode},
@@ -7,6 +7,7 @@ use actix_web::{
     Responder,
 };
 use serde::{Deserialize, Serialize};
+use chrono::{Utc, Duration};
 
 /// A struct representing a user.
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
@@ -27,6 +28,18 @@ pub struct User {
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
+}
+
+impl User {
+    pub fn token(&self, issuer: String, audience: Audience, ttl: i64) -> Token {
+        let id = Default::default();
+        let subject = self.id;
+        let issued_at = Utc::now();
+        let not_before = None;
+        let expiration = issued_at + Duration::seconds(ttl);
+        let claims = Default::default();
+        Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims}
+    }
 }
 
 #[cfg(feature = "http")]

@@ -1,12 +1,15 @@
-use actix_web::{get, post, web::{Data, Json}, App, HttpServer, Responder, HttpResponseBuilder as ResponseBuilder, http::StatusCode};
 use crate::adaptors::outputs::database::memory::Memory;
 use crate::adaptors::outputs::mailer::smtp::SmtpMailer;
 use crate::ports::inputs::config::Config as Conf;
-use crate::domain::services::Registration;
-use crate::domain::types::{User, Config};
+use actix_web::{web::Data, App, HttpServer};
+use crate::domain::services::Authentication;
 use std::error::Error as StdError;
+use crate::domain::types::Config;
 use crate::ports::Error;
 use std::sync::Arc;
+
+
+mod user;
 
 
 type Response<T> = std::result::Result<T, Error>;
@@ -29,32 +32,12 @@ impl Actix {
         HttpServer::new(move|| {
             App::new()
             .app_data(data.clone())
-            .service(greet)
-            .service(register)
+            .service(user::signup)
+            .service(user::login)
         })
         .bind(("127.0.0.1", 8080))?
         .run()
         .await?;
         Ok(())
     }
-}
-
-
-
-#[get("/")]
-async fn greet() -> impl Responder {
-    let mut builder = ResponseBuilder::new(StatusCode::OK);
-    builder.content_type("html");
-    let body = "<h1>Hello World!!!!</h1>";
-    builder.body(body)
-}
-
-
-#[post("/register")]
-async fn register(json: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
-    let db = config.db();
-    let argon = config.argon();
-    let user = json.0;
-    let user = user.register(db, argon).await?;
-    Ok(user)
 }

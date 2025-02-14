@@ -127,9 +127,6 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
 
 impl Paseto for Token {
     fn expired(&self) -> bool {
-        if let Some(expiration) = &self.expiration {
-            return Utc::now() >= *expiration
-        }
-        false
+        return Utc::now() >= self.expiration
     }
 }

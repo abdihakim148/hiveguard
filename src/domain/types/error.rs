@@ -71,7 +71,10 @@ impl From<SmtpError> for Error {
 // Password-related error conversions
 impl From<HashError> for Error {
     fn from(err: HashError) -> Self {
-        Error::internal(err)
+        match err {
+            HashError::Password => Error::WrongPassword,
+            _ => Error::internal(err)
+        }
     }
 }
 
