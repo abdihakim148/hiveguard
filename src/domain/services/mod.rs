@@ -1,5 +1,4 @@
 mod authentication;
-mod registration;
 mod password;
 mod paseto;
 
