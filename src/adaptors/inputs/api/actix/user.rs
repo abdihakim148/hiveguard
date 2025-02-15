@@ -16,10 +16,13 @@ struct Credentials {
 #[post("/signup")]
 async fn signup(json: Json<User>, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
     let db = config.db();
-    let argon = config.argon();
+    let hasher = config.argon();
+    let issuer = config.name.clone();
+    let paseto = config.paseto();
+    let audience = Audience::None;
     let user = json.0;
-    let user = user.register(db, argon).await?;
-    Ok(user)
+    let token = user.register(db, hasher, paseto, issuer, audience).await?;
+    Ok(token)
 }
 
 

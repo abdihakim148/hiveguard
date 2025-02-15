@@ -7,7 +7,7 @@ use super::Password;
 pub trait Authentication: Sized + Item {
     type Error;
     type QueryKey;
-    async fn register<DB: CreateItem<Self>, H: PasswordHasher>(self, db: &DB, hasher: &H) -> Result<Self, Self::Error>;
+    async fn register<DB: CreateItem<Self>, H: PasswordHasher>(self, db: &DB, hasher: &H, paseto: &Paseto, issuer: String, audience: Audience) -> Result<Token, Self::Error>;
     async fn authenticate<DB: GetItem<Self>, V: PasswordVerifier>(query_key: &Self::QueryKey, password: &str, db: &DB, verifier: &V, paseto: &Paseto, issuer: String, audience: Audience) -> Result<Token, Self::Error>;
 }
 
@@ -17,11 +17,13 @@ impl Authentication for User {
     type Error = Error;
     type QueryKey = Self::SK;
 
-    async fn register<DB: CreateItem<Self>, H: PasswordHasher>(mut self, db: &DB, hasher: &H) -> Result<Self, Self::Error> {
+    async fn register<DB: CreateItem<Self>, H: PasswordHasher>(mut self, db: &DB, hasher: &H, paseto: &Paseto, issuer: String, audience: Audience) -> Result<Token, Self::Error> {
         self.password = self.password.hash(hasher)?;
         let mut user = db.create_item(self).await?;
-        user.password = Default::default();
-        Ok(user)
+        let keys = &paseto.keys;
+        let ttl = paseto.ttl;
+        let token = user.token(issuer, audience, ttl);
+        Ok(token)
     }
 
 
