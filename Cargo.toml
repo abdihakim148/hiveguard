@@ -6,11 +6,14 @@ edition = "2021"
 [dependencies]
 actix-web = "4.9.0"
 argon2 = { version = "0.5.3", features = ["std"]}
+base64 = "0.21"
 bson = "2.0"
 chrono = { version = "0.4.39", features = ["serde"] }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 env_logger = "0.11.6"
+hex = "0.4"
 lettre = { version = "0.11.11", features = ["smtp-transport", "tokio1", "tokio1-native-tls", "serde"] }
+log = "0.4.25"
 rand = "0.8.5"
 reqwest = { version = "0.12.8", features = ["json"] }
 rusty_paseto = { version = "0.7.2", features = ["core"] }

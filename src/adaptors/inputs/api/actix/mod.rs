@@ -9,6 +9,7 @@ use crate::ports::Error;
 use std::sync::Arc;
 
 
+mod error;
 mod user;
 
 
@@ -34,6 +35,7 @@ impl Actix {
             .app_data(data.clone())
             .service(user::signup)
             .service(user::login)
+            .service(user::user_info)
         })
         .bind(("127.0.0.1", 8080))?
         .run()

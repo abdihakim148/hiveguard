@@ -1,4 +1,5 @@
 mod authentication;
+mod operations;
 mod password;
 mod paseto;
 
@@ -6,3 +7,4 @@ mod paseto;
 pub use authentication::Authentication;
 pub use password::Password;
 pub use paseto::Paseto;
+pub use operations::*;

@@ -38,7 +38,8 @@ impl User {
         let not_before = None;
         let expiration = issued_at + Duration::seconds(ttl);
         let claims = Default::default();
-        Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims}
+        let signature = None;
+        Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims, signature}
     }
 }
 

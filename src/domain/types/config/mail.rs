@@ -10,11 +10,7 @@ pub struct MailConfig<M> {
 }
 
 
-impl<M> MailConfig<M>
-where 
-    M: Mailer + TryFrom<Mail>,
-    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
-{
+impl<M> MailConfig<M> {
     pub fn mailer(&self) -> &M {
         &self.mailer
     }

@@ -1,5 +1,6 @@
+use actix_web::http::StatusCode;
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, slice::Windows};
 use super::{Id, Value};
 use chrono::{Utc, DateTime};
 
@@ -7,13 +8,23 @@ use chrono::{Utc, DateTime};
 use actix_web::{
     Responder,
     HttpResponse,
-    web::Json,
-    cookie::Cookie,
+    HttpResponseBuilder,
+    web::{Json, Data},
     body::BoxBody,
+    cookie::Cookie,
     ResponseError
 };
+// use crate::adaptors::outputs::{database::memory::Memory, mailer::smtp::SmtpMailer};
+use std::sync::Arc;
+use crate::{
+    domain::types::Config,
+    ports::{
+        outputs::{database::Item, mailer::Mailer},
+        ErrorTrait
+    },
+    domain::services::Paseto
+};
 use serde_json::json;
-use crate::{domain::services::Paseto, ports::ErrorTrait};
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
@@ -44,7 +55,9 @@ pub struct Token<T = HashMap<String, Value>> {
     #[serde(rename = "iat")]
     pub issued_at: DateTime<Utc>,
     #[serde(flatten)]
-    pub claims: T
+    pub claims: T,
+    #[serde(skip)]
+    pub signature: Option<String>
 }
 
 
@@ -68,27 +81,23 @@ impl Responder for Token {
             .map(|h| h.to_str().unwrap_or(""))
             .map(|h| h.contains("json"))
             .unwrap_or(false);
+        let status = StatusCode::OK;
 
-        // Try to sign the token
-        match self.try_sign(&Default::default()) {  // Provide a default PasetoKeys
-            Ok(signed_token) => {
+        // Get the signature or panic if none
+        match self.signature {
+            None => HttpResponse::with_body(StatusCode::INTERNAL_SERVER_ERROR, BoxBody::new(String::from("{\"error\": \"internal server error. empty token\"}"))),
+            Some(token) => {
                 if !is_json {
                     // If HTML is requested, set as cookie
-                    HttpResponse::Ok()
-                        .cookie(Cookie::new("token", signed_token.clone()))
-                        .body(BoxBody::new(""))
+                    HttpResponseBuilder::new(status)
+                        .cookie(Cookie::new("token", token.clone()))
+                        .body(String::new())
                 } else {
                     // Set token in Authorization header for JSON
-                    HttpResponse::Ok()
-                        .insert_header(("Authorization", format!("Bearer {}", signed_token)))
-                        .body(BoxBody::new(""))
+                    HttpResponseBuilder::new(status)
+                        .insert_header(("Authorization", format!("Bearer {}", token)))
+                        .body(String::new())
                 }
-            },
-            Err(err) => {
-                // If signing fails, convert to HTTP response
-                let status = err.status();
-                let body = BoxBody::new(err.user_message());
-                HttpResponse::with_body(status, body)
             }
         }
     }

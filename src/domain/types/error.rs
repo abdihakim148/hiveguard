@@ -83,6 +83,7 @@ impl From<PasetoError> for Error {
     fn from(err: PasetoError) -> Self {
         match err {
             PasetoError::InvalidSignature => Error::InvalidToken,
+            // PasetoError::FooterInvalid | PasetoError::WrongHeader,
             _ => Error::internal(err),
         }
     }

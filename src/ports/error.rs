@@ -1,6 +1,7 @@
 use std::error::Error as StdError;
 use std::fmt::{Debug, Display};
 use serde::Serialize;
+use log::error;
 
 #[cfg(feature = "http")]
 use actix_web::{
@@ -40,6 +41,10 @@ impl Error {
         let body = serde_json::json!({
             "error": self.source.user_message(),
         });
+        if status.is_server_error() {
+            let msg = self.source.log_message();
+            error!("{msg}")
+        }
         HttpResponse::build(status).json(body)
     }
 }

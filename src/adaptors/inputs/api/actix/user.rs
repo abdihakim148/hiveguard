@@ -1,7 +1,8 @@
-use actix_web::{post, web::{Json, Data, Either, Form, Header}, Responder, HttpResponse};
-use crate::domain::types::{Config, User, Contact, Audience};
+use actix_web::{post, get, web::{Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest};
+use crate::domain::{services::Get, types::{Audience, Config, Contact, User}};
 use crate::domain::services::Authentication;
 use super::{Response, DB, Mailer};
+use super::error::Error;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -38,4 +39,27 @@ async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, config: Data
     let password = credentials.password.as_str();
     let token = User::authenticate(contact, password, db, verifier, paseto, issuer, audience).await?;
     Ok(token)
+}
+
+
+#[get("/users/info")]
+async fn user_info(req: HttpRequest, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
+    let token = match req.cookie("token") {
+        Some(cookie) => cookie.value().to_string(),
+        None => {
+            match req.headers().get(actix_web::http::header::AUTHORIZATION) {
+                Some(value) => match value.to_str(){
+                    Ok(value) => value.to_string(),
+                    _ => Err(Error::UnAuthorized)?
+                },
+                None => Err(Error::UnAuthorized)?
+            }
+        }
+    };
+    let token = &token.replace("Bearer ", "");
+    let paseto = config.paseto();
+    let db = config.db();
+    let id = &User::authorize(token, paseto).await?;
+    let user = User::get(id, db).await?;
+    Ok(user)
 }

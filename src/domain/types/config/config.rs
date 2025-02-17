@@ -18,13 +18,7 @@ pub struct Config<DB, M> {
 }
 
 
-
-impl<DB, M> Config<DB, M>
-where 
-    DB: Default + Serialize + DeserializeOwned,
-    M: Mailer + TryFrom<Mail>,
-    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
-{
+impl<DB, M> Config<DB, M> {
     pub fn db(&self) -> &DB {
         &self.database
     }
@@ -40,6 +34,17 @@ where
     pub fn mailer(&self) -> &M {
         &self.mailer.mailer()
     }
+}
+
+
+
+impl<DB, M> Config<DB, M>
+where 
+    DB: Default + Serialize + DeserializeOwned,
+    M: Mailer + TryFrom<Mail>,
+    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
+{
+
 
     fn load_sync(path: Option<&str>, input: <Self as ConfigTrait>::Input) -> Result<Self, <Self as ConfigTrait>::Error> {
         let path = match path {Some(path) => path, None => <Self as ConfigTrait>::PATH};

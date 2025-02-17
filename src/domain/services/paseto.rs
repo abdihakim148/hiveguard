@@ -26,6 +26,7 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
     ///
     /// * `bool` - Returns `true` if the token has expired, `false` otherwise.
     fn expired(&self) -> bool;
+    fn set_signature(&mut self, signature: String);
 
     /// Verifies a PASETO token signature and returns the deserialized token if valid.
     ///
@@ -42,10 +43,9 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
     ///
     /// * `Result<Self>` - Returns the deserialized token if the signature is valid, or an error if not.
     fn try_verify(signature: &str, keys: &PasetoKeys) -> Result<Self> {
-        // Convert the current public key to the required format.
-        let key = Key::from(&keys.public_key);
         
-        // Create a public key from the converted key.
+        // Create the public key from the bytes
+        let key = Key::from(&keys.public_key);
         let public_key = From::from(&key);
         
         // Initialize footer and implicit assertion as None.
@@ -53,9 +53,12 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
         
         let implicit_assertion = Option::<ImplicitAssertion>::None;
         
+        
         // Attempt to verify the signature using the current public key.
         let json = match PasetoBuilder::try_verify(signature, &public_key, footer, implicit_assertion) {
-            Ok(value) => value,
+            Ok(value) => {
+                value
+            },
             
             // If verification fails, handle the error.
             Err(err) => {
@@ -69,9 +72,15 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
                         };
                         // Create a public key from the previous key.
                         let public_key = From::from(&key);
-                        
-                        // Attempt to verify the signature using the previous public key.
-                        PasetoBuilder::try_verify(signature, &public_key, footer, implicit_assertion)? 
+
+                        match PasetoBuilder::try_verify(signature, &public_key, footer, implicit_assertion) {
+                            Ok(value) => {
+                                value
+                            },
+                            Err(e) => {
+                                Err(e)?
+                            }
+                        }
                     },
                     // Propagate other errors.
                     _ => Err(err)? 
@@ -99,28 +108,31 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
     /// # Returns
     ///
     /// * `Result<String>` - Returns the PASETO token string if successful, or an error if not.
-    fn try_sign(&self, keys: &PasetoKeys) -> Result<String> {
-        // Prepare the key by combining the private and public keys.
-        let mut key = [0u8; 64];
+    fn try_sign(mut self, keys: &PasetoKeys) -> Result<Self> {
+        // For v4.public, we need to use a 64-byte key
+        let mut combined_key = [0u8; 64];
+        combined_key[..32].copy_from_slice(&keys.private_key);
+        combined_key[32..].copy_from_slice(&keys.public_key);
         
-        key[..32].copy_from_slice(&keys.private_key);
+        // Create the key from the combined bytes
+        let key = Key::from(&combined_key);
+        let private_key = From::from(&key);
         
-        key[32..].copy_from_slice(&keys.public_key);
-        
-        // Convert the combined key to the required format.
-        let key = Key::from(&key);
-        
-        let key = From::from(&key);
-        // Serialize the token to a JSON string.
+        // Serialize the token to a JSON string
         let json = serde_json::to_string(&self).map_err(|err|Error::internal(err))?;
         
-        // Create a payload from the JSON string.
+        // Create a payload from the JSON string
         let payload = Payload::from(json.as_str());
         
-        // Sign the payload to generate the PASETO token.
-        let token = PasetoBuilder::<V4, Public>::builder().set_payload(payload).try_sign(&key)?;
+        // Sign the payload to generate the PASETO token
+        let token = PasetoBuilder::<V4, Public>::builder()
+            .set_payload(payload)
+            .try_sign(&private_key)?;
         
-        Ok(token)
+        // Create a new token with the signature
+        self.set_signature(token);
+        
+        Ok(self)
     }
 }
 
@@ -128,5 +140,9 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
 impl Paseto for Token {
     fn expired(&self) -> bool {
         return Utc::now() >= self.expiration
+    }
+
+    fn set_signature(&mut self, signature: String) {
+        self.signature = Some(signature)
     }
 }
