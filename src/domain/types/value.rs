@@ -9,6 +9,7 @@ use chrono::Duration;
 
 /// Enum representing various possible object types.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[serde(untagged)]
 pub enum Value {
     #[default]
     None,

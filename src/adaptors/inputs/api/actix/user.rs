@@ -1,7 +1,8 @@
-use actix_web::{post, get, web::{Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest};
-use crate::domain::{services::Get, types::{Audience, Config, Contact, User}};
+use actix_web::{post, get, patch, web::{Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest};
+use crate::domain::{services::{Get, Update}, types::{Audience, Config, Contact, User, Value}};
 use crate::domain::services::Authentication;
 use super::{Response, DB, Mailer};
+use std::collections::HashMap;
 use super::error::Error;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -42,7 +43,7 @@ async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, config: Data
 }
 
 
-#[get("/users/info")]
+#[get("/users/")]
 async fn user_info(req: HttpRequest, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
     let token = match req.cookie("token") {
         Some(cookie) => cookie.value().to_string(),
@@ -62,4 +63,28 @@ async fn user_info(req: HttpRequest, config: Data<Arc<Config<DB, Mailer>>>) -> R
     let id = &User::authorize(token, paseto).await?;
     let user = User::get(id, db).await?;
     Ok(user)
+}
+
+
+#[patch("/users/")]
+async fn patch_user(req: HttpRequest, item: Json<HashMap<String, Value>>, config: Data<Arc<Config<DB, Mailer>>>) -> Response<impl Responder> {
+    let token = match req.cookie("token") {
+        Some(cookie) => cookie.value().to_string(),
+        None => {
+            match req.headers().get(actix_web::http::header::AUTHORIZATION) {
+                Some(value) => match value.to_str(){
+                    Ok(value) => value.to_string(),
+                    _ => Err(Error::UnAuthorized)?
+                },
+                None => Err(Error::UnAuthorized)?
+            }
+        }
+    };
+    let token = &token.replace("Bearer ", "");
+    let paseto = config.paseto();
+    let db = config.db();
+    let id = &User::authorize(token, paseto).await?;
+    let item = item.0;
+    let updated_user = User::update(id, db, item).await?;
+    Ok(updated_user)
 }
