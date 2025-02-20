@@ -27,6 +27,9 @@ pub enum Error {
     MemberAlreadyExists,
     ServiceNotFound,
     ServiceAlreadyExists,
+    CannotDeleteField(String),
+    CannotDeleteContact,
+    UnsupportedOperation,
     /// A thread lock was poisoned, indicating a concurrent access failure
     PoisonedLock(&'static str),
     DomainError(DomainError)
@@ -44,6 +47,9 @@ impl Display for Error {
             Self::MemberAlreadyExists => write!(f, "Member already exists in the organisation"),
             Self::ServiceNotFound => write!(f, "service not found"),
             Self::ServiceAlreadyExists => write!(f, "Service with this name already exists"),
+            Self::CannotDeleteField(field) => write!(f, "cannot delete the {field} field"),
+            Self::CannotDeleteContact => write!(f, "cannot delete the only contact info you have but you can replace it"),
+            Self::UnsupportedOperation => write!(f, "Unsupported operation"),
             Self::PoisonedLock(lock_type) => write!(f, "Thread lock poisoned for {}", lock_type),
             Self::DomainError(err) => Display::fmt(err, f)
         }
@@ -72,13 +78,13 @@ impl ErrorTrait for Error {
     #[cfg(feature = "http")]
     fn status(&self) -> StatusCode {
         match self {
-            Self::UserNotFound => StatusCode::NOT_FOUND,
             Self::UserWithEmailExists | 
             Self::UserWithPhoneExists | Self::MemberAlreadyExists |
             Self::OrganisationWithNameExists | Self::ServiceAlreadyExists | Self::ServiceAlreadyExists => StatusCode::CONFLICT,
             Self::UserNotFound |
             Self::OrganisationNotFound | Self::ServiceNotFound |
             Self::MemberNotFound | Self::ServiceNotFound=> StatusCode::NOT_FOUND,
+            Self::CannotDeleteField(_) | Self::CannotDeleteContact | Self::UnsupportedOperation => StatusCode::BAD_REQUEST,
             Self::PoisonedLock(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DomainError(err) => err.status()
         }

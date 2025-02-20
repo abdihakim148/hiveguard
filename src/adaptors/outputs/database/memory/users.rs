@@ -3,7 +3,7 @@
 //! This module provides the implementation for storing and managing user records
 //! in memory with thread-safe access and index management.
 
-use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
+use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{User, Contact, Key, EmailAddress, Phone, Value};
 use super::error::Error;
 use std::collections::HashMap;
@@ -159,6 +159,7 @@ impl GetItem<User> for Users {
 
 impl UpdateItem<User> for Users {
     type Error = Error;
+    type Update = Map;
 
     async fn update_item(&self, _: Key<&<User as Item>::PK, &<User as Item>::SK>, user: User) -> Result<User, Self::Error> {
         // Update indexes for new user
@@ -169,7 +170,7 @@ impl UpdateItem<User> for Users {
         Ok(user)
     }
 
-    async fn patch_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, mut map: HashMap<String, Value>) -> Result<User, Self::Error> {
+    async fn patch_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, map: Map) -> Result<User, Self::Error> {
         let id = match key {
             Key::Both((pk, _)) | Key::Pk(pk) => *pk,
             Key::Sk(sk) => match self.pk(sk)? {
@@ -182,17 +183,17 @@ impl UpdateItem<User> for Users {
         let user = users.get_mut(&id).ok_or(Error::UserNotFound)?;
         
         // Update basic fields
-        if let Some(value) = map.remove("username").or_else(|| map.remove("user_name")) {
-            user.username = value.try_into()?;
+        if let Some(value) = map.get("username").or_else(|| map.get("user_name")) {
+            user.username = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("first_name") {
-            user.first_name = value.try_into()?;
+        if let Some(value) = map.get("first_name") {
+            user.first_name = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("last_name") {
-            user.last_name = value.try_into()?;
+        if let Some(value) = map.get("last_name") {
+            user.last_name = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("password") {
-            user.password = value.try_into()?;
+        if let Some(value) = map.get("password") {
+            user.password = value.clone().try_into()?;
         }
 
         // Update contact info if provided
@@ -201,6 +202,55 @@ impl UpdateItem<User> for Users {
             let contact: Contact = map.try_into()?;
             self.update_indexes(user.id, contact.clone())?;
             user.contact = contact;
+        }
+
+        Ok(user.clone())
+    }
+
+    /// Delete specific fields from a user
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the user (by ID or contact info)
+    /// * `fields`: List of fields to delete
+    /// 
+    /// # Behavior
+    /// - Only allows deleting email or phone if the user has both contact methods
+    /// - Prevents deletion of other fields like username, first_name, etc.
+    /// 
+    /// # Errors
+    /// - Returns `UserNotFound` if the user doesn't exist
+    /// - Returns `CannotDeleteContact` if trying to delete the only contact method
+    /// - Returns `CannotDeleteField` for attempts to delete non-contact fields
+    async fn delete_fields(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, fields: &[String]) -> Result<User, Self::Error> {
+        // Resolve the user ID from the provided key
+        let id = match key {
+            Key::Both((pk, _)) | Key::Pk(pk) => *pk,
+            Key::Sk(sk) => match self.pk(sk)? {
+                Some(pk) => pk,
+                None => return Err(Error::UserNotFound)
+            }
+        };
+
+        // Acquire a write lock on the users collection
+        let mut users = self.users.write()?;
+        let user = users.get_mut(&id).ok_or(Error::UserNotFound)?;
+
+        // Process each field to be deleted
+        for field in fields {
+            match field.to_lowercase().as_str() {
+                // If user has both phone and email, remove email
+                "email" => match &user.contact {
+                    Contact::Both(phone, _) => user.contact = Contact::Phone(phone.clone()),
+                    _ => return Err(Error::CannotDeleteContact)
+                },
+                // If user has both phone and email, remove phone
+                "phone" => match &user.contact {
+                    Contact::Both(_, email) => user.contact = Contact::Email(email.clone()),
+                    _ => return Err(Error::CannotDeleteContact)
+                },
+                // Prevent deletion of other fields
+                _ => return Err(Error::CannotDeleteField(field.clone()))
+            }
         }
 
         Ok(user.clone())
@@ -320,5 +370,90 @@ mod tests {
         
         let get_result = users.get_item(Key::Pk(&user.id)).await;
         assert!(get_result.is_err());
+    }
+
+    /// Test deleting email from a user with both phone and email
+    #[tokio::test]
+    async fn test_delete_email_field() {
+        let users = Users::default();
+        let user = create_test_user();
+        let _ = users.create_item(user.clone()).await;
+        
+        // Delete email field
+        let result = users.delete_fields(Key::Pk(&user.id), &["email".to_string()]).await;
+        assert!(result.is_ok());
+        
+        // Verify the user now has only phone contact
+        let updated_user = result.unwrap();
+        assert!(matches!(updated_user.contact, Contact::Phone(_)));
+    }
+
+    /// Test deleting phone from a user with both phone and email
+    #[tokio::test]
+    async fn test_delete_phone_field() {
+        let users = Users::default();
+        let user = create_test_user();
+        let _ = users.create_item(user.clone()).await;
+        
+        // Delete phone field
+        let result = users.delete_fields(Key::Pk(&user.id), &["phone".to_string()]).await;
+        assert!(result.is_ok());
+        
+        // Verify the user now has only email contact
+        let updated_user = result.unwrap();
+        assert!(matches!(updated_user.contact, Contact::Email(_)));
+    }
+
+    /// Test attempting to delete email from a user with only email contact
+    #[tokio::test]
+    async fn test_delete_email_from_single_contact_fails() {
+        let users = Users::default();
+        let user = User {
+            id: Id(ObjectId::new()),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            password: "hashedpassword".to_string(),
+            contact: Contact::Email(EmailAddress::New("test@example.com".parse().unwrap()))
+        };
+        let _ = users.create_item(user.clone()).await;
+        
+        // Attempt to delete email
+        let result = users.delete_fields(Key::Pk(&user.id), &["email".to_string()]).await;
+        assert!(result.is_err());
+        assert!(matches!(result, Err(Error::CannotDeleteContact)));
+    }
+
+    /// Test attempting to delete phone from a user with only phone contact
+    #[tokio::test]
+    async fn test_delete_phone_from_single_contact_fails() {
+        let users = Users::default();
+        let user = User {
+            id: Id(ObjectId::new()),
+            username: "testuser".to_string(),
+            first_name: "Test".to_string(),
+            last_name: "User".to_string(),
+            password: "hashedpassword".to_string(),
+            contact: Contact::Phone(Phone::New("1234567890".to_string()))
+        };
+        let _ = users.create_item(user.clone()).await;
+        
+        // Attempt to delete phone
+        let result = users.delete_fields(Key::Pk(&user.id), &["phone".to_string()]).await;
+        assert!(result.is_err());
+        assert!(matches!(result, Err(Error::CannotDeleteContact)));
+    }
+
+    /// Test attempting to delete non-contact fields
+    #[tokio::test]
+    async fn test_delete_non_contact_fields_fails() {
+        let users = Users::default();
+        let user = create_test_user();
+        let _ = users.create_item(user.clone()).await;
+        
+        // Attempt to delete username
+        let result = users.delete_fields(Key::Pk(&user.id), &["username".to_string()]).await;
+        assert!(result.is_err());
+        assert!(matches!(result, Err(Error::CannotDeleteField(_))));
     }
 }

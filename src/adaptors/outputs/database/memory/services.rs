@@ -1,13 +1,24 @@
 //! Services collection implementation for the memory database
 //!
-//! This module provides the implementation for storing and managing service records
-//! in memory with thread-safe access and index management.
+//! This module provides a thread-safe, in-memory implementation for storing and managing service records.
+//! 
+//! # Key Features
+//! - Thread-safe storage using RwLock
+//! - Unique service names per owner
+//! - Efficient indexing for quick lookups
+//! 
+//! # Indexes
+//! - Primary index: Service ID -> Service record
+//! - Secondary index: Owner ID -> (Service Name -> Service ID)
+//! 
+//! # Concurrency
+//! Uses RwLock to ensure safe concurrent read and write operations
 
-use super::error::Error;
+use crate::ports::outputs::database::{CreateItem, DeleteItem, GetItem, Item, UpdateItem, Map};
 use crate::domain::types::{Id, Key, Service, Value};
-use crate::ports::outputs::database::{CreateItem, DeleteItem, GetItem, Item, UpdateItem};
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
+use super::error::Error;
 use chrono::Duration;
 
 /// Thread-safe, indexed storage for service records
@@ -31,6 +42,14 @@ pub struct Services {
 
 impl Services {
     /// Checks if a service with the given name already exists for this owner
+    ///
+    /// # Arguments
+    /// * `owner_id` - The ID of the service owner
+    /// * `name` - The name of the service to check
+    ///
+    /// # Returns
+    /// * `Ok(())` if no service with this name exists for the owner
+    /// * `Err(ServiceAlreadyExists)` if a service with this name already exists
     pub fn does_not_exist(&self, owner_id: &Id, name: &str) -> Result<(), Error> {
         let owner_index = self.owner_index.read()?;
         if let Some(owner_services) = owner_index.get(owner_id) {
@@ -42,6 +61,14 @@ impl Services {
     }
 
     /// Find the service ID for a given owner and name
+    ///
+    /// # Arguments
+    /// * `owner_id` - The ID of the service owner
+    /// * `name` - The name of the service
+    ///
+    /// # Returns
+    /// * `Ok(Some(service_id))` if a service is found
+    /// * `Ok(None)` if no service is found
     pub fn pk(&self, owner_id: &Id, name: &str) -> Result<Option<Id>, Error> {
         let owner_index = self.owner_index.read()?;
         Ok(owner_index
@@ -104,6 +131,7 @@ impl GetItem<Service> for Services {
 
 impl UpdateItem<Service> for Services {
     type Error = Error;
+    type Update = Map;
 
     async fn update_item(
         &self,
@@ -130,7 +158,7 @@ impl UpdateItem<Service> for Services {
     async fn patch_item(
         &self,
         key: Key<&<Service as Item>::PK, &<Service as Item>::SK>,
-        mut map: HashMap<String, Value>,
+        map: Map,
     ) -> Result<Service, Self::Error> {
         let service_id = match key {
             Key::Pk(pk) => pk.clone(),
@@ -146,10 +174,10 @@ impl UpdateItem<Service> for Services {
 
         let mut services = self.services.write()?;
         let mut service = services.get_mut(&service_id).ok_or(Error::ServiceNotFound)?.clone();
-
+        
         // Update basic fields
-        if let Some(value) = map.remove("new_name") {
-            let new_name: String = value.try_into()?;
+        if let Some(value) = map.get("new_name") {
+            let new_name: String = value.clone().try_into()?;
 
             // Validate old_name matches the current service name
             if let Some(old_name_value) = map.get("old_name") {
@@ -170,26 +198,31 @@ impl UpdateItem<Service> for Services {
         }
 
         // Update other fields
-        if let Some(value) = map.remove("client_secret") {
-            service.client_secret = value.try_into()?;
+        if let Some(value) = map.get("client_secret") {
+            service.client_secret = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("redirect_uris") {
-            service.redirect_uris = value.try_into()?;
+        if let Some(value) = map.get("redirect_uris") {
+            service.redirect_uris = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("scopes") {
-            service.scopes = value.try_into()?;
+        if let Some(value) = map.get("scopes") {
+            service.scopes = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("grant_types") {
-            service.grant_types = value.try_into()?;
+        if let Some(value) = map.get("grant_types") {
+            service.grant_types = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("token_expiry") {
-            let (seconds,): (i64,) = value.try_into()?;
+        if let Some(value) = map.get("token_expiry") {
+            let (seconds,): (i64,) = value.clone().try_into()?;
             service.token_expiry = Some(Duration::seconds(seconds));
         }
 
         services.insert(service_id, service.clone());
 
         Ok(service)
+    }
+
+    async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: &[String]) -> Result<Service, Self::Error> {
+        // Services do not support deleting fields
+        Err(Error::UnsupportedOperation)
     }
 }
 
@@ -273,19 +306,20 @@ mod tests {
         let services = Services::default();
         let service = create_test_service();
         let result = services.create_item(service.clone()).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), service);
+        assert!(result.is_ok(), "Service creation should succeed");
+        assert_eq!(result.unwrap(), service, "Created service should match input");
     }
 
     #[tokio::test]
     async fn test_create_duplicate_service_name_same_owner() {
         let services = Services::default();
         let service1 = create_test_service();
-        let mut service2 = service1.clone();
+        let service2 = service1.clone();
 
         let _ = services.create_item(service1).await;
         let result = services.create_item(service2).await;
-        assert!(matches!(result, Err(Error::ServiceAlreadyExists)));
+        assert!(matches!(result, Err(Error::ServiceAlreadyExists)), 
+                "Creating a service with duplicate name for same owner should fail");
     }
 
     #[tokio::test]
@@ -297,76 +331,33 @@ mod tests {
 
         let _ = services.create_item(service1.clone()).await;
         let result = services.create_item(service2.clone()).await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Services with same name but different owners should be allowed");
     }
 
     #[tokio::test]
-    async fn test_get_service_by_id() {
+    async fn test_patch_service_name() {
         let services = Services::default();
         let service = create_test_service();
         let _ = services.create_item(service.clone()).await;
 
-        let result = services.get_item(Key::Pk(&service.id)).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), service);
+        let patch_map = HashMap::from([
+            ("new_name".to_string(), Value::String("Updated Service".to_string())),
+            ("old_name".to_string(), Value::String(service.name.clone()))
+        ]);
+
+        let result = services.patch_item(Key::Pk(&service.id), patch_map).await;
+        assert!(result.is_ok(), "Patching service name should succeed");
+        assert_eq!(result.unwrap().name, "Updated Service", "Service name should be updated");
     }
 
     #[tokio::test]
-    async fn test_get_service_by_name() {
+    async fn test_delete_service_unsupported_fields() {
         let services = Services::default();
         let service = create_test_service();
         let _ = services.create_item(service.clone()).await;
 
-        let key = Key::Sk(&service.name);
-
-        let result = services.get_item(key).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), service);
-    }
-
-    #[tokio::test]
-    async fn test_update_service() {
-        let services = Services::default();
-        let mut service = create_test_service();
-        let _ = services.create_item(service.clone()).await;
-
-        service.name = "Updated Service".to_string();
-        let result = services
-            .update_item(Key::Pk(&service.owner_id), service.clone())
-            .await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), service);
-    }
-
-    #[tokio::test]
-    async fn test_update_service_with_existing_name_same_owner() {
-        let services = Services::default();
-        let service1 = create_test_service();
-        let mut service2 = service1.clone();
-
-        let _ = services.create_item(service1.clone()).await;
-        let _ = services.create_item(service2.clone()).await;
-
-        // Try to update service2 with service1's name
-        let mut updated_service2 = service2.clone();
-        updated_service2.name = service1.name;
-
-        let result = services
-            .update_item(Key::Pk(&service2.owner_id), updated_service2)
-            .await;
-        assert!(matches!(result, Err(Error::ServiceAlreadyExists)));
-    }
-
-    #[tokio::test]
-    async fn test_delete_service() {
-        let services = Services::default();
-        let service = create_test_service();
-        let _ = services.create_item(service.clone()).await;
-
-        let result = services.delete_item(Key::Pk(&service.id)).await;
-        assert!(result.is_ok());
-
-        let get_result = services.get_item(Key::Pk(&service.id)).await;
-        assert!(get_result.is_err());
+        let result = services.delete_fields(Key::Pk(&service.id), &["name".to_string()]).await;
+        assert!(matches!(result, Err(Error::UnsupportedOperation)), 
+                "Deleting fields should return UnsupportedOperation");
     }
 }

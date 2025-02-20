@@ -17,7 +17,7 @@ mod users;
 mod members;
 mod services;
 
-use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem};
+use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{User, Key, Value, Organisation, Member, Service};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -101,6 +101,7 @@ impl GetItem<User> for Memory {
 
 impl UpdateItem<User> for Memory {
     type Error = Error;
+    type Update = Map;
     /// Updates an existing user's information
     /// 
     /// # Behavior
@@ -118,8 +119,12 @@ impl UpdateItem<User> for Memory {
     /// - Last name
     /// - Password
     /// - Contact information
-    async fn patch_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, map: HashMap<String, Value>) -> Result<User, Self::Error> {
-        self.users.patch_item(key, map).await
+    async fn patch_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, update: Map) -> Result<User, Self::Error> {
+        self.users.patch_item(key, update).await
+    }
+
+    async fn delete_fields(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, fields: &[String]) -> Result<User, Self::Error> {
+        self.users.delete_fields(key, fields).await
     }
 }
 
@@ -161,6 +166,7 @@ impl GetItem<Organisation> for Memory {
 
 impl UpdateItem<Organisation> for Memory {
     type Error = Error;
+    type Update = Map;
     /// Updates an existing organisation's information
     /// 
     /// # Behavior
@@ -174,8 +180,12 @@ impl UpdateItem<Organisation> for Memory {
     /// 
     /// # Supported Partial Updates
     /// - Name
-    async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, map: HashMap<String, Value>) -> Result<Organisation, Self::Error> {
-        self.organisations.patch_item(key, map).await
+    async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, update: Map) -> Result<Organisation, Self::Error> {
+        self.organisations.patch_item(key, update).await
+    }
+
+    async fn delete_fields(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, fields: &[String]) -> Result<Organisation, Self::Error> {
+        self.organisations.delete_fields(key, fields).await
     }
 }
 
@@ -216,6 +226,7 @@ impl GetItem<(Organisation, User), Member> for Memory {
 
 impl UpdateItem<(Organisation, User), Member> for Memory {
     type Error = Error;
+    type Update = Map;
     /// Updates an existing member's information
     /// 
     /// # Behavior
@@ -231,8 +242,12 @@ impl UpdateItem<(Organisation, User), Member> for Memory {
     /// - Title
     /// - Owner status
     /// - Roles
-    async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, map: HashMap<String, Value>) -> Result<Member, Self::Error> {
-        self.members.patch_item(key, map).await
+    async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, update: Map) -> Result<Member, Self::Error> {
+        self.members.patch_item(key, update).await
+    }
+
+    async fn delete_fields(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, fields: &[String]) -> Result<Member, Self::Error> {
+        self.members.delete_fields(key, fields).await
     }
 }
 
@@ -273,6 +288,7 @@ impl GetItem<Service> for Memory {
 
 impl UpdateItem<Service> for Memory {
     type Error = Error;
+    type Update = Map;
     /// Updates an existing service's information
     /// 
     /// # Behavior
@@ -292,8 +308,12 @@ impl UpdateItem<Service> for Memory {
     /// - Grant types
     /// - Token expiry
     /// - Owner ID
-    async fn patch_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, map: HashMap<String, Value>) -> Result<Service, Self::Error> {
-        self.services.patch_item(key, map).await
+    async fn patch_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, update: Map) -> Result<Service, Self::Error> {
+        self.services.patch_item(key, update).await
+    }
+
+    async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: &[String]) -> Result<Service, Self::Error> {
+        self.services.delete_fields(key, fields).await
     }
 }
 

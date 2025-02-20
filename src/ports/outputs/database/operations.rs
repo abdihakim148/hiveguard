@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use crate::ports::ErrorTrait;
 use super::Item;
 
+
+pub type Map = HashMap<String, Value>;
+
 /// This trait is used to create a new Item.
 pub trait CreateItem<I: Item>: Sized {
     type Error: ErrorTrait;
@@ -44,11 +47,31 @@ pub trait GetItems<I: Item, O: Item = I>: Sized {
 /// This trait is used to update an Item
 pub trait UpdateItem<I: Item, O: Item = I>: Sized {
     type Error: ErrorTrait;
-    /// This method is used to completyley replace an item.
-    /// It should also create a new item. if the Item does not exist
+    type Update;
+
+    /// This method is used to completely replace an item.
+    /// It should also create a new item if the Item does not exist
     async fn update_item(&self, key: Key<&I::PK, &I::SK>, item: O) -> Result<O, Self::Error>;
-    /// This methods is used to update parts of an Item.
-    async fn patch_item(&self, key: Key<&I::PK, &I::SK>, map: HashMap<String, Value>) -> Result<O, Self::Error>;
+    
+    /// This method is used to add or replace fields of an Item
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the item to update
+    /// * `update`: Specification of fields to add or replace
+    /// 
+    /// # Returns
+    /// The updated item or an error if the update fails
+    async fn patch_item(&self, key: Key<&I::PK, &I::SK>, update: Self::Update) -> Result<O, Self::Error>;
+
+    /// This method is used to delete specific fields from an Item
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the item to update
+    /// * `fields`: List of field names to delete
+    /// 
+    /// # Returns
+    /// The updated item or an error if the deletion fails
+    async fn delete_fields(&self, key: Key<&I::PK, &I::SK>, fields: &[String]) -> Result<O, Self::Error>;
 }
 
 /// This trait is used to delete an Item from the database.

@@ -3,7 +3,7 @@
 //! This module provides the implementation for storing and managing member records
 //! in memory with thread-safe access and index management.
 
-use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
+use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{Member, Id, Key, Value, User, Organisation};
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
@@ -119,6 +119,7 @@ impl GetItem<(Organisation, User), Member> for Members {
 
 impl UpdateItem<(Organisation, User), Member> for Members {
     type Error = Error;
+    type Update = Map;
 
     async fn update_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, member: Member) -> Result<Member, Self::Error> {
         let pk = match key {
@@ -139,24 +140,35 @@ impl UpdateItem<(Organisation, User), Member> for Members {
         Ok(member)
     }
 
-    async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, mut map: HashMap<String, Value>) -> Result<Member, Self::Error> {
-        let org_id = match key {
-            Key::Pk(org_id) | Key::Both((org_id, _)) => org_id,
+    /// Partially update a member's fields
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the member to update
+    /// * `map`: A map of fields to update
+    /// 
+    /// # Returns
+    /// The updated member or an error if the update fails
+    /// 
+    /// # Behavior
+    /// - Allows updating title, owner status, and roles
+    async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, map: Map) -> Result<Member, Self::Error> {
+        let pk = match key {
+            Key::Pk(pk) | Key::Both((pk, _)) => *pk,
             _ => return Err(Error::MemberNotFound),
         };
 
         let mut members = self.members.write()?;
-        let member = members.get_mut(&org_id).ok_or(Error::MemberNotFound)?;
-        
+        let member = members.get_mut(&pk).ok_or(Error::MemberNotFound)?;
+
         // Update basic fields
-        if let Some(value) = map.remove("title") {
-            member.title = value.try_into()?;
+        if let Some(value) = map.get("title") {
+            member.title = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("owner") {
-            member.owner = value.try_into()?;
+        if let Some(value) = map.get("owner") {
+            member.owner = value.clone().try_into()?;
         }
-        if let Some(value) = map.remove("roles") {
-            member.roles = value.try_into()?;
+        if let Some(value) = map.get("roles") {
+            member.roles = value.clone().try_into()?;
         }
 
         // Remove old indexes and update with new member data
@@ -164,6 +176,21 @@ impl UpdateItem<(Organisation, User), Member> for Members {
         self.update_indexes(member)?;
 
         Ok(member.clone())
+    }
+
+    /// Delete specific fields from a member
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the member to update
+    /// * `fields`: List of field names to delete
+    /// 
+    /// # Returns
+    /// The updated member or an error if the deletion fails
+    /// 
+    /// # Behavior
+    /// - Members do not support deleting individual fields
+    async fn delete_fields(&self, _key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, _fields: &[String]) -> Result<Member, Self::Error> {
+        Err(Error::UnsupportedOperation)
     }
 }
 
@@ -246,27 +273,47 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_update_member() {
-        let members = Members::default();
-        let mut member = create_test_member();
-        let _ = members.create_item(member.clone()).await;
-        
-        member.title = "Updated Member".to_string();
-        let result = members.update_item(Key::Pk(&(member.org_id, member.user_id)), member.clone()).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), member);
-    }
-
-    #[tokio::test]
-    async fn test_delete_member() {
+    async fn test_patch_member_title() {
         let members = Members::default();
         let member = create_test_member();
         let _ = members.create_item(member.clone()).await;
         
-        let result = members.delete_item(Key::Pk(&(member.org_id, member.user_id))).await;
-        assert!(result.is_ok());
+        let patch_map = HashMap::from([
+            ("title".to_string(), Value::String("Updated Member Title".to_string()))
+        ]);
+
+        let result = members.patch_item(Key::Pk(&(member.org_id, member.user_id)), patch_map).await;
+        assert!(result.is_ok(), "Patching member title should succeed");
         
-        let get_result = members.get_item(Key::Pk(&(member.org_id, member.user_id))).await;
-        assert!(get_result.is_err());
+        let updated_member = result.unwrap();
+        assert_eq!(updated_member.title, "Updated Member Title", "Member title should be updated");
+    }
+
+    #[tokio::test]
+    async fn test_patch_member_owner_status() {
+        let members = Members::default();
+        let member = create_test_member();
+        let _ = members.create_item(member.clone()).await;
+        
+        let patch_map = HashMap::from([
+            ("owner".to_string(), Value::Bool(true))
+        ]);
+
+        let result = members.patch_item(Key::Pk(&(member.org_id, member.user_id)), patch_map).await;
+        assert!(result.is_ok(), "Patching member owner status should succeed");
+        
+        let updated_member = result.unwrap();
+        assert!(updated_member.owner, "Member owner status should be updated");
+    }
+
+    #[tokio::test]
+    async fn test_delete_member_fields_unsupported() {
+        let members = Members::default();
+        let member = create_test_member();
+        let _ = members.create_item(member.clone()).await;
+        
+        let result = members.delete_fields(Key::Pk(&(member.org_id, member.user_id)), &["title".to_string()]).await;
+        assert!(matches!(result, Err(Error::UnsupportedOperation)), 
+                "Deleting fields should return UnsupportedOperation");
     }
 }

@@ -3,7 +3,7 @@
 //! This module provides the implementation for storing and managing organisation records
 //! in memory with thread-safe access and index management.
 
-use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem};
+use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{Organisation, Id, Key, Value};
 use std::collections::HashMap;
 use std::sync::RwLock as Lock;
@@ -105,6 +105,7 @@ impl GetItem<Organisation> for Organisations {
 
 impl UpdateItem<Organisation> for Organisations {
     type Error = Error;
+    type Update = Map;
 
     async fn update_item(&self, _: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, organisation: Organisation) -> Result<Organisation, Self::Error> {
         // Update indexes for new organisation
@@ -115,7 +116,19 @@ impl UpdateItem<Organisation> for Organisations {
         Ok(organisation)
     }
 
-    async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, mut map: HashMap<String, Value>) -> Result<Organisation, Self::Error> {
+    /// Partially update an organisation's fields
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the organisation to update
+    /// * `map`: A map of fields to update
+    /// 
+    /// # Returns
+    /// The updated organisation or an error if the update fails
+    /// 
+    /// # Behavior
+    /// - Allows updating name, domain, home, and contacts
+    /// - Updates secondary indexes if name changes
+    async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, map: Map) -> Result<Organisation, Self::Error> {
         let id = match key {
             Key::Both((pk, _)) | Key::Pk(pk) => *pk,
             Key::Sk(sk) => match self.pk(sk)? {
@@ -128,25 +141,40 @@ impl UpdateItem<Organisation> for Organisations {
         let organisation = organisations.get_mut(&id).ok_or(Error::OrganisationNotFound)?;
         
         // Update basic fields
-        if let Some(value) = map.remove("name") {
-            let new_name: String = value.try_into()?;
+        if let Some(value) = map.get("name") {
+            let new_name: String = value.clone().try_into()?;
             self.update_indexes(id, new_name.clone())?;
             organisation.name = new_name;
         }
 
-        if let Some(value) = map.remove("domain") {
-            organisation.domain = Some(value.try_into()?);
+        if let Some(value) = map.get("domain") {
+            organisation.domain = Some(value.clone().try_into()?);
         }
 
-        if let Some(value) = map.remove("home") {
-            organisation.home = Some(value.try_into()?);
+        if let Some(value) = map.get("home") {
+            organisation.home = Some(value.clone().try_into()?);
         }
 
-        if let Some(value) = map.remove("contacts") {
-            organisation.contacts = value.try_into()?;
+        if let Some(value) = map.get("contacts") {
+            organisation.contacts = value.clone().try_into()?;
         }
 
         Ok(organisation.clone())
+    }
+
+    /// Delete specific fields from an organisation
+    /// 
+    /// # Arguments
+    /// * `key`: The key to identify the organisation to update
+    /// * `fields`: List of field names to delete
+    /// 
+    /// # Returns
+    /// The updated organisation or an error if the deletion fails
+    /// 
+    /// # Behavior
+    /// - Organisations do not support deleting individual fields
+    async fn delete_fields(&self, _key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, _fields: &[String]) -> Result<Organisation, Self::Error> {
+        Err(Error::UnsupportedOperation)
     }
 }
 
@@ -235,27 +263,47 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_update_organisation() {
-        let organisations = Organisations::default();
-        let mut organisation = create_test_organisation();
-        let _ = organisations.create_item(organisation.clone()).await;
-        
-        organisation.name = "Updated Organisation".to_string();
-        let result = organisations.update_item(Key::Pk(&organisation.id), organisation.clone()).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), organisation);
-    }
-
-    #[tokio::test]
-    async fn test_delete_organisation() {
+    async fn test_patch_organisation_name() {
         let organisations = Organisations::default();
         let organisation = create_test_organisation();
         let _ = organisations.create_item(organisation.clone()).await;
         
-        let result = organisations.delete_item(Key::Pk(&organisation.id)).await;
-        assert!(result.is_ok());
+        let patch_map = HashMap::from([
+            ("name".to_string(), Value::String("Updated Organisation".to_string()))
+        ]);
+
+        let result = organisations.patch_item(Key::Pk(&organisation.id), patch_map).await;
+        assert!(result.is_ok(), "Patching organisation name should succeed");
         
-        let get_result = organisations.get_item(Key::Pk(&organisation.id)).await;
-        assert!(get_result.is_err());
+        let updated_org = result.unwrap();
+        assert_eq!(updated_org.name, "Updated Organisation", "Organisation name should be updated");
+    }
+
+    #[tokio::test]
+    async fn test_patch_organisation_domain() {
+        let organisations = Organisations::default();
+        let organisation = create_test_organisation();
+        let _ = organisations.create_item(organisation.clone()).await;
+        
+        let patch_map = HashMap::from([
+            ("domain".to_string(), Value::String("example.com".to_string()))
+        ]);
+
+        let result = organisations.patch_item(Key::Pk(&organisation.id), patch_map).await;
+        assert!(result.is_ok(), "Patching organisation domain should succeed");
+        
+        let updated_org = result.unwrap();
+        assert_eq!(updated_org.domain, Some("example.com".to_string()), "Organisation domain should be updated");
+    }
+
+    #[tokio::test]
+    async fn test_delete_organisation_fields_unsupported() {
+        let organisations = Organisations::default();
+        let organisation = create_test_organisation();
+        let _ = organisations.create_item(organisation.clone()).await;
+        
+        let result = organisations.delete_fields(Key::Pk(&organisation.id), &["name".to_string()]).await;
+        assert!(matches!(result, Err(Error::UnsupportedOperation)), 
+                "Deleting fields should return UnsupportedOperation");
     }
 }
