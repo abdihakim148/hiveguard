@@ -46,17 +46,15 @@ impl Users {
     /// - Adds new email/phone indexes
     /// - Handles partial updates (email or phone only)
     pub fn update_indexes(&self, pk: <User as Item>::PK, sk: <User as Item>::SK) -> Result<(), Error> {
-        // Retrieve existing user's contact information
-        let (old_phone, old_email) = match self.users.read()?.get(&pk) {
+        let old_contact = self.users.read()?.get(&pk).map(|user| user.contact.clone());
+
+        let (old_phone, old_email) = match &old_contact {
             None => (None, None),
-            Some(user) => match &user.contact {
-                Contact::Both(phone, email) => (Some(phone.clone()), Some(email.clone())),
-                Contact::Phone(phone) => (Some(phone.clone()), None),
-                Contact::Email(email) => (None, Some(email.clone()))
-            }
+            Some(Contact::Both(phone, email)) => (Some(phone.clone()), Some(email.clone())),
+            Some(Contact::Phone(phone)) => (Some(phone.clone()), None),
+            Some(Contact::Email(email)) => (None, Some(email.clone()))
         };
 
-        // Determine new contact information
         let (new_phone, new_email) = match sk {
             Contact::Both(phone, email) => (Some(phone), Some(email)),
             Contact::Phone(phone) => (Some(phone), None),
@@ -83,31 +81,36 @@ impl Users {
 
     pub fn pk(&self, sk: &<User as Item>::SK) -> Result<Option<<User as Item>::PK>, Error> {
         match sk {
-            Contact::Phone(phone) => Ok(self.phones_index.read()?.get(phone).cloned()),
-            Contact::Email(email) => Ok(self.emails_index.read()?.get(email).cloned()),
-            Contact::Both(phone, _) => Ok(self.phones_index.read()?.get(phone).cloned())
+            Contact::Phone(phone) => Ok(self.phones_index.read().map(|index| index.get(phone).cloned())?),
+            Contact::Email(email) => Ok(self.emails_index.read().map(|index| index.get(email).cloned())?),
+            Contact::Both(phone, _) => Ok(self.phones_index.read().map(|index| index.get(phone).cloned())?)
         }
     }
 
     pub fn does_not_exist(&self, sk: &<User as Item>::SK) -> Result<(), Error> {
         match sk {
             Contact::Phone(phone) => {
-                if self.phones_index.read()?.contains_key(phone) {
+                let phones_index = self.phones_index.read()?;
+                if phones_index.contains_key(phone) {
                     return Err(Error::UserWithPhoneExists)
                 }
                 Ok(())
             },
             Contact::Email(email) => {
-                if self.emails_index.read()?.contains_key(email) {
+                let emails_index = self.emails_index.read()?;
+                if emails_index.contains_key(email) {
                     return Err(Error::UserWithEmailExists)
                 }
                 Ok(())
             },
             Contact::Both(phone, email) => {
-                if self.phones_index.read()?.contains_key(phone) {
+                let phones_index = self.phones_index.read()?;
+                let emails_index = self.emails_index.read()?;
+                
+                if phones_index.contains_key(phone) {
                     return Err(Error::UserWithPhoneExists)
                 }
-                if self.emails_index.read()?.contains_key(email) {
+                if emails_index.contains_key(email) {
                     return Err(Error::UserWithEmailExists)
                 }
                 Ok(())
@@ -171,16 +174,8 @@ impl UpdateItem<User> for Users {
     }
 
     async fn patch_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, map: Map) -> Result<User, Self::Error> {
-        let id = match key {
-            Key::Both((pk, _)) | Key::Pk(pk) => *pk,
-            Key::Sk(sk) => match self.pk(sk)? {
-                Some(pk) => pk,
-                None => return Err(Error::UserNotFound)
-            }
-        };
-
-        let mut users = self.users.write()?;
-        let user = users.get_mut(&id).ok_or(Error::UserNotFound)?;
+        // First, retrieve the existing user
+        let mut user = self.get_item(key.clone()).await?;
         
         // Update basic fields
         if let Some(value) = map.get("username").or_else(|| map.get("user_name")) {
@@ -199,12 +194,11 @@ impl UpdateItem<User> for Users {
         // Update contact info if provided
         if map.contains_key("email") || map.contains_key("phone") || 
            map.contains_key("email_verified") || map.contains_key("phone_verified") {
-            let contact: Contact = map.try_into()?;
-            self.update_indexes(user.id, contact.clone())?;
-            user.contact = contact;
+            user.contact = map.try_into()?;
         }
 
-        Ok(user.clone())
+        // Use update_item to handle indexes and storage
+        self.update_item(key, user).await
     }
 
     /// Delete specific fields from a user
@@ -263,18 +257,14 @@ impl DeleteItem<User> for Users {
     async fn delete_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>) -> Result<(), Self::Error> {
         let pk = match key {
             Key::Pk(pk) | Key::Both((pk, _)) => *pk,
-            Key::Sk(sk) => match self.pk(sk)? {
-                Some(pk) => pk,
-                None => return Err(Error::UserNotFound)
-            }
+            Key::Sk(sk) => self.pk(sk)?.ok_or(Error::UserNotFound)?
         };
 
-        // Remove from indexes
-        if let Some(user) = self.users.read()?.get(&pk) {
-            self.update_indexes(pk, user.contact.clone())?;
-        }
+        let contact = self.users.read()?.get(&pk)
+            .map(|user| user.contact.clone())
+            .ok_or(Error::UserNotFound)?;
 
-        // Remove user
+        self.update_indexes(pk, contact)?;
         self.users.write()?.remove(&pk);
         Ok(())
     }

@@ -337,33 +337,37 @@ impl GetItems<User, Organisation> for Memory {
         // Find the user ID based on the key
         let user_id = match key {
             Key::Pk(pk) => *pk,
-            Key::Sk(sk) => match self.users.pk(sk)? {
-                Some(pk) => pk,
-                None => return Err(Error::UserNotFound)
-            },
+            Key::Sk(sk) => self.users.pk(sk)?.ok_or(Error::UserNotFound)?,
             Key::Both((pk, _)) => *pk
         };
 
-        // Use the Members table to find organisations for this user
-        let org_ids = self.members.user_index.read()?
-            .get(&user_id)
-            .cloned()
-            .unwrap_or_default();
-
-        // Retrieve organisations, optionally filtering by ownership
-        let mut result = Vec::new();
-        for org_id in org_ids {
-            if let Some(organisation) = self.organisations.organisations.read()?.get(&org_id) {
-                // If filter is true, only return organisations where the user is an owner
+        // Collect organisation IDs and member information in a single read lock
+        let (org_ids, members_map) = {
+            
+            let org_ids = self.members.user_index.read()?.get(&user_id).cloned().unwrap_or_default();
+            
+            let mut members_map = HashMap::new();
+            for &org_id in &org_ids {
                 if let Some(member) = self.members.members.read()?.get(&(org_id, user_id)) {
-                    if !filter || member.owner {
-                        result.push(organisation.clone());
-                    }
+                    members_map.insert(org_id, member.clone());
+                }
+            }
+            
+            (org_ids, members_map)
+        };
+
+        // Retrieve organisations with minimal lock time
+        let mut organisations = Vec::new();
+        
+        for &org_id in &org_ids {
+            if let Some(org) = self.organisations.organisations.read()?.get(&org_id) {
+                if !filter || members_map.get(&org_id).map_or(false, |m| m.owner) {
+                    organisations.push(org.clone());
                 }
             }
         }
 
-        Ok(result)
+        Ok(organisations)
     }
 }
 

@@ -52,12 +52,11 @@ impl Services {
     /// * `Err(ServiceAlreadyExists)` if a service with this name already exists
     pub fn does_not_exist(&self, owner_id: &Id, name: &str) -> Result<(), Error> {
         let owner_index = self.owner_index.read()?;
-        if let Some(owner_services) = owner_index.get(owner_id) {
-            if owner_services.contains_key(name) {
-                return Err(Error::ServiceAlreadyExists);
-            }
+        match owner_index.get(owner_id) {
+            Some(owner_services) if owner_services.contains_key(name) => 
+                Err(Error::ServiceAlreadyExists),
+            _ => Ok(())
         }
-        Ok(())
     }
 
     /// Find the service ID for a given owner and name
@@ -70,10 +69,11 @@ impl Services {
     /// * `Ok(Some(service_id))` if a service is found
     /// * `Ok(None)` if no service is found
     pub fn pk(&self, owner_id: &Id, name: &str) -> Result<Option<Id>, Error> {
-        let owner_index = self.owner_index.read()?;
-        Ok(owner_index
-            .get(owner_id)
-            .and_then(|services| services.get(name).cloned()))
+        Ok(self.owner_index.read()
+            .map(|index| 
+                index.get(owner_id)
+                    .and_then(|services| services.get(name).cloned())
+            )?)
     }
 }
 
@@ -108,24 +108,20 @@ impl GetItem<Service> for Services {
         key: Key<&<Service as Item>::PK, &<Service as Item>::SK>,
     ) -> Result<Service, Self::Error> {
         let option = match key {
-            Key::Pk(pk) | Key::Both((pk, _)) => self.services.read()?.get(pk).cloned(),
+            Key::Pk(pk) | Key::Both((pk, _)) => self.services.read().map(|services| services.get(pk).cloned())?,
             Key::Sk(sk) => {
                 let owner_index = self.owner_index.read()?;
-                let mut option = None;
-                for (owner_id, owner_services) in owner_index.iter() {
-                    match owner_services.get(sk) {
-                        Some(service_id) => option = self.services.read()?.get(service_id).cloned(),
-                        None => (),
-                    };
-                };
-                option
+                owner_index
+                    .iter()
+                    .find_map(|(_, owner_services)| 
+                        owner_services.get(sk)
+                            .and_then(|service_id| self.services.read().map(|services| services.get(service_id).cloned()).ok())
+                    )
+                    .flatten()
             }
         };
 
-        if let Some(service) = option {
-            return Ok(service)
-        }
-        Err(Error::ServiceNotFound)
+        option.ok_or(Error::ServiceNotFound)
     }
 }
 
@@ -160,20 +156,8 @@ impl UpdateItem<Service> for Services {
         key: Key<&<Service as Item>::PK, &<Service as Item>::SK>,
         map: Map,
     ) -> Result<Service, Self::Error> {
-        let service_id = match key {
-            Key::Pk(pk) => pk.clone(),
-            Key::Both((pk, _)) => pk.clone(),
-            Key::Sk(sk) => {
-                let owner_index = self.owner_index.read()?;
-                owner_index
-                    .iter()
-                    .find_map(|(_, services)| services.get(sk).cloned())
-                    .ok_or(Error::ServiceNotFound)?
-            }
-        };
-
-        let mut services = self.services.write()?;
-        let mut service = services.get_mut(&service_id).ok_or(Error::ServiceNotFound)?.clone();
+        // First, retrieve the existing service
+        let mut service = self.get_item(key.clone()).await?;
         
         // Update basic fields
         if let Some(value) = map.get("new_name") {
@@ -185,13 +169,6 @@ impl UpdateItem<Service> for Services {
                 if old_name != service.name {
                     return Err(Error::ServiceNotFound);
                 }
-            }
-
-            // Update owner index
-            let mut owner_index = self.owner_index.write()?;
-            if let Some(owner_services) = owner_index.get_mut(&service.owner_id) {
-                owner_services.remove(&service.name);
-                owner_services.insert(new_name.clone(), service.id.clone());
             }
 
             service.name = new_name;
@@ -215,9 +192,8 @@ impl UpdateItem<Service> for Services {
             service.token_expiry = Some(Duration::seconds(seconds));
         }
 
-        services.insert(service_id, service.clone());
-
-        Ok(service)
+        // Use update_item to handle indexes and storage
+        self.update_item(key, service).await
     }
 
     async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: &[String]) -> Result<Service, Self::Error> {

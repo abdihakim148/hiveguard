@@ -39,12 +39,12 @@ impl Organisations {
     /// - Removes old name index
     /// - Adds new name index
     pub fn update_indexes(&self, pk: <Organisation as Item>::PK, sk: <Organisation as Item>::SK) -> Result<(), Error> {
-        // Remove old name index if it exists
-        if let Some(old_org) = self.organisations.read()?.get(&pk) {
-            self.names_index.write()?.remove(&old_org.name);
+        let old_name = self.organisations.read()?.get(&pk).map(|org| org.name.clone());
+        
+        if let Some(name) = old_name {
+            self.names_index.write()?.remove(&name);
         }
 
-        // Add new name index
         self.names_index.write()?.insert(sk, pk);
         Ok(())
     }
@@ -67,15 +67,9 @@ impl CreateItem<Organisation> for Organisations {
     type Error = Error;
     
     async fn create_item(&self, organisation: Organisation) -> Result<Organisation, Self::Error> {
-        // Check if organisation with same name exists
         self.does_not_exist(&organisation.name)?;
-        
-        // Update indexes
         self.update_indexes(organisation.id, organisation.name.clone())?;
-        
-        // Store organisation
         self.organisations.write()?.insert(organisation.id, organisation.clone());
-        
         Ok(organisation)
     }
 }
@@ -85,21 +79,18 @@ impl GetItem<Organisation> for Organisations {
     
     async fn get_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>) -> Result<Organisation, Self::Error> {
         let option = match key {
-            Key::Pk(pk) => self.organisations.read()?.get(pk).cloned(),
-            Key::Both((pk, _)) => self.organisations.read()?.get(pk).cloned(),
+            Key::Pk(pk) => self.organisations.read().map(|orgs| orgs.get(pk).cloned())?,
+            Key::Both((pk, _)) => self.organisations.read().map(|orgs| orgs.get(pk).cloned())?,
             Key::Sk(sk) => {
-                if let Some(pk) = self.pk(sk)? {
-                    self.organisations.read()?.get(&pk).cloned()
-                } else {
-                    None
+                let pk = self.pk(sk)?;
+                match &pk {
+                    None => None,
+                    Some(pk) => self.organisations.read().map(|orgs| orgs.get(pk).cloned())?
                 }
-            }
+            },
         };
 
-        if let Some(service) = option {
-            return Ok(service)
-        }
-        Err(Error::ServiceNotFound)
+        option.ok_or(Error::ServiceNotFound)
     }
 }
 
@@ -129,21 +120,12 @@ impl UpdateItem<Organisation> for Organisations {
     /// - Allows updating name, domain, home, and contacts
     /// - Updates secondary indexes if name changes
     async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, map: Map) -> Result<Organisation, Self::Error> {
-        let id = match key {
-            Key::Both((pk, _)) | Key::Pk(pk) => *pk,
-            Key::Sk(sk) => match self.pk(sk)? {
-                Some(pk) => pk,
-                None => return Err(Error::OrganisationNotFound)
-            }
-        };
-
-        let mut organisations = self.organisations.write()?;
-        let organisation = organisations.get_mut(&id).ok_or(Error::OrganisationNotFound)?;
+        // First, retrieve the existing organisation
+        let mut organisation = self.get_item(key.clone()).await?;
         
-        // Update basic fields
+        // Update fields
         if let Some(value) = map.get("name") {
             let new_name: String = value.clone().try_into()?;
-            self.update_indexes(id, new_name.clone())?;
             organisation.name = new_name;
         }
 
@@ -159,7 +141,8 @@ impl UpdateItem<Organisation> for Organisations {
             organisation.contacts = value.clone().try_into()?;
         }
 
-        Ok(organisation.clone())
+        // Create a new organisation with updated values
+        self.update_item(key, organisation).await
     }
 
     /// Delete specific fields from an organisation
@@ -184,18 +167,14 @@ impl DeleteItem<Organisation> for Organisations {
     async fn delete_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>) -> Result<(), Self::Error> {
         let pk = match key {
             Key::Pk(pk) | Key::Both((pk, _)) => *pk,
-            Key::Sk(sk) => match self.pk(sk)? {
-                Some(pk) => pk,
-                None => return Err(Error::OrganisationNotFound)
-            }
+            Key::Sk(sk) => self.pk(sk)?.ok_or(Error::OrganisationNotFound)?
         };
 
-        // Remove from indexes
-        if let Some(organisation) = self.organisations.read()?.get(&pk) {
-            self.names_index.write()?.remove(&organisation.name);
-        }
+        let name = self.organisations.read()?.get(&pk)
+            .map(|org| org.name.clone())
+            .ok_or(Error::OrganisationNotFound)?;
 
-        // Remove organisation
+        self.names_index.write()?.remove(&name);
         self.organisations.write()?.remove(&pk);
         Ok(())
     }
@@ -205,6 +184,7 @@ impl DeleteItem<Organisation> for Organisations {
 mod tests {
     use super::*;
     use bson::oid::ObjectId;
+    use tokio::time::{timeout, Duration};
 
     /// Helper function to create a test organisation
     fn create_test_organisation() -> Organisation {
@@ -271,12 +251,11 @@ mod tests {
         let patch_map = HashMap::from([
             ("name".to_string(), Value::String("Updated Organisation".to_string()))
         ]);
-
-        let result = organisations.patch_item(Key::Pk(&organisation.id), patch_map).await;
-        assert!(result.is_ok(), "Patching organisation name should succeed");
+        println!("Pass1");
+        let result = organisations.patch_item(Key::Pk(&organisation.id), patch_map).await.expect("Patching organisation name should succeed");
+        println!("Pass2");
         
-        let updated_org = result.unwrap();
-        assert_eq!(updated_org.name, "Updated Organisation", "Organisation name should be updated");
+        assert_eq!(result.name, "Updated Organisation", "Organisation name should be updated");
     }
 
     #[tokio::test]

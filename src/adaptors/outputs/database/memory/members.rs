@@ -40,23 +40,26 @@ impl Members {
     /// # Behavior
     /// - Adds/updates member in organisation and user indexes
     pub fn update_indexes(&self, member: &Member) -> Result<(), Error> {
-        // Update organisation index
-        let mut org_index = self.org_index.write()?;
-        org_index.entry(member.org_id)
-            .or_insert_with(Vec::new)
-            .retain(|&user_id| user_id != member.user_id);
-        org_index.get_mut(&member.org_id)
-            .unwrap()
-            .push(member.user_id);
+        let org_id = member.org_id;
+        let user_id = member.user_id;
 
-        // Update user index
-        let mut user_index = self.user_index.write()?;
-        user_index.entry(member.user_id)
-            .or_insert_with(Vec::new)
-            .retain(|&org_id| org_id != member.org_id);
-        user_index.get_mut(&member.user_id)
+        self.org_index.write()?
+            .entry(org_id)
+            .or_default()
+            .retain(|&id| id != user_id);
+        self.org_index.write()?
+            .get_mut(&org_id)
             .unwrap()
-            .push(member.org_id);
+            .push(user_id);
+
+        self.user_index.write()?
+            .entry(user_id)
+            .or_default()
+            .retain(|&id| id != org_id);
+        self.user_index.write()?
+            .get_mut(&user_id)
+            .unwrap()
+            .push(org_id);
 
         Ok(())
     }
@@ -66,16 +69,15 @@ impl Members {
     /// # Arguments
     /// * `member`: The member being removed
     pub fn remove_from_indexes(&self, member: &Member) -> Result<(), Error> {
-        // Remove from organisation index
-        let mut org_index = self.org_index.write()?;
-        if let Some(org_members) = org_index.get_mut(&member.org_id) {
-            org_members.retain(|&user_id| user_id != member.user_id);
+        let org_id = member.org_id;
+        let user_id = member.user_id;
+
+        if let Some(org_members) = self.org_index.write()?.get_mut(&org_id) {
+            org_members.retain(|&id| id != user_id);
         }
 
-        // Remove from user index
-        let mut user_index = self.user_index.write()?;
-        if let Some(user_members) = user_index.get_mut(&member.user_id) {
-            user_members.retain(|&org_id| org_id != member.org_id);
+        if let Some(user_members) = self.user_index.write()?.get_mut(&user_id) {
+            user_members.retain(|&id| id != org_id);
         }
 
         Ok(())
@@ -86,15 +88,15 @@ impl CreateItem<Member> for Members {
     type Error = Error;
     
     async fn create_item(&self, member: Member) -> Result<Member, Self::Error> {
-        // Check if member already exists
-        if self.members.read()?.contains_key(&(member.org_id, member.user_id)) {
-            return Err(Error::MemberAlreadyExists);
+        {
+            let members = self.members.read()?;
+            if members.contains_key(&(member.org_id, member.user_id)) {
+                return Err(Error::MemberAlreadyExists);
+            }
         }
         
-        // Update indexes
         self.update_indexes(&member)?;
         
-        // Store member
         self.members.write()?.insert((member.org_id, member.user_id), member.clone());
         
         Ok(member)
@@ -152,14 +154,9 @@ impl UpdateItem<(Organisation, User), Member> for Members {
     /// # Behavior
     /// - Allows updating title, owner status, and roles
     async fn patch_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, map: Map) -> Result<Member, Self::Error> {
-        let pk = match key {
-            Key::Pk(pk) | Key::Both((pk, _)) => *pk,
-            _ => return Err(Error::MemberNotFound),
-        };
-
-        let mut members = self.members.write()?;
-        let member = members.get_mut(&pk).ok_or(Error::MemberNotFound)?;
-
+        // First, retrieve the existing member
+        let mut member = self.get_item(key.clone()).await?;
+        
         // Update basic fields
         if let Some(value) = map.get("title") {
             member.title = value.clone().try_into()?;
@@ -171,11 +168,8 @@ impl UpdateItem<(Organisation, User), Member> for Members {
             member.roles = value.clone().try_into()?;
         }
 
-        // Remove old indexes and update with new member data
-        self.remove_from_indexes(member)?;
-        self.update_indexes(member)?;
-
-        Ok(member.clone())
+        // Use update_item to handle indexes and storage
+        self.update_item(key, member.clone()).await
     }
 
     /// Delete specific fields from a member
@@ -203,12 +197,12 @@ impl DeleteItem<Member> for Members {
             _ => return Err(Error::MemberNotFound),
         };
 
-        // Remove from indexes
-        if let Some(member) = self.members.read()?.get(&pk) {
-            self.remove_from_indexes(member)?;
-        }
+        let member = self.members.read()?
+            .get(&pk)
+            .cloned()
+            .ok_or(Error::MemberNotFound)?;
 
-        // Remove member
+        self.remove_from_indexes(&member)?;
         self.members.write()?.remove(&pk);
         Ok(())
     }
