@@ -18,7 +18,7 @@ impl Mailer for SmtpMailer {
     type Error = Error;
 
     async fn new(mail: Self::Config) -> std::result::Result<Self, Self::Error> {
-        Ok(mail.try_into()?)
+        mail.try_into()
     }
 
     async fn send(&self, mail: Self::Mail) -> std::result::Result<(), Self::Error> {
@@ -31,8 +31,8 @@ impl Mailer for SmtpMailer {
         .from(sender)
         .to(receiver)
         .subject(subject)
-        .singlepart(part).map_err(|err|Error::from(err))?;
-        self.0.send(email).await.map_err(|err|Error::from(err))?;
+        .singlepart(part)?;
+        self.0.send(email).await?;
         Ok(())
     }
 }
