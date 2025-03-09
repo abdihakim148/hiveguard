@@ -57,7 +57,7 @@ impl Twilio {
         Ok(())
     }
 
-    async fn verify(&self, form: &HashMap<&str, &str>) -> Result<(), Error> {
+    async fn verify_request(&self, form: &HashMap<&str, &str>) -> Result<(), Error> {
         let base_url = self.base_url.as_str().trim_end_matches("/");
         let url = format!("{base_url}/Services/{}/VerificationCheck", self.service_sid);
         let (username, password) = (self.credentials.username.as_str(), Some(self.credentials.password.as_str()));
@@ -86,6 +86,10 @@ impl Verify<Phone> for Twilio {
     }
 
     async fn verify<DB: GetItem<Self::Verification> + DeleteItem<Self::Verification>>(&self, contact: &Phone,  code: &str, db: &DB) -> Result<(), Self::Error> {
-        todo!()
+        let number = contact.as_str();
+        let mut form = HashMap::new();
+        form.insert("To", number);
+        form.insert("Code", code);
+        self.verify_request(&form).await
     }
 }
