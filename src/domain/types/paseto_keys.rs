@@ -1,8 +1,9 @@
+use rand::{rngs::OsRng, CryptoRng, TryRngCore}; // Importing OsRng for generating random numbers securely.
+use ed25519_dalek::{SigningKey, SecretKey}; // Importing the SigningKey for generating key pairs.
 use serde::{Serialize, Deserialize}; // Importing necessary traits for serialization and deserialization.
-use ed25519_dalek::SigningKey; // Importing the SigningKey for generating key pairs.
 use chrono::{DateTime, Utc}; // Importing DateTime and Utc for handling time-related data.
-use rand::rngs::OsRng; // Importing OsRng for generating random numbers securely.
 use chrono::Duration; // Importing Duration for handling time intervals.
+use std::ops::DerefMut;
 
 
 /// The duration for which the PASETO keys are valid.
@@ -22,6 +23,16 @@ pub struct PasetoKeys {
 }
 
 
+impl PasetoKeys {
+    fn generate() -> SigningKey {
+        let mut csprng = OsRng;
+        let mut secret = [0u8; 32];
+        csprng.try_fill_bytes(&mut secret).expect("Failed to generate random bytes");
+        SigningKey::from_bytes(&secret)
+    }
+}
+
+
 
 impl Default for PasetoKeys {
     /// Generates a default set of PASETO keys.
@@ -31,7 +42,7 @@ impl Default for PasetoKeys {
     /// on the defined duration.
     fn default() -> Self {
         // Generate a new signing key using a secure random number generator.
-        let key = SigningKey::generate(&mut OsRng);
+        let key = Self::generate();
         
         // Extract the public key from the signing key.
         let public_key = key.verifying_key().to_bytes();

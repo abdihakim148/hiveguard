@@ -4,6 +4,7 @@ use serde::ser::SerializeStruct;
 use std::collections::HashMap;
 use super::{Value, Error};
 use std::any::TypeId;
+use std::ops::Deref;
 use std::fmt;
 
 
@@ -162,6 +163,17 @@ impl TryFrom<HashMap<String, Value>> for Phone {
             return Ok(Phone::Verified(phone));
         }
         Ok(Phone::New(phone))
+    }
+}
+
+
+impl Deref for Phone {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::New(phone) => phone,
+            Self::Verified(phone) => phone
+        }
     }
 }
 

@@ -22,7 +22,9 @@ impl ErrorTrait for Error {
     fn log_message(&self) -> String {
         self.to_string()
     }
+    // test comment
 
+    #[cfg(feature = "http")]
     fn status(&self) -> StatusCode {
         StatusCode::UNAUTHORIZED
     }

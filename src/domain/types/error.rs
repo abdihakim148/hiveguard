@@ -166,7 +166,7 @@ impl ErrorTrait for Error {
         match self {
             Self::Internal { message, source } => {
                 if let Some(err) = source {
-                    format!("Internal error: {}. Cause: {}", message, err)
+                    format!("Internal error: {}", err)
                 } else {
                     format!("Internal error: {}", message)
                 }

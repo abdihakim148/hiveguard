@@ -14,8 +14,7 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
     /// The type of verification code used for this verification process
     /// 
     /// Must implement both the `Code` trait and be storable as an `Item` 
-    /// with the contact type as its primary key
-    type Verification: Code + Item<PK = T>;
+    type Verification: Code<T> + Item;
 
     /// The error type for verification operations
     type Error: ErrorTrait;
@@ -33,6 +32,7 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
     /// # Returns
     /// A result indicating successful initiation or an error
     async fn initiate<DB: CreateItem<Self::Verification>>(
+        &self,
         contact: &T, 
         channel: Self::Channel, 
         db: &DB
@@ -48,8 +48,9 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
     /// # Returns
     /// A result indicating successful verification or an error
     async fn verify<DB: GetItem<Self::Verification> + DeleteItem<Self::Verification>>(
+        &self,
         contact: &T, 
-        code: Rc<str>, 
+        code: &str, 
         db: &DB
     ) -> Result<(), Self::Error>;
 }
@@ -57,22 +58,10 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
 /// A trait representing a verification code
 ///
 /// Provides methods for creating, accessing, and validating verification codes
-pub trait Code: Sized {
-    /// The type of identifier for this verification code
-    type Id: Copy;
-
+pub trait Code<T: Clone>: Sized {
     /// Creates a new verification code
-    fn new() -> Self;
+    fn new(contatc: &T, ttl: Option<i64>) -> Self;
 
     /// Retrieves the verification code as a reference-counted string
-    fn code(&self) -> Rc<str>;
-
-    /// Validates a provided code against the current code
-    ///
-    /// # Arguments
-    /// * `code` - The code to validate
-    ///
-    /// # Returns
-    /// A boolean indicating whether the code is valid
-    fn validate(&self, code: Rc<str>) -> bool;
+    fn code(&self) -> u32;
 }
