@@ -1,5 +1,5 @@
-use crate::ports::outputs::database::{Item, GetItem, CreateItem, DeleteItem};
-use serde::de::DeserializeOwned;
+use crate::ports::outputs::database::{Item, GetItem, CreateItem, DeleteItem, GetItems};
+use serde::{de::DeserializeOwned, Serialize};
 use crate::ports::ErrorTrait;
 use std::rc::Rc;
 
@@ -14,7 +14,7 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
     /// The type of verification code used for this verification process
     /// 
     /// Must implement both the `Code` trait and be storable as an `Item` 
-    type Verification: Code<T> + Item;
+    type Verification: Code<T, 6> + Item;
 
     /// The error type for verification operations
     type Error: ErrorTrait;
@@ -47,7 +47,7 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
     ///
     /// # Returns
     /// A result indicating successful verification or an error
-    async fn verify<DB: GetItem<Self::Verification> + DeleteItem<Self::Verification>>(
+    async fn verify<DB: GetItem<Self::Verification> + GetItems<Self::Verification>>(
         &self,
         contact: &T, 
         code: &str, 
@@ -58,10 +58,25 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
 /// A trait representing a verification code
 ///
 /// Provides methods for creating, accessing, and validating verification codes
-pub trait Code<T: Clone>: Sized {
+pub trait Code<T: Clone, const DIGITS: usize = 6>: Sized {
+    type Id: Serialize + DeserializeOwned;
     /// Creates a new verification code
-    fn new(contatc: &T, ttl: Option<i64>) -> Self;
+    fn new(contact: &T, ttl: Option<i64>, id: Self::Id) -> Self;
 
     /// Retrieves the verification code as a reference-counted string
     fn code(&self) -> u32;
+
+    /// Converts the code into a String for universal familiarity
+    fn as_str(&self) -> String {
+        let mut code = String::new();
+        let string = self.code().to_string();
+        if code.len() < DIGITS {
+            let missing = DIGITS - code.len();
+            for _ in 0..missing {
+                code.push('0');
+            }
+        }
+        code.push_str(&string);
+        code
+    }
 }

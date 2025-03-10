@@ -1,4 +1,4 @@
-use crate::ports::outputs::{verify::Verify, database::{Item, GetItem, CreateItem, DeleteItem}};
+use crate::ports::outputs::{database::{CreateItem, DeleteItem, GetItem, GetItems, Item}, verify::{self, Verify, Code}};
 use crate::domain::types::{Verification, Phone, EmailAddress, VerificationMedia};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -13,6 +13,7 @@ pub struct Twilio {
     account_sid: String,
     service_sid: String,
     credentials: Credentials,
+    friendly_name: Option<String>,
     base_url: String,
     custom_code: bool,
     #[serde(skip)]
@@ -30,6 +31,8 @@ pub struct Credentials {
 #[derive(Deserialize, Default)]
 #[serde(default)]
 pub struct Response {
+    #[serde(alias = "sid")]
+    id: String,
     valid: bool
 }
 
@@ -45,7 +48,7 @@ impl Twilio {
         code
     }
 
-    async fn initiate_request(&self, form: &HashMap<&str, &str>) -> Result<(), Error> {
+    async fn initiate_request(&self, form: &HashMap<&str, &str>) -> Result<Response, Error> {
         let base_url = self.base_url.as_str().trim_end_matches("/");
         let url = format!("{base_url}/Services/{}/Verifications", self.service_sid);
         let (username, password) = (self.credentials.username.as_str(), Some(self.credentials.password.as_str()));
@@ -54,7 +57,7 @@ impl Twilio {
             let err = format!("{:?}", res);
             Err(Error::internal(err))?
         }
-        Ok(())
+        Ok(res.json().await.map_err(Error::internal)?)
     }
 
     async fn verify_request(&self, form: &HashMap<&str, &str>) -> Result<(), Error> {
@@ -74,18 +77,31 @@ impl Twilio {
 impl Verify<Phone> for Twilio {
     type Error = Error;
     type Channel = VerificationMedia;
-    type Verification = Verification;
+    type Verification = Verification<String>;
 
     async fn initiate<DB: CreateItem<Self::Verification>>(&self, contact: &Phone, channel: Self::Channel, db: &DB) -> Result<(), Self::Error> {
         let number = contact.as_str();
         let channel = channel.to_string();
         let mut form = HashMap::new();
+        if let Some(name) = &self.friendly_name {
+            form.insert("CustomFriendlyName", name.as_str());
+        }
         form.insert("To", number);
         form.insert("Channel", channel.as_str());
-        self.initiate_request(&form).await
+        if !self.custom_code {
+            self.initiate_request(&form).await?;
+            return Ok(())
+        }
+        let mut verification = Self::Verification::new(contact, None, String::new());
+        let code = verification.as_str();
+        form.insert("CustomCode", code.as_str());
+        let res = self.initiate_request(&form).await?;
+        verification.id = res.id;
+        db.create_item(verification).await.map_err(Self::Error::err)?;
+        Ok(())
     }
 
-    async fn verify<DB: GetItem<Self::Verification> + DeleteItem<Self::Verification>>(&self, contact: &Phone,  code: &str, db: &DB) -> Result<(), Self::Error> {
+    async fn verify<DB: GetItem<Self::Verification> + GetItems<Self::Verification>>(&self, contact: &Phone,  code: &str, db: &DB) -> Result<(), Self::Error> {
         let number = contact.as_str();
         let mut form = HashMap::new();
         form.insert("To", number);

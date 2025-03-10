@@ -1,9 +1,9 @@
 #[cfg(feature = "http")]
 use actix_web::{Responder, web::Json, http::{Method, StatusCode}};
 use crate::ports::outputs::{verify::Code, database::Item};
+use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use super::{Id, Contact, Phone, EmailAddress};
 use chrono::{DateTime, Utc, Duration};
-use serde::{Serialize, Deserialize};
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
@@ -18,12 +18,12 @@ pub enum VerificationMedia {
 
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Verification {
+pub struct Verification<ID = Id> {
     /// This is the owner of the verification code.
     /// In other words. This is the user being verified
     pub owner_contact: Contact,
     /// This is the Id of the verification code
-    pub id: Id,
+    pub id: ID,
     /// This is the actual verification
     pub code: u32,
     /// This the time when the verification code become invalid.
@@ -48,19 +48,19 @@ impl Responder for Verification {
 }
 
 
-impl Item for Verification {
+impl<ID: PartialEq + Clone + std::hash::Hash> Item for Verification<ID> {
     /// This is the owner id
     type PK = Contact;
     /// This is the verification id
-    type SK = Id;
+    type SK = ID;
 }
 
 
-impl Code<Phone> for Verification {
-    fn new(phone: &Phone, ttl: Option<i64>) -> Self {
+impl<ID: Serialize + DeserializeOwned> Code<Phone, 6> for Verification<ID> {
+    type Id = ID;
+    fn new(phone: &Phone, ttl: Option<i64>, id: Self::Id) -> Self {
         let seconds = match ttl {Some(secs) => secs, None => 60*5};
         let owner_contact = Contact::Phone(phone.clone());
-        let id = Id::default();
         let code = rand::random_range(10000..999999);
         let expires = Utc::now() + Duration::seconds(seconds);
         Self{owner_contact, id, code, expires}

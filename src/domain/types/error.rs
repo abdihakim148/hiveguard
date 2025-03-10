@@ -1,14 +1,14 @@
-use crate::ports::ErrorTrait;
-#[cfg(feature = "http")]
-use actix_web::http::StatusCode;
-use std::fmt::{self, Display, Debug};
-use std::error::Error as StdError;
-use serde::Serialize;
-use lettre::address::AddressError;
-use lettre::error::Error as LettreError;
 use lettre::transport::smtp::Error as SmtpError;
 use argon2::password_hash::Error as HashError;
+use lettre::error::Error as LettreError;
 use rusty_paseto::core::PasetoError;
+use std::fmt::{self, Display, Debug};
+use std::error::Error as StdError;
+use lettre::address::AddressError;
+#[cfg(feature = "http")]
+use actix_web::http::StatusCode;
+use crate::ports::ErrorTrait;
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub enum Error {
