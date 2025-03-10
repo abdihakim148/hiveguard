@@ -1,5 +1,5 @@
 use crate::ports::outputs::{database::{CreateItem, DeleteItem, GetItem, GetItems, Item}, verify::{self, Verify, Code}};
-use crate::domain::types::{Verification, Phone, EmailAddress, VerificationMedia};
+use crate::domain::types::{Verification, Phone, EmailAddress, VerificationMedia, Contact, Key};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use reqwest::Client;
@@ -60,9 +60,12 @@ impl Twilio {
         Ok(res.json().await.map_err(Error::internal)?)
     }
 
-    async fn verify_request(&self, form: &HashMap<&str, &str>) -> Result<(), Error> {
+    async fn verify_request(&self, form: &HashMap<&str, &str>, id: Option<&str>) -> Result<(), Error> {
         let base_url = self.base_url.as_str().trim_end_matches("/");
-        let url = format!("{base_url}/Services/{}/VerificationCheck", self.service_sid);
+        let url = match id {
+            None => format!("{base_url}/Services/{}/VerificationCheck", self.service_sid),
+            Some(id) => format!("{base_url}/Services/{}/Verifications/{}", self.service_sid, id)
+        };
         let (username, password) = (self.credentials.username.as_str(), Some(self.credentials.password.as_str()));
         let res: Response = self.client.post(url).basic_auth(username, password).form(form).send().await.map_err(Error::internal)?.json().await.map_err(Error::internal)?;
         if !res.valid {
@@ -101,11 +104,24 @@ impl Verify<Phone> for Twilio {
         Ok(())
     }
 
-    async fn verify<DB: GetItem<Self::Verification> + GetItems<Self::Verification>>(&self, contact: &Phone,  code: &str, db: &DB) -> Result<(), Self::Error> {
-        let number = contact.as_str();
-        let mut form = HashMap::new();
-        form.insert("To", number);
-        form.insert("Code", code);
-        self.verify_request(&form).await
+    async fn verify<DB: GetItem<Self::Verification>>(&self, contact: &Phone,  code: &str, db: &DB) -> Result<(), Self::Error> {
+        if !self.custom_code {
+            let number = contact.as_str();
+            let mut form = HashMap::new();
+            form.insert("To", number);
+            form.insert("Code", code);
+            return self.verify_request(&form, None).await
+        }
+        let contact = Contact::Phone(contact.clone());
+        let key = Key::Pk(&contact);
+        let verification = db.get_item(key).await.map_err(Self::Error::err)?;
+        let saved_code = verification.as_str();
+        if saved_code.as_str() != code {
+            return Err(Error::InvalidCode)
+        }
+        let form = [("Status", "approved")].into();
+        let id = Some(verification.id.as_str());
+        self.verify_request(&form, id).await?;
+        Ok(())
     }
 }

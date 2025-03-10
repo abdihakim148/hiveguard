@@ -47,7 +47,7 @@ pub trait Verify<T: Clone>: DeserializeOwned + Sized {
     ///
     /// # Returns
     /// A result indicating successful verification or an error
-    async fn verify<DB: GetItem<Self::Verification> + GetItems<Self::Verification>>(
+    async fn verify<DB: GetItem<Self::Verification>>(
         &self,
         contact: &T, 
         code: &str, 
