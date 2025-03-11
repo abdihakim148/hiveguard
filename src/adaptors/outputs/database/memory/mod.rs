@@ -508,7 +508,9 @@ mod tests {
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
             password: "hashedpassword".to_string(),
+            #[cfg(any(feature = "phone", feature = "contact"))]
             phone: Phone::New("1234567890".to_string()),
+            #[cfg(any(feature = "email", feature = "contact"))]
             email: EmailAddress::New("test@example.com".parse().unwrap())
         }
     }

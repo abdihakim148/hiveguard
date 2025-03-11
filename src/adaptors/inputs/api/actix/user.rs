@@ -10,8 +10,15 @@ use std::sync::Arc;
 
 #[derive(Deserialize)]
 struct Credentials {
+    #[cfg(feature = "contact")]
     #[serde(alias = "email", alias = "phone", flatten)]
     pub contact: DomainEither<Phone, EmailAddress>,
+    #[cfg(feature = "phone")]
+    #[serde(rename = "phone")]
+    pub contact: Phone,
+    #[cfg(feature = "email")]
+    #[serde(rename = "email")]
+    pub contact: EmailAddress,
     pub password: String
 }
 

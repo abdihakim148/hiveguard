@@ -32,7 +32,10 @@ mockall = "0.13.0"
 http = []
 memory = []
 smtp = []
+email = []
+phone = []
+contact = []
 
-default = ["http", "memory", "smtp"]
+default = ["http", "memory", "smtp", "email"]
 [badges]
 travis-ci = { repository = "abdihakim148/beekeeper", branch = "main" }
