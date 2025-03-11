@@ -1,8 +1,9 @@
 use crate::ports::outputs::{database::{CreateItem, DeleteItem, GetItem, GetItems, Item}, verify::{self, Verify, Code}};
-use crate::domain::types::{Verification, Phone, EmailAddress, VerificationMedia, Contact, Key};
+use crate::domain::types::{Verification, Phone, EmailAddress, VerificationMedia, Contact, Key, Either};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use reqwest::Client;
+use std::ops::Deref;
 use error::Error;
 
 mod error;
@@ -77,26 +78,29 @@ impl Twilio {
 
 
 
-impl Verify<Phone> for Twilio {
+impl Verify<Either<Phone, EmailAddress>> for Twilio {
     type Error = Error;
     type Channel = VerificationMedia;
     type Verification = Verification<String>;
 
-    async fn initiate<DB: CreateItem<Self::Verification>>(&self, contact: &Phone, channel: Self::Channel, db: &DB) -> Result<(), Self::Error> {
-        let number = contact.as_str();
+    async fn initiate<DB: CreateItem<Self::Verification>>(&self, contact: &Either<Phone, EmailAddress>, channel: Self::Channel, db: &DB) -> Result<(), Self::Error> {
+        let receiver = match contact {
+            Either::Left(phone) => phone.as_str(),
+            Either::Right(email) => email.as_ref()
+        };
         let channel = channel.to_string();
         let mut form = HashMap::new();
         if let Some(name) = &self.friendly_name {
             form.insert("CustomFriendlyName", name.as_str());
         }
-        form.insert("To", number);
+        form.insert("To", receiver);
         form.insert("Channel", channel.as_str());
         if !self.custom_code {
             self.initiate_request(&form).await?;
             return Ok(())
         }
         let mut verification = Self::Verification::new(contact, None, String::new());
-        let code = verification.as_str();
+        let code = Code::<Either<Phone, EmailAddress>>::as_str(&verification);
         form.insert("CustomCode", code.as_str());
         let res = self.initiate_request(&form).await?;
         verification.id = res.id;
@@ -104,18 +108,21 @@ impl Verify<Phone> for Twilio {
         Ok(())
     }
 
-    async fn verify<DB: GetItem<Self::Verification>>(&self, contact: &Phone,  code: &str, db: &DB) -> Result<(), Self::Error> {
+    async fn verify<DB: GetItem<Self::Verification>>(&self, contact: &Either<Phone, EmailAddress>,  code: &str, db: &DB) -> Result<(), Self::Error> {
         if !self.custom_code {
-            let number = contact.as_str();
+            let contact = match contact {
+                Either::Left(phone) => phone.as_str(),
+                Either::Right(email) => email.as_ref()
+            };
             let mut form = HashMap::new();
-            form.insert("To", number);
+            form.insert("To", contact);
             form.insert("Code", code);
             return self.verify_request(&form, None).await
         }
-        let contact = Contact::Phone(contact.clone());
-        let key = Key::Pk(&contact);
+        // let contact = Contact::Phone(contact.clone());
+        let key = Key::Pk(contact);
         let verification = db.get_item(key).await.map_err(Self::Error::err)?;
-        let saved_code = verification.as_str();
+        let saved_code = Code::<Either<Phone, EmailAddress>>::as_str(&verification);
         if saved_code.as_str() != code {
             return Err(Error::InvalidCode)
         }
@@ -123,5 +130,61 @@ impl Verify<Phone> for Twilio {
         let id = Some(verification.id.as_str());
         self.verify_request(&form, id).await?;
         Ok(())
+    }
+}
+
+
+
+
+impl Verify<Phone, Either<Phone, EmailAddress>> for Twilio {
+    type Error = Error;
+    type Channel = VerificationMedia;
+    type Verification = Verification<String>;
+
+    async fn initiate<DB: CreateItem<Self::Verification>>(
+            &self,
+            contact: &Phone, 
+            channel: Self::Channel, 
+            db: &DB
+        ) -> Result<(), Self::Error> {
+        let contact = Either::Left(contact.clone());
+        <Twilio as Verify<Either<Phone, EmailAddress>>>::initiate(&self, &contact, channel, db).await
+    }
+
+    async fn verify<DB: GetItem<Self::Verification>>(
+            &self,
+            contact: &Phone, 
+            code: &str, 
+            db: &DB
+        ) -> Result<(), Self::Error> {
+        let contact = Either::Left(contact.clone());
+        <Twilio as Verify<Either<Phone, EmailAddress>>>::verify(&self, &contact, code, db).await
+    }
+}
+
+
+impl Verify<EmailAddress, Either<Phone, EmailAddress>> for Twilio {
+    type Error = Error;
+    type Channel = VerificationMedia;
+    type Verification = Verification<String>;
+
+    async fn initiate<DB: CreateItem<Self::Verification>>(
+            &self,
+            contact: &EmailAddress, 
+            channel: Self::Channel, 
+            db: &DB
+        ) -> Result<(), Self::Error> {
+        let contact = Either::Right(contact.clone());
+        <Twilio as Verify<Either<Phone, EmailAddress>>>::initiate(&self, &contact, channel, db).await
+    }
+
+    async fn verify<DB: GetItem<Self::Verification>>(
+            &self,
+            contact: &EmailAddress, 
+            code: &str, 
+            db: &DB
+        ) -> Result<(), Self::Error> {
+        let contact = Either::Right(contact.clone());
+        <Twilio as Verify<Either<Phone, EmailAddress>>>::verify(&self, &contact, code, db).await
     }
 }

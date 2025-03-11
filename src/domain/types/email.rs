@@ -5,6 +5,7 @@ use serde::ser::SerializeStruct;
 use std::collections::HashMap;
 use lettre::address::Address;
 use std::any::TypeId;
+use std::ops::Deref;
 use std::fmt;
 
 /// An enum representing the state of an email.
@@ -112,11 +113,22 @@ impl<'de> Deserialize<'de> for EmailAddress {
 }
 
 
+impl Deref for EmailAddress {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::New(address) => address.as_ref(),
+            Self::Verified(address) => address.as_ref()
+        }
+    }
+}
 
-impl TryFrom<Value> for EmailAddress {
+
+
+impl TryFrom<&mut Value> for EmailAddress {
     type Error = Error;
 
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
+    fn try_from(value: &mut Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(string) => {
                 let address: Address = string.parse().map_err(|_| Error::InvalidEmail)?;
@@ -129,9 +141,9 @@ impl TryFrom<Value> for EmailAddress {
 }
 
 
-impl TryFrom<HashMap<String, Value>> for EmailAddress {
+impl TryFrom<&mut HashMap<String, Value>> for EmailAddress {
     type Error = Error;
-    fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
+    fn try_from(map: &mut HashMap<String, Value>) -> Result<Self, Self::Error> {
         if let Some(email) = map.remove("email") {
             let email_verified = match map.remove("email_verified") {
                 Some(value) => value.try_into()?,
@@ -144,7 +156,7 @@ impl TryFrom<HashMap<String, Value>> for EmailAddress {
                 false => Ok(EmailAddress::New(address)),
             };
         }
-        let value = Value::Object(map);
+        let value = Value::Object(map.clone());
         Err(Error::invalid_format("EmailAddress", format!("{:?}", value), None))
     }
 }

@@ -508,10 +508,8 @@ mod tests {
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
             password: "hashedpassword".to_string(),
-            contact: Contact::Both(
-                Phone::New("1234567890".to_string()),
-                EmailAddress::New("test@example.com".parse().unwrap())
-            )
+            phone: Phone::New("1234567890".to_string()),
+            email: EmailAddress::New("test@example.com".parse().unwrap())
         }
     }
 

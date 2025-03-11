@@ -1,5 +1,5 @@
+use crate::domain::{services::{Get, Update}, types::{Audience, Config, Either as DomainEither, User, Value, Phone, EmailAddress}};
 use actix_web::{post, get, patch, web::{Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest};
-use crate::domain::{services::{Get, Update}, types::{Audience, Config, Contact, User, Value}};
 use crate::domain::services::Authentication;
 use super::{Response, DB, Mailer};
 use std::collections::HashMap;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 #[derive(Deserialize)]
 struct Credentials {
     #[serde(alias = "email", alias = "phone", flatten)]
-    pub contact: Contact,
+    pub contact: DomainEither<Phone, EmailAddress>,
     pub password: String
 }
 

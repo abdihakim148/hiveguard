@@ -1,4 +1,4 @@
-use super::{super::services::Paseto, Contact, Id, Token, Audience};
+use super::{super::services::Paseto, Audience, Contact, EmailAddress, Id, Token, Phone, Either};
 use crate::ports::outputs::database::Item;
 #[cfg(feature = "http")]
 use actix_web::{
@@ -24,7 +24,10 @@ pub struct User {
     pub last_name: String,
     /// The email address of the user.
     #[serde(flatten)]
-    pub contact: Contact,
+    pub email: EmailAddress,
+    /// The phone number of the user.
+    #[serde(flatten)]
+    pub phone: Phone,
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
@@ -64,5 +67,5 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 
 impl Item for User {
     type PK = Id;
-    type SK = Contact;
+    type SK = Either<Phone, EmailAddress>;
 }

@@ -10,11 +10,11 @@ use std::rc::Rc;
 ///
 /// # Type Parameters
 /// * `T` - The type of contact being verified (e.g., email, phone number)
-pub trait Verify<T: Clone>: DeserializeOwned + Sized {
+pub trait Verify<T: Clone, P: Clone = T>: DeserializeOwned + Sized {
     /// The type of verification code used for this verification process
     /// 
     /// Must implement both the `Code` trait and be storable as an `Item` 
-    type Verification: Code<T, 6> + Item;
+    type Verification: Code<P, 6> + Item;
 
     /// The error type for verification operations
     type Error: ErrorTrait;

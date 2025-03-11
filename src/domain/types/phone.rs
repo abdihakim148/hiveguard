@@ -126,14 +126,14 @@ impl<'de> Deserialize<'de> for Phone {
 }
 
 
-impl TryFrom<Value> for Phone {
+impl TryFrom<&mut Value> for Phone {
     type Error = Error;
 
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
+    fn try_from(value: &mut Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(phone) => {
-                if Self::valid(&phone) {
-                    return Ok(Phone::New(phone))
+                if Self::valid(phone) {
+                    return Ok(Phone::New(phone.clone()))
                 }
                 Err(Error::InvalidPhone)?
             },
@@ -145,9 +145,9 @@ impl TryFrom<Value> for Phone {
 
 
 
-impl TryFrom<HashMap<String, Value>> for Phone {
+impl TryFrom<&mut HashMap<String, Value>> for Phone {
     type Error = Error;
-    fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
+    fn try_from(mut map: &mut HashMap<String, Value>) -> Result<Self, Self::Error> {
         let phone: String = match map.remove("phone") {
             Some(value) => value.try_into()?,
             None => Err(Error::validation("phone", "field not found"))?
