@@ -1,4 +1,5 @@
 use crate::ports::outputs::database::{Item, GetItem, CreateItem, DeleteItem, GetItems};
+use crate::domain::types::{EmailAddress, Phone, Either};
 use serde::{de::DeserializeOwned, Serialize};
 use crate::ports::ErrorTrait;
 use std::rc::Rc;
@@ -10,11 +11,11 @@ use std::rc::Rc;
 ///
 /// # Type Parameters
 /// * `T` - The type of contact being verified (e.g., email, phone number)
-pub trait Verify<T: Clone, P: Clone = T>: DeserializeOwned + Sized {
+pub trait Verify<T: Clone, const DIGITS: usize = 6>: DeserializeOwned + Sized {
     /// The type of verification code used for this verification process
     /// 
     /// Must implement both the `Code` trait and be storable as an `Item` 
-    type Verification: Code<P, 6> + Item;
+    type Verification: Code<T, DIGITS> + Item;
 
     /// The error type for verification operations
     type Error: ErrorTrait;
@@ -80,3 +81,15 @@ pub trait Code<T: Clone, const DIGITS: usize = 6>: Sized {
         code
     }
 }
+
+
+
+pub trait Verifyer{}
+#[cfg(all(feature = "email", not(feature = "phone")))]
+impl<V: Verify<EmailAddress>> Verifyer for V {}
+
+#[cfg(all(feature = "phone", not(feature = "email")))]
+impl<V: Verify<Phone>> Verifyer for V {}
+
+#[cfg(all(feature = "phone", feature = "email"))]
+impl<V: Verify<EmailAddress> + Verify<Phone>> Verifyer for V {}

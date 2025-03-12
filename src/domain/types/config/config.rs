@@ -1,24 +1,23 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
 use crate::ports::inputs::config::Config as ConfigTrait;
 use super::{argon::Argon, Paseto, mail::MailConfig};
-use crate::ports::outputs::mailer::Mailer;
+use crate::ports::outputs::verify::Verifyer;
 use crate::domain::types::Mail;
 use std::io::{Read, Write};
 
 
 
-
-pub struct Config<DB, M> {
+pub struct Config<DB, V> {
     pub name: String,
     domain: String,
     database: DB,
     argon: Argon,
     paseto: Paseto,
-    mailer: MailConfig<M>
+    verifyer: V,
 }
 
 
-impl<DB, M> Config<DB, M> {
+impl<DB, V> Config<DB, V> {
     pub fn db(&self) -> &DB {
         &self.database
     }
@@ -31,18 +30,17 @@ impl<DB, M> Config<DB, M> {
         &self.paseto
     }
 
-    pub fn mailer(&self) -> &M {
-        &self.mailer.mailer()
+    pub fn verifyer(&self) -> &V {
+        &self.verifyer
     }
 }
 
 
 
-impl<DB, M> Config<DB, M>
+impl<DB, V> Config<DB, V>
 where 
     DB: Default + Serialize + DeserializeOwned,
-    M: Mailer + TryFrom<Mail>,
-    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
+    V: Verifyer + Default + Serialize + DeserializeOwned,
 {
 
 
@@ -74,7 +72,7 @@ where
 }
 
 
-impl<DB: Serialize, M: Mailer + TryFrom<Mail>> Serialize for Config<DB, M> {
+impl<DB: Serialize, V: Verifyer + Serialize> Serialize for Config<DB, V> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
@@ -82,17 +80,16 @@ impl<DB: Serialize, M: Mailer + TryFrom<Mail>> Serialize for Config<DB, M> {
         state.serialize_field("database", &self.database)?;
         state.serialize_field("argon", &self.argon)?;
         state.serialize_field("paseto", &self.paseto)?;
-        state.serialize_field("mailer", &self.mailer)?;
+        state.serialize_field("verifyer", &self.verifyer)?;
         state.end()
     }
 }
 
 
-impl<DB: Default + Serialize + DeserializeOwned, M> ConfigTrait for Config<DB, M> 
+impl<DB: Default + Serialize + DeserializeOwned, V> ConfigTrait for Config<DB, V> 
 where 
     DB: Default + Serialize + DeserializeOwned,
-    M: Mailer + TryFrom<Mail>,
-    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
+    V: Verifyer + Default + Serialize + DeserializeOwned,
 {
     type Error = Box<dyn std::error::Error + 'static>;
     type Input = ();
@@ -108,44 +105,39 @@ where
 }
 
 
-impl<DB: Default , M: Mailer + TryFrom<Mail>> Default for Config<DB, M> 
-where 
-    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
-{
+impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
     fn default() -> Self {
         let name = String::from("Beekeeper");
         let domain = Default::default();
         let database = Default::default();
         let argon = Default::default();
         let paseto = Default::default();
-        let mailer = Default::default();
+        let verifyer = Default::default();
 
-        Self{name, domain, database, argon, paseto, mailer}
+        Self{name, domain, database, argon, paseto, verifyer}
     }
 }
 
 
-impl<'de, DB, M> Deserialize<'de> for Config<DB, M> 
+impl<'de, DB, V> Deserialize<'de> for Config<DB, V> 
 where
     DB: Default + Deserialize<'de>,
-    M: Mailer + TryFrom<Mail>,
-    <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
+    V: Verifyer + Default + Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: serde::Deserializer<'de> {
 
-        struct ConfigVisitor<DB, M> {
-            _t: std::marker::PhantomData<(DB, M)>
+        struct ConfigVisitor<DB, V> {
+            _t: std::marker::PhantomData<(DB, V)>
         }
 
-        impl<'de, DB, M> Visitor<'de> for ConfigVisitor<DB, M> 
+        impl<'de, DB, V> Visitor<'de> for ConfigVisitor<DB, V> 
         where
             DB: Default + Deserialize<'de>,
-            M: Mailer + TryFrom<Mail>,
-            <M as TryFrom<Mail>>::Error: std::fmt::Display + std::fmt::Debug
+            V: Verifyer + Default + Deserialize<'de>,
         {
-            type Value = Config<DB, M>;
+            type Value = Config<DB, V>;
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("a struct of Config")
             }
@@ -158,7 +150,7 @@ where
                 let mut database = None;
                 let mut argon = None;
                 let mut paseto = None;
-                let mut mailer = None;
+                let mut verifyer = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -192,11 +184,11 @@ where
                             }
                             paseto = map.next_value()?;
                         },
-                        "mailer" => {
-                            if mailer.is_some() {
+                        "verifyer" => {
+                            if verifyer.is_some() {
                                 return Err(de::Error::duplicate_field("mailer"));
                             }
-                            mailer = map.next_value()?;
+                            verifyer = map.next_value()?;
                         },
                         _ => {
                             let _: de::IgnoredAny = map.next_value()?;
@@ -209,12 +201,12 @@ where
                 let database = database.unwrap_or_default();
                 let argon = argon.unwrap_or_default();
                 let paseto = paseto.unwrap_or_default();
-                let mailer = mailer.unwrap_or_default();
+                let verifyer = verifyer.unwrap_or_default();
 
-                Ok(Config{name, domain, database, argon, paseto, mailer})
+                Ok(Config{name, domain, database, argon, paseto, verifyer})
             }
         }
-        let visitor = ConfigVisitor::<DB, M>{_t: std::marker::PhantomData::default()};
+        let visitor = ConfigVisitor::<DB, V>{_t: std::marker::PhantomData::default()};
         deserializer.deserialize_map(visitor)
     }
 }

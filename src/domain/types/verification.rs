@@ -55,13 +55,30 @@ impl<ID: PartialEq + Clone + std::hash::Hash> Item for Verification<ID> {
     type SK = ID;
 }
 
-
-impl<ID: Serialize + DeserializeOwned, T: Clone + Into<Either<Phone, EmailAddress>>> Code<T, 6> for Verification<ID> {
+#[cfg(feature = "email")]
+impl<ID: Serialize + DeserializeOwned> Code<EmailAddress, 6> for Verification<ID> {
     type Id = ID;
-    fn new(contact: &T, ttl: Option<i64>, id: Self::Id) -> Self {
+    fn new(email: &EmailAddress, ttl: Option<i64>, id: Self::Id) -> Self {
         let seconds = match ttl {Some(secs) => secs, None => 60*5};
         let code = rand::random_range(10000..999999);
-        let owner_contact = contact.clone().into();
+        let owner_contact = Either::Right(email.clone());
+        let expires = Utc::now() + Duration::seconds(seconds);
+        Self{owner_contact, id, code, expires}
+    }
+
+    fn code(&self) -> u32 {
+        self.code
+    }
+}
+
+
+#[cfg(feature = "phone")]
+impl<ID: Serialize + DeserializeOwned> Code<Phone, 6> for Verification<ID> {
+    type Id = ID;
+    fn new(phone: &Phone, ttl: Option<i64>, id: Self::Id) -> Self {
+        let seconds = match ttl {Some(secs) => secs, None => 60*5};
+        let code = rand::random_range(10000..999999);
+        let owner_contact = Either::Left(phone.clone());
         let expires = Utc::now() + Duration::seconds(seconds);
         Self{owner_contact, id, code, expires}
     }

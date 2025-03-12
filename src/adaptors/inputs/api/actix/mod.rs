@@ -16,9 +16,8 @@ mod user;
 type Response<T> = std::result::Result<T, Error>;
 #[cfg(feature = "memory")]
 type DB = Memory;
-#[cfg(feature = "smtp")]
-type Mailer = SmtpMailer;
 pub type Result<T> = std::result::Result<T, Box<dyn StdError + 'static>>;
+type Verifyer = crate::adaptors::outputs::verify::Verifyer;
 
 #[derive(Default)]
 pub struct Actix;
@@ -28,7 +27,7 @@ impl Actix {
     pub async fn start() -> Result<()> {
         std::env::set_var("RUST_LOG", "debug");
         env_logger::init();
-        let state = Arc::new(<Config<Memory, Mailer> as Conf>::load(None, ()).await?);
+        let state = Arc::new(<Config<Memory, Verifyer> as Conf>::load(None, ()).await?);
         let data = Data::new(state);
         HttpServer::new(move|| {
             App::new()

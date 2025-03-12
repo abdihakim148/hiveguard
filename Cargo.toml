@@ -17,7 +17,7 @@ log = "0.4.25"
 rand = { version = "0.9.0", features = ["thread_rng", "os_rng"]}
 reqwest = { version = "0.12.8", features = ["json"] }
 rusty_paseto = { version = "0.7.2", features = ["core"] }
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.128"
 static_init = "1.0.3"
 thiserror = "1.0.64"
@@ -34,8 +34,9 @@ memory = []
 smtp = []
 email = []
 phone = []
-contact = []
+twilio-phone = []
+twilio-email = []
 
-default = ["http", "memory", "smtp", "email"]
+default = ["http", "memory", "smtp", "email", "twilio-email"]
 [badges]
 travis-ci = { repository = "abdihakim148/beekeeper", branch = "main" }
