@@ -8,6 +8,7 @@ use std::fmt::{self, Display, Debug};
 use std::error::Error as StdError;
 #[cfg(feature = "http")]
 use actix_web::http::StatusCode;
+use std::collections::HashSet;
 use crate::ports::ErrorTrait;
 use std::sync::PoisonError;
 use std::any::type_name;
@@ -27,7 +28,7 @@ pub enum Error {
     MemberAlreadyExists,
     ServiceNotFound,
     ServiceAlreadyExists,
-    CannotDeleteFields(Vec<String>),
+    CannotDeleteFields(HashSet<String>),
     CannotDeleteContact,
     UnsupportedOperation,
     /// A thread lock was poisoned, indicating a concurrent access failure
@@ -49,9 +50,11 @@ impl Display for Error {
             Self::ServiceAlreadyExists => write!(f, "Service with this name already exists"),
             Self::CannotDeleteFields(fields) => {
                 if fields.len() == 1 {
-                    write!(f, "cannot delete the {} field", fields[0])
+                    // unwrap is used here because the above condition makes sure that there is at least one item
+                    // which makes this unwrap operation a safe one.
+                    write!(f, "cannot delete the {} field", fields.into_iter().next().unwrap())
                 } else {
-                    write!(f, "cannot delete fields: {}", fields.join(", "))
+                    write!(f, "cannot delete fields: {}", fields.into_iter().map(|s|s.as_str()).collect::<Vec<&str>>().join(", "))
                 }
             },
             Self::CannotDeleteContact => write!(f, "cannot delete the only contact info you have but you can replace it"),

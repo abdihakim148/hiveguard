@@ -5,7 +5,7 @@
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{Organisation, Id, Key, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::RwLock as Lock;
 use super::error::Error;
 
@@ -119,26 +119,26 @@ impl UpdateItem<Organisation> for Organisations {
     /// # Behavior
     /// - Allows updating name, domain, home, and contacts
     /// - Updates secondary indexes if name changes
-    async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, mut map: Map) -> Result<Organisation, Self::Error> {
+    async fn patch_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, map: Map) -> Result<Organisation, Self::Error> {
         // First, retrieve the existing organisation
         let mut organisation = self.get_item(key.clone()).await?;
         
         // Update fields
-        if let Some(value) = map.remove("name") {
-            let new_name: String = value.try_into()?;
+        if let Some(value) = map.get("name") {
+            let new_name: String = value.clone().try_into()?;
             organisation.name = new_name;
         }
 
-        if let Some(value) = map.remove("domain") {
-            organisation.domain = Some(value.try_into()?);
+        if let Some(value) = map.get("domain") {
+            organisation.domain = Some(value.clone().try_into()?);
         }
 
-        if let Some(value) = map.remove("home") {
-            organisation.home = Some(value.try_into()?);
+        if let Some(value) = map.get("home") {
+            organisation.home = Some(value.clone().try_into()?);
         }
 
-        if let Some(mut value) = map.remove("contacts") {
-            organisation.contacts = value.try_into()?;
+        if let Some(value) = map.get("contacts") {
+            organisation.contacts = value.clone().try_into()?;
         }
 
         // Create a new organisation with updated values
@@ -156,7 +156,7 @@ impl UpdateItem<Organisation> for Organisations {
     /// 
     /// # Behavior
     /// - Organisations do not support deleting individual fields
-    async fn delete_fields(&self, _key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, _fields: &[String]) -> Result<Organisation, Self::Error> {
+    async fn delete_fields(&self, _key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, _fields: HashSet<String>) -> Result<Organisation, Self::Error> {
         Err(Error::UnsupportedOperation)
     }
 }
@@ -281,7 +281,7 @@ mod tests {
         let organisation = create_test_organisation();
         let _ = organisations.create_item(organisation.clone()).await;
         
-        let result = organisations.delete_fields(Key::Pk(&organisation.id), &["name".to_string()]).await;
+        let result = organisations.delete_fields(Key::Pk(&organisation.id), [String::from("name")].into()).await;
         assert!(matches!(result, Err(Error::UnsupportedOperation)), 
                 "Deleting fields should return UnsupportedOperation");
     }

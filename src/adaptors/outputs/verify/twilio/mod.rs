@@ -85,7 +85,7 @@ impl Verify<Either<Phone, EmailAddress>> for Twilio {
 
     async fn initiate<DB: CreateItem<Self::Verification>>(&self, contact: &Either<Phone, EmailAddress>, channel: Self::Channel, db: &DB) -> Result<(), Self::Error> {
         let receiver = match contact {
-            Either::Left(phone) => phone.as_str(),
+            Either::Left(phone) => phone.as_ref(),
             Either::Right(email) => email.as_ref()
         };
         let channel = channel.to_string();
@@ -111,7 +111,7 @@ impl Verify<Either<Phone, EmailAddress>> for Twilio {
     async fn verify<DB: GetItem<Self::Verification>>(&self, contact: &Either<Phone, EmailAddress>,  code: &str, db: &DB) -> Result<(), Self::Error> {
         if !self.custom_code {
             let contact = match contact {
-                Either::Left(phone) => phone.as_str(),
+                Either::Left(phone) => phone.as_ref(),
                 Either::Right(email) => email.as_ref()
             };
             let mut form = HashMap::new();
@@ -180,8 +180,8 @@ impl Verify<EmailAddress, Either<Phone, EmailAddress>> for Twilio {
 
     async fn verify<DB: GetItem<Self::Verification>>(
             &self,
-            contact: &EmailAddress, 
-            code: &str, 
+            contact: &EmailAddress,
+            code: &str,
             db: &DB
         ) -> Result<(), Self::Error> {
         let contact = Either::Right(contact.clone());

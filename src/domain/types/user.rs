@@ -1,8 +1,4 @@
-use super::{super::services::Paseto, Audience, Contact, Id, Token, Either};
-#[cfg(feature = "email")]
-use super::EmailAddress;
-#[cfg(feature = "phone")]
-use super::Phone;
+use super::{super::services::Paseto, Contact, Id, Token, Audience};
 use crate::ports::outputs::database::Item;
 #[cfg(feature = "http")]
 use actix_web::{
@@ -27,21 +23,8 @@ pub struct User {
     /// The last name of the user.
     pub last_name: String,
     /// The email address of the user.
-    #[cfg(all(feature = "email", not(feature = "contact")))]
     #[serde(flatten)]
-    pub email: EmailAddress,
-    /// The email address of the user (optional when contact feature is enabled).
-    #[cfg(feature = "contact")]
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub email: Option<EmailAddress>,
-    /// The phone number of the user.
-    #[cfg(all(feature = "phone", not(feature = "contact")))]
-    #[serde(flatten)]
-    pub phone: Phone,
-    /// The phone number of the user (optional when contact feature is enabled).
-    #[cfg(feature = "contact")]
-    #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub phone: Option<Phone>,
+    pub contact: Contact,
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
@@ -81,10 +64,5 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 
 impl Item for User {
     type PK = Id;
-    #[cfg(any(all(feature = "email", feature = "phone"), feature = "contact"))]
-    type SK = Either<Phone, EmailAddress>;
-    #[cfg(all(feature = "email", not(feature = "phone")))]
-    type SK = EmailAddress;
-    #[cfg(all(feature = "phone", not(feature = "email")))]
-    type SK = Phone;
+    type SK = Contact;
 }

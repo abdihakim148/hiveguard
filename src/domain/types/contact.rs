@@ -74,15 +74,15 @@ impl<'de> Deserialize<'de> for Contact {
 
 impl TryFrom<Value> for Contact {
     type Error = Error;
-    fn try_from(mut value: Value) -> Result<Self, Self::Error> {
-        let result = TryInto::try_into(&mut value);
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let result = value.clone().try_into();
         if let Ok(phone) = result {
-            match TryInto::try_into(&mut value) {
+            match value.try_into() {
                 Ok(email) => Ok(Contact::Both(phone, email)),
                 Err(_) => Ok(Contact::Phone(phone))
             }
         }else {
-            match TryInto::try_into(&mut value) {
+            match value.try_into() {
                 Ok(email) => Ok(Contact::Email(email)),
                 Err(err) => Err(err)?
             }

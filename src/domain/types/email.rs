@@ -113,22 +113,11 @@ impl<'de> Deserialize<'de> for EmailAddress {
 }
 
 
-impl Deref for EmailAddress {
-    type Target = str;
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::New(address) => address.as_ref(),
-            Self::Verified(address) => address.as_ref()
-        }
-    }
-}
 
-
-
-impl TryFrom<&mut Value> for EmailAddress {
+impl TryFrom<Value> for EmailAddress {
     type Error = Error;
 
-    fn try_from(value: &mut Value) -> Result<Self, Self::Error> {
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(string) => {
                 let address: Address = string.parse().map_err(|_| Error::InvalidEmail)?;
@@ -141,9 +130,9 @@ impl TryFrom<&mut Value> for EmailAddress {
 }
 
 
-impl TryFrom<&mut HashMap<String, Value>> for EmailAddress {
+impl TryFrom<HashMap<String, Value>> for EmailAddress {
     type Error = Error;
-    fn try_from(map: &mut HashMap<String, Value>) -> Result<Self, Self::Error> {
+    fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
         if let Some(email) = map.remove("email") {
             let email_verified = match map.remove("email_verified") {
                 Some(value) => value.try_into()?,
@@ -156,11 +145,22 @@ impl TryFrom<&mut HashMap<String, Value>> for EmailAddress {
                 false => Ok(EmailAddress::New(address)),
             };
         }
-        let value = Value::Object(map.clone());
+        let value = Value::Object(map);
         Err(Error::invalid_format("EmailAddress", format!("{:?}", value), None))
     }
 }
 
+
+impl Deref for EmailAddress {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::New(address) => address.as_ref(),
+            Self::Verified(address) => address.as_ref()
+        }
+    }
+}
 
 
 

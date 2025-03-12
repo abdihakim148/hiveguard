@@ -5,7 +5,7 @@
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{Member, Id, Key, Value, User, Organisation};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::RwLock as Lock;
 use super::error::Error;
 
@@ -183,7 +183,7 @@ impl UpdateItem<(Organisation, User), Member> for Members {
     /// 
     /// # Behavior
     /// - Members do not support deleting individual fields
-    async fn delete_fields(&self, _key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, _fields: &[String]) -> Result<Member, Self::Error> {
+    async fn delete_fields(&self, _key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, _fields: HashSet<String>) -> Result<Member, Self::Error> {
         Err(Error::UnsupportedOperation)
     }
 }
@@ -306,7 +306,7 @@ mod tests {
         let member = create_test_member();
         let _ = members.create_item(member.clone()).await;
         
-        let result = members.delete_fields(Key::Pk(&(member.org_id, member.user_id)), &["title".to_string()]).await;
+        let result = members.delete_fields(Key::Pk(&(member.org_id, member.user_id)), [String::from("title")].into()).await;
         assert!(matches!(result, Err(Error::UnsupportedOperation)), 
                 "Deleting fields should return UnsupportedOperation");
     }

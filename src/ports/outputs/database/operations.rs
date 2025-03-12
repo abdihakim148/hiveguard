@@ -1,5 +1,5 @@
+use std::collections::{HashMap, HashSet};
 use crate::domain::types::{Key, Value};
-use std::collections::HashMap;
 use crate::ports::ErrorTrait;
 use super::Item;
 
@@ -71,7 +71,7 @@ pub trait UpdateItem<I: Item, O: Item = I>: Sized {
     /// 
     /// # Returns
     /// The updated item or an error if the deletion fails
-    async fn delete_fields(&self, key: Key<&I::PK, &I::SK>, fields: &[String]) -> Result<O, Self::Error>;
+    async fn delete_fields(&self, key: Key<&I::PK, &I::SK>, fields: HashSet<String>) -> Result<O, Self::Error>;
 }
 
 /// This trait is used to delete an Item from the database.

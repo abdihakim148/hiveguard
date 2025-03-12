@@ -20,7 +20,7 @@ mod services;
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem, Map};
 use crate::domain::types::{User, Key, Value, Organisation, Member, Service};
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::RwLock as Lock;
 use organisations::*;
 use services::*;
@@ -123,7 +123,7 @@ impl UpdateItem<User> for Memory {
         self.users.patch_item(key, update).await
     }
 
-    async fn delete_fields(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, fields: &[String]) -> Result<User, Self::Error> {
+    async fn delete_fields(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>, fields: HashSet<String>) -> Result<User, Self::Error> {
         self.users.delete_fields(key, fields).await
     }
 }
@@ -184,7 +184,7 @@ impl UpdateItem<Organisation> for Memory {
         self.organisations.patch_item(key, update).await
     }
 
-    async fn delete_fields(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, fields: &[String]) -> Result<Organisation, Self::Error> {
+    async fn delete_fields(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>, fields: HashSet<String>) -> Result<Organisation, Self::Error> {
         self.organisations.delete_fields(key, fields).await
     }
 }
@@ -246,7 +246,7 @@ impl UpdateItem<(Organisation, User), Member> for Memory {
         self.members.patch_item(key, update).await
     }
 
-    async fn delete_fields(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, fields: &[String]) -> Result<Member, Self::Error> {
+    async fn delete_fields(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>, fields: HashSet<String>) -> Result<Member, Self::Error> {
         self.members.delete_fields(key, fields).await
     }
 }
@@ -312,7 +312,7 @@ impl UpdateItem<Service> for Memory {
         self.services.patch_item(key, update).await
     }
 
-    async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: &[String]) -> Result<Service, Self::Error> {
+    async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: HashSet<String>) -> Result<Service, Self::Error> {
         self.services.delete_fields(key, fields).await
     }
 }
@@ -508,10 +508,10 @@ mod tests {
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
             password: "hashedpassword".to_string(),
-            #[cfg(any(feature = "phone", feature = "contact"))]
-            phone: Phone::New("1234567890".to_string()),
-            #[cfg(any(feature = "email", feature = "contact"))]
-            email: EmailAddress::New("test@example.com".parse().unwrap())
+            contact: Contact::Both(
+                Phone::New("1234567890".to_string()),
+                EmailAddress::New("test@example.com".parse().unwrap())
+            )
         }
     }
 

@@ -16,7 +16,7 @@
 
 use crate::ports::outputs::database::{CreateItem, DeleteItem, GetItem, Item, UpdateItem, Map};
 use crate::domain::types::{Id, Key, Service, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::RwLock as Lock;
 use super::error::Error;
 use chrono::Duration;
@@ -196,7 +196,7 @@ impl UpdateItem<Service> for Services {
         self.update_item(key, service).await
     }
 
-    async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: &[String]) -> Result<Service, Self::Error> {
+    async fn delete_fields(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>, fields: HashSet<String>) -> Result<Service, Self::Error> {
         // Services do not support deleting fields
         Err(Error::UnsupportedOperation)
     }
@@ -332,7 +332,7 @@ mod tests {
         let service = create_test_service();
         let _ = services.create_item(service.clone()).await;
 
-        let result = services.delete_fields(Key::Pk(&service.id), &["name".to_string()]).await;
+        let result = services.delete_fields(Key::Pk(&service.id), [String::from("name")].into()).await;
         assert!(matches!(result, Err(Error::UnsupportedOperation)), 
                 "Deleting fields should return UnsupportedOperation");
     }
