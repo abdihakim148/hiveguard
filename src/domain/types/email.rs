@@ -163,6 +163,16 @@ impl Deref for EmailAddress {
 }
 
 
+impl From<EmailAddress> for Address {
+    fn from(email: EmailAddress) -> Self {
+        match email {
+            EmailAddress::New(address) => address,
+            EmailAddress::Verified(address) => address
+        }
+    }
+}
+
+
 
 #[cfg(test)]
 mod tests {
