@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiveguard Email Verification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            /* Enhanced shadow on all sides */
+            box-shadow:
+                0 10px 25px rgba(107, 72, 255, 0.2),
+                0 -5px 20px rgba(63, 140, 255, 0.1),
+                5px 0 15px rgba(107, 72, 255, 0.15),
+                -5px 0 15px rgba(63, 140, 255, 0.15);
+            border-top: 6px solid #6B48FF;
+            /* Purple accent border */
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Add a subtle outer glow effect */
+        .container::after {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, rgba(107, 72, 255, 0.1) 0%, rgba(63, 140, 255, 0.1) 50%, rgba(255, 213, 79, 0.1) 100%);
+            border-radius: 14px;
+            z-index: -1;
+            filter: blur(8px);
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            margin: -30px -30px 25px -30px;
+            background: linear-gradient(135deg, #6B48FF 0%, #3F8CFF 100%);
+            /* Purple to blue gradient */
+            color: #ffffff;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 28px;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-name {
+            display: inline-block;
+            background-color: #FFD54F;
+            /* Yellow accent */
+            color: #333333;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .content {
+            margin: 30px 0;
+            text-align: center;
+            color: #444444;
+        }
+
+        .content p {
+            line-height: 1.6;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            margin: 25px 0;
+            padding: 14px 30px;
+            background: linear-gradient(to right, #3F8CFF, #6B48FF);
+            /* Blue to purple gradient */
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(107, 72, 255, 0.3);
+        }
+
+        .button:hover {
+            background: linear-gradient(to right, #3670CC, #5A3FD8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(107, 72, 255, 0.4);
+        }
+
+        .code-container {
+            margin: 25px auto;
+            max-width: 280px;
+            position: relative;
+        }
+
+        .code-container::after {
+            content: "Click to copy";
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: #6B48FF;
+            font-weight: 500;
+        }
+
+        .verification-code {
+            background-color: #f8f8f8;
+            border: 2px dashed #3F8CFF;
+            /* Blue border */
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #6B48FF;
+            /* Purple text */
+            user-select: all;
+            /* Makes text selectable for easy copying */
+            -webkit-user-select: all;
+            -moz-user-select: all;
+            -ms-user-select: all;
+            cursor: text;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        /* Additional styling to make the code stand out more */
+        .verification-code::before {
+            content: "";
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 10px;
+            background: rgba(63, 140, 255, 0.05);
+            z-index: -1;
+        }
+
+        /* Copy hint effect on hover */
+        .verification-code:hover {
+            background-color: #f0f0f0;
+            border-color: #6B48FF;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 35px;
+            color: #888888;
+            font-size: 14px;
+            border-top: 1px solid #eeeeee;
+            padding-top: 20px;
+        }
+
+        .security-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 12px;
+            background-color: #FFD54F;
+            /* Yellow accent */
+            color: #333;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .hidden-content {
+            display: none;
+            visibility: hidden;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            position: absolute;
+            left: -9999px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Verify Your Email</h1>
+            <div class="brand-name">HIVEGUARD</div>
+        </div>
+        <div class="content">
+            <p>Thank you for signing up! Please verify your email address by clicking the button below or using the
+                verification code provided.</p>
+
+            <a href="{{magic_link}}" class="button">Verify Email</a>
+
+            <p>Or use this verification code:</p>
+            <div class="code-container">
+                <div class="verification-code">{{code}}</div>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">This code will expire in 24 hours</p>
+            <div class="security-badge">Secured by Hiveguard</div>
+        </div>
+        <div class="footer">
+            <p>If you did not sign up for this account, you can ignore this email.</p>
+            <p style="color: #6B48FF; font-weight: 500; margin-top: 10px;">© Hiveguard</p>
+        </div>
+    </div>
+</body>
+
+</html>

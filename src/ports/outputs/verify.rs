@@ -35,7 +35,8 @@ pub trait Verify<T: Clone, const DIGITS: usize = 6>: DeserializeOwned + Sized {
     async fn initiate<DB: CreateItem<Self::Verification>>(
         &self,
         contact: &T, 
-        channel: Self::Channel, 
+        channel: Self::Channel,
+        base_url: &str,
         db: &DB
     ) -> Result<(), Self::Error>;
 
@@ -51,7 +52,7 @@ pub trait Verify<T: Clone, const DIGITS: usize = 6>: DeserializeOwned + Sized {
     async fn verify<DB: GetItem<Self::Verification>>(
         &self,
         contact: &T, 
-        code: &str, 
+        code: Either<&str, &<Self::Verification as Code<T, DIGITS>>::Id>,
         db: &DB
     ) -> Result<(), Self::Error>;
 }

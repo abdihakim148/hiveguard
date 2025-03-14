@@ -9,6 +9,7 @@ mod verify;
 
 type Client = AsyncSmtpTransport<Tokio1Executor>;
 
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Smtp {
     url: String,
@@ -19,6 +20,9 @@ pub struct Smtp {
 }
 
 impl Smtp {
+
+    const TEMPLATE: &'static str = include_str!("./template.html");
+
     /// Creates a new SMTP client from the given configuration
     pub fn new(url: String, credentials: Option<Credentials>, sender: Mailbox) -> Result<Self, Error> {
         let mut mailer = Client::from_url(&url)?;
@@ -49,11 +53,9 @@ impl Smtp {
     }
     
     /// Creates a verification email with the given code
-    pub fn create_verification_email(&self, code: &str) -> String {
-        format!(
-            "<html><body><h1>Verification Code</h1><p>Your verification code is: <strong>{}</strong></p></body></html>",
-            code
-        )
+    pub fn create_verification_email(&self, code: &str, link: &str) -> String {
+        let body = Self::TEMPLATE.replace("{{magic_link}}", link);
+        body.replace("{{code}}", code)
     }
 }
 

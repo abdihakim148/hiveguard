@@ -146,7 +146,8 @@ impl Verify<EmailAddress> for Twilio {
     async fn initiate<DB: CreateItem<Self::Verification>>(
             &self,
             contact: &EmailAddress, 
-            channel: Self::Channel, 
+            channel: Self::Channel,
+            _: &str,
             db: &DB
         ) -> Result<(), Self::Error> {
         let receiver = contact.as_ref();
@@ -173,9 +174,13 @@ impl Verify<EmailAddress> for Twilio {
     async fn verify<DB: GetItem<Self::Verification>>(
             &self,
             contact: &EmailAddress,
-            code: &str,
+            code: Either<&str, &<Self::Verification as Code<EmailAddress>>::Id>,
             db: &DB
         ) -> Result<(), Self::Error> {
+        let code = match code {
+            Either::Left(code) => code,
+            Either::Right(_) => return Err(Error::InvalidCode)
+        };
         if !self.custom_code {
             let contact = contact.as_ref();
             let mut form = HashMap::new();
