@@ -19,7 +19,6 @@ mod email;
 mod token;
 mod user;
 mod role;
-mod mail;
 mod key;
 mod id;
 
@@ -44,6 +43,5 @@ pub use email::*;
 pub use token::*;
 pub use user::*;
 pub use role::*;
-pub use mail::*;
 pub use key::*;
 pub use id::*;
