@@ -1,3 +1,5 @@
+use lettre::transport::smtp::Error as SmtpError;
+use lettre::error::Error as LettreError;
 use reqwest::Error as ReqwestError;
 use std::error::Error as StdError;
 #[cfg(feature = "http")]
@@ -6,16 +8,16 @@ use std::fmt::{Display, Debug};
 use crate::ports::ErrorTrait;
 
 #[derive(Debug)]
-pub enum Error<E = String> {
+pub enum Error {
     InvalidCode,
-    Internal(E),
+    Internal(Box<dyn StdError + Send + Sync + 'static>),
     Err(Box<dyn ErrorTrait + 'static>)
 }
 
 
-impl<E: Display + Debug + Send + Sync + 'static> Error<E> {
-    pub fn internal(err: E) -> Self {
-        Self::Internal(err)
+impl Error {
+    pub fn internal(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Self {
+        Self::Internal(err.into())
     }
 
     pub fn err<T: ErrorTrait + 'static>(err: T) -> Self {
@@ -24,30 +26,24 @@ impl<E: Display + Debug + Send + Sync + 'static> Error<E> {
 }
 
 
-impl From<Error<ReqwestError>> for Error {
-    fn from(value: Error<ReqwestError>) -> Self {
-        let err = match value {
-            Error::InvalidCode => return  Self::InvalidCode,
-            Error::Internal(err) => err.to_string(),
-            Error::Err(err) => return Self::Err(err)
-        };
-        Error::internal(err)
-    }
-}
-
-impl From<Error<serde_json::Error>> for Error {
-    fn from(value: Error<serde_json::Error>) -> Self {
-        let err = match value {
-            Error::InvalidCode => return  Self::InvalidCode,
-            Error::Internal(err) => err.to_string(),
-            Error::Err(err) => return Self::Err(err)
-        };
-        Error::internal(err)
+impl From<SmtpError> for Error {
+    fn from(err: SmtpError) -> Self {
+        Error::Internal(Box::new(err))
     }
 }
 
 
-impl<E: Display + Debug + Send + Sync + 'static> Display for Error<E> {
+impl From<LettreError> for Error {
+    fn from(err: LettreError) -> Self {
+        match err {
+            LettreError::Io(err) => Error::internal(err),
+            _ => Error::Err(Box::new(crate::domain::types::Error::InvalidEmail))
+        }
+    }
+}
+
+
+impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::InvalidCode => write!(f, "invlid code"),
@@ -58,10 +54,10 @@ impl<E: Display + Debug + Send + Sync + 'static> Display for Error<E> {
 }
 
 
-impl<E: Display + Debug + Send + Sync + 'static> StdError for Error<E> {}
+impl StdError for Error {}
 
 
-impl<E: Display + Debug + Send + Sync + 'static> ErrorTrait for Error<E> {
+impl ErrorTrait for Error {
     fn log_message(&self) -> String {
         match self {
             Error::InvalidCode => format!("invlid code"),

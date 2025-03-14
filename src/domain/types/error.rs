@@ -1,6 +1,4 @@
-use lettre::transport::smtp::Error as SmtpError;
 use argon2::password_hash::Error as HashError;
-use lettre::error::Error as LettreError;
 use rusty_paseto::core::PasetoError;
 use std::fmt::{self, Display, Debug};
 use std::error::Error as StdError;
@@ -50,21 +48,6 @@ pub enum Error {
 impl From<AddressError> for Error {
     fn from(_: AddressError) -> Self {
         Error::InvalidEmail
-    }
-}
-
-impl From<LettreError> for Error {
-    fn from(err: LettreError) -> Self {
-        match err {
-            LettreError::Io(err) => Error::internal(err),
-            _ => Error::InvalidEmail
-        }
-    }
-}
-
-impl From<SmtpError> for Error {
-    fn from(err: SmtpError) -> Self {
-        Error::internal(err)
     }
 }
 

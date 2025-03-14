@@ -4,9 +4,7 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use reqwest::Client;
 use std::ops::Deref;
-use error::Error;
-
-mod error;
+use super::Error;
 
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
