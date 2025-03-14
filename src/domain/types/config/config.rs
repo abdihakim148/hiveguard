@@ -1,7 +1,7 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
 use crate::ports::inputs::config::Config as ConfigTrait;
-use super::{argon::Argon, Paseto, mail::MailConfig};
 use crate::ports::outputs::verify::Verifyer;
+use super::{argon::Argon, Paseto};
 use crate::domain::types::Mail;
 use std::io::{Read, Write};
 

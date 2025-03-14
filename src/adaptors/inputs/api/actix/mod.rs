@@ -1,5 +1,4 @@
 use crate::adaptors::outputs::database::memory::Memory;
-use crate::adaptors::outputs::mailer::smtp::SmtpMailer;
 use crate::ports::inputs::config::Config as Conf;
 use actix_web::{web::Data, App, HttpServer};
 use crate::domain::services::Authentication;

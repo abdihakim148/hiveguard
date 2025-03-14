@@ -18,10 +18,7 @@ use actix_web::{
 use std::sync::Arc;
 use crate::{
     domain::types::Config,
-    ports::{
-        outputs::{database::Item, mailer::Mailer},
-        ErrorTrait
-    },
+    ports::ErrorTrait,
     domain::services::Paseto
 };
 use serde_json::json;
