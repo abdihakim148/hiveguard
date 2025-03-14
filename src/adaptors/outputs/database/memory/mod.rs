@@ -16,9 +16,10 @@ mod error;
 mod users;
 mod members;
 mod services;
+mod verifications;
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem, Map};
-use crate::domain::types::{User, Key, Value, Organisation, Member, Service};
+use crate::domain::types::{User, Key, Value, Organisation, Member, Service, Verification};
 use serde::{Serialize, Deserialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::RwLock as Lock;
@@ -27,6 +28,7 @@ use services::*;
 use members::*;
 use error::*;
 use users::*;
+use verifications::*;
 
 /// An in-memory database implementation for User entities.
 /// 
@@ -56,7 +58,11 @@ pub struct Memory {
     
     /// Internal services collection, not serialized
     #[serde(skip)]
-    services: Services
+    services: Services,
+    
+    /// Internal verifications collection, not serialized
+    #[serde(skip)]
+    verifications: Verifications
 }
 
 
@@ -488,10 +494,29 @@ impl GetItems<User, (Member, Organisation)> for Memory {
     }
 }
 
+/// # Verification-related Database Operations
+impl CreateItem<Verification> for Memory {
+    type Error = Error;
+    /// Creates a new verification in the in-memory database
+    async fn create_item(&self, verification: Verification) -> Result<Verification, Self::Error> {
+        self.verifications.create_item(verification).await
+    }
+}
+
+impl GetItem<Verification> for Memory {
+    type Error = Error;
+    /// Retrieves a verification by primary key (contact) or secondary key (ID)
+    /// 
+    /// # Returns
+    /// - The verification if found
+    /// - Error if no matching verification exists
+    async fn get_item(&self, key: Key<&<Verification as Item>::PK, &<Verification as Item>::SK>) -> Result<Verification, Self::Error> {
+        self.verifications.get_item(key).await
+    }
+}
+
 // Similar placeholder implementations for other types would follow:
-// - Service
 // - Role
-// - Verification
 // - Resource
 // - Scope
 

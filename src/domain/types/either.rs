@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 use std::hash::Hash;
 use std::ops::Deref;
 
-#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
 #[serde(untagged)]
 pub enum Either<L, R> {
     Left(L),
