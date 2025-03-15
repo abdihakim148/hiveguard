@@ -29,6 +29,7 @@ pub enum Error {
     ServiceNotFound,
     ServiceAlreadyExists,
     VerificationNotFound,
+    VerificationExpired,
     CannotDeleteFields(HashSet<String>),
     CannotDeleteContact,
     UnsupportedOperation,
@@ -50,6 +51,7 @@ impl Display for Error {
             Self::ServiceNotFound => write!(f, "service not found"),
             Self::ServiceAlreadyExists => write!(f, "Service with this name already exists"),
             Self::VerificationNotFound => write!(f, "Verification code not found"),
+            Self::VerificationExpired => write!(f, "Verification code has expired"),
             Self::CannotDeleteFields(fields) => {
                 if fields.len() == 1 {
                     // unwrap is used here because the above condition makes sure that there is at least one item
@@ -96,6 +98,7 @@ impl ErrorTrait for Error {
             Self::OrganisationNotFound | Self::ServiceNotFound |
             Self::MemberNotFound | Self::ServiceNotFound | 
             Self::VerificationNotFound => StatusCode::NOT_FOUND,
+            Self::VerificationExpired => StatusCode::GONE,
             Self::CannotDeleteFields(_) | Self::CannotDeleteContact | Self::UnsupportedOperation => StatusCode::BAD_REQUEST,
             Self::PoisonedLock(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DomainError(err) => err.status()
