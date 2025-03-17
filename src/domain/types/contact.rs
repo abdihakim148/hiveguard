@@ -24,6 +24,15 @@ impl Contact {
         }
     }
 
+    #[cfg(all(feature = "email", not(feature = "phone")))]
+    pub fn verified(&self) -> Result<bool, Error> {
+        match &self {
+            Self::Email(email) => Ok(email.verified()),
+            Self::Both(_, email) => Ok(email.verified()),
+            Self::Phone(_) => Err(Error::ContactFeatureConflict)
+        }
+    }
+
     #[cfg(all(feature = "phone", not(feature = "email")))]
     pub fn contact(self) -> Result<Phone, Error> {
         match self {
@@ -33,12 +42,45 @@ impl Contact {
         }
     }
 
+    #[cfg(all(feature = "phone", not(feature = "email")))]
+    pub fn verified(&self) -> Result<bool, Error> {
+        match &self {
+            Self::Phone(phone) => phone.verified,
+            Self::Both(phone, _) => Ok(phone.verified()),
+            Self::Email(email) => Err(Error::ContactFeatureConflict),
+        }
+    }
+
     #[cfg(all(feature = "phone", feature = "email"))]
     pub fn contact(self) -> Result<Phone, Error> {
         match self {
             Contact::Email(_) => Err(Error::PhoneNumberRequired),
             Contact::Phone(_) => Err(Error::EmailAddressRequired),
             Contact::Both(phone, _) => Ok(phone)
+        }
+    }
+
+    #[cfg(all(feature = "phone", feature = "email"))]
+    pub fn phone_verified(&self) -> Result<bool, Error> {
+        match &self {
+            Self::Both(phone, _) => Ok(phone.verified()),
+            _ => Err(Error::ContactFeatureConflict),
+        }
+    }
+
+    #[cfg(all(feature = "phone", feature = "email"))]
+    pub fn email_verified(&self) -> Result<bool, Error> {
+        match &self {
+            Self::Both(_, email) => Ok(email.verified()),
+            _ => Err(Error::ContactFeatureConflict),
+        }
+    }
+
+    #[cfg(all(feature = "phone", feature = "email"))]
+    pub fn verified(&self) -> Result<bool, Error> {
+        match &self {
+            Self::Both(phone, email) => Ok(phone.verified() && email.verified()),
+            _ => Err(Error::ContactFeatureConflict),
         }
     }
 }

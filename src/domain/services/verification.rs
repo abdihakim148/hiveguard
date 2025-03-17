@@ -21,7 +21,10 @@ impl<V: Verify<EmailAddress>> Verification<EmailAddress, User> for V {
         };
         let key = Key::Sk(&contact);
         // just making sure that a user with the provided contact exists.
-        let _ = db.get_item(key).await.map_err(Error::new)?;
+        let user = db.get_item(key).await.map_err(Error::new)?;
+        if user.contact.verified()? {
+            return Err(Error::ContactAlreadyVerified)
+        }
         <Self as Verify<EmailAddress>>::initiate(&self, email, channel, base_url, db).await.map_err(Error::new)
     }
 

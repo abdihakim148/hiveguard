@@ -18,6 +18,11 @@ pub enum Error {
     InvalidToken,
     EmailAddressRequired,
     PhoneNumberRequired,
+    ContactAlreadyVerified,
+    /// this is supposed to be returned when a contact is:
+    /// only email and the current feature is phone or
+    /// only phone and the current feature is phone.
+    ContactFeatureConflict,
     
     // Resource errors
     ResourceNotFound { resource: String },
@@ -126,8 +131,10 @@ impl Display for Error {
             Self::InvalidPhone => write!(f, "Invalid phone number format"),
             Self::TokenExpired => write!(f, "Token has expired"),
             Self::InvalidToken => write!(f, "Invalid token"),
+            Self::ContactFeatureConflict => write!(f, "current feature and a user contact do not align"),
             Self::EmailAddressRequired => write!(f, "email address is required"),
             Self::PhoneNumberRequired => write!(f, "phone number is required"),
+            Self::ContactAlreadyVerified => write!(f, "this contact is already verified"),
             Self::ResourceNotFound { resource } => write!(f, "{} not found", resource),
             Self::DuplicateResource { resource } => write!(f, "{} already exists", resource),
             Self::ValidationError { field, message } => write!(f, "{}: {}", field, message),
@@ -170,7 +177,7 @@ impl ErrorTrait for Error {
 
     fn user_message(&self) -> String {
         match self {
-            Self::Internal { .. } => "An internal error occurred".to_string(),
+            Self::Internal { .. } | Self::ContactFeatureConflict => "An internal error occurred".to_string(),
             Self::New(err) => err.user_message(),
             _ => self.to_string()
         }
@@ -185,10 +192,10 @@ impl ErrorTrait for Error {
             Self::InvalidEmail |
             Self::InvalidPhone |
             Self::ValidationError { .. } |
-            Self::InvalidFormat { .. } | Self::PhoneNumberRequired | Self::EmailAddressRequired => StatusCode::BAD_REQUEST,
+            Self::InvalidFormat { .. } | Self::PhoneNumberRequired | Self::EmailAddressRequired | Self::ContactAlreadyVerified => StatusCode::BAD_REQUEST,
             Self::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
             Self::DuplicateResource { .. } => StatusCode::CONFLICT,
-            Self::Internal { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Internal { .. } | Self::ContactFeatureConflict => StatusCode::INTERNAL_SERVER_ERROR,
             Self::New(err) => err.status()
         }
     }
