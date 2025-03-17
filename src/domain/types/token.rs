@@ -52,10 +52,9 @@ pub struct Token<T = HashMap<String, Value>> {
     #[serde(rename = "iat")]
     pub issued_at: DateTime<Utc>,
     #[serde(flatten)]
-    pub claims: T,
-    #[serde(skip)]
-    pub signature: Option<String>
+    pub claims: T
 }
+
 
 
 impl Audience {
@@ -64,38 +63,6 @@ impl Audience {
             Audience::None => true,
             Audience::One(aud) => aud.is_empty(),
             Audience::Many(aud) => aud.is_empty()
-        }
-    }
-}
-
-#[cfg(feature = "http")]
-impl Responder for Token {
-    type Body = BoxBody;
-
-    fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
-        // Check Accept header
-        let is_json = req.headers().get("Content-Type")
-            .map(|h| h.to_str().unwrap_or(""))
-            .map(|h| h.contains("json"))
-            .unwrap_or(false);
-        let status = StatusCode::OK;
-
-        // Get the signature or panic if none
-        match self.signature {
-            None => HttpResponse::with_body(StatusCode::INTERNAL_SERVER_ERROR, BoxBody::new(String::from("{\"error\": \"internal server error. empty token\"}"))),
-            Some(token) => {
-                if !is_json {
-                    // If HTML is requested, set as cookie
-                    HttpResponseBuilder::new(status)
-                        .cookie(Cookie::new("token", token.clone()))
-                        .body(String::new())
-                } else {
-                    // Set token in Authorization header for JSON
-                    HttpResponseBuilder::new(status)
-                        .insert_header(("Authorization", format!("Bearer {}", token)))
-                        .body(String::new())
-                }
-            }
         }
     }
 }

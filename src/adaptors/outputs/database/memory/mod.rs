@@ -19,11 +19,13 @@ mod services;
 mod verifications;
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem, Map};
-use crate::domain::types::{User, Key, Value, Organisation, Member, Service, Verification};
-use serde::{Serialize, Deserialize};
+use crate::domain::types::{User, Key, Value, Organisation, Member, Service, Verification, Id};
 use std::collections::{HashMap, HashSet};
+use serde::{Serialize, Deserialize};
 use std::sync::RwLock as Lock;
 use organisations::*;
+use std::hash::Hash;
+use std::fmt::Debug;
 use services::*;
 use members::*;
 use error::*;
@@ -43,7 +45,10 @@ use verifications::*;
 /// Derives Default for easy initialization.
 /// Skips serializing the internal Users collection to prevent complex serialization.
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct Memory {
+pub struct Memory<ID = Id> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     /// Internal users collection, not serialized
     #[serde(skip)]
     users: Users,
@@ -62,7 +67,7 @@ pub struct Memory {
     
     /// Internal verifications collection, not serialized
     #[serde(skip)]
-    verifications: Verifications
+    verifications: Verifications<ID>
 }
 
 
@@ -82,7 +87,10 @@ pub struct Memory {
 /// - Scopes
 
 /// # User-related Database Operations
-impl CreateItem<User> for Memory {
+impl<ID> CreateItem<User> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Creates a new user in the in-memory database
     /// 
@@ -93,7 +101,10 @@ impl CreateItem<User> for Memory {
     }
 }
 
-impl GetItem<User> for Memory {
+impl<ID> GetItem<User> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Retrieves a user by primary key (ID) or secondary key (email/phone)
     /// 
@@ -105,7 +116,10 @@ impl GetItem<User> for Memory {
     }
 }
 
-impl UpdateItem<User> for Memory {
+impl<ID> UpdateItem<User> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Update = Map;
     /// Updates an existing user's information
@@ -134,7 +148,10 @@ impl UpdateItem<User> for Memory {
     }
 }
 
-impl DeleteItem<User> for Memory {
+impl<ID> DeleteItem<User> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Deletes a user from the database
     /// 
@@ -147,7 +164,10 @@ impl DeleteItem<User> for Memory {
 
 
 /// # Organisation-related Database Operations
-impl CreateItem<Organisation> for Memory {
+impl<ID> CreateItem<Organisation> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Creates a new organisation in the in-memory database
     /// 
@@ -158,7 +178,10 @@ impl CreateItem<Organisation> for Memory {
     }
 }
 
-impl GetItem<Organisation> for Memory {
+impl<ID> GetItem<Organisation> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Retrieves an organisation by primary key (ID) or secondary key (name)
     /// 
@@ -170,7 +193,10 @@ impl GetItem<Organisation> for Memory {
     }
 }
 
-impl UpdateItem<Organisation> for Memory {
+impl<ID> UpdateItem<Organisation> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Update = Map;
     /// Updates an existing organisation's information
@@ -195,7 +221,10 @@ impl UpdateItem<Organisation> for Memory {
     }
 }
 
-impl DeleteItem<Organisation> for Memory {
+impl<ID> DeleteItem<Organisation> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Deletes an organisation from the database
     /// 
@@ -207,7 +236,10 @@ impl DeleteItem<Organisation> for Memory {
 }
 
 /// # Member-related Database Operations
-impl CreateItem<Member> for Memory {
+impl<ID> CreateItem<Member> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Creates a new member in the in-memory database
     /// 
@@ -218,7 +250,10 @@ impl CreateItem<Member> for Memory {
     }
 }
 
-impl GetItem<(Organisation, User), Member> for Memory {
+impl<ID> GetItem<(Organisation, User), Member> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Retrieves a member by organisation ID, user ID, or both
     /// 
@@ -230,7 +265,10 @@ impl GetItem<(Organisation, User), Member> for Memory {
     }
 }
 
-impl UpdateItem<(Organisation, User), Member> for Memory {
+impl<ID> UpdateItem<(Organisation, User), Member> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Update = Map;
     /// Updates an existing member's information
@@ -257,7 +295,10 @@ impl UpdateItem<(Organisation, User), Member> for Memory {
     }
 }
 
-impl DeleteItem<Member> for Memory {
+impl<ID> DeleteItem<Member> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Deletes a member from the database
     /// 
@@ -269,7 +310,10 @@ impl DeleteItem<Member> for Memory {
 }
 
 /// # Service-related Database Operations
-impl CreateItem<Service> for Memory {
+impl<ID> CreateItem<Service> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Creates a new service in the in-memory database
     /// 
@@ -280,7 +324,10 @@ impl CreateItem<Service> for Memory {
     }
 }
 
-impl GetItem<Service> for Memory {
+impl<ID> GetItem<Service> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Retrieves a service by primary key (ID) or secondary key (owner ID)
     /// 
@@ -292,7 +339,10 @@ impl GetItem<Service> for Memory {
     }
 }
 
-impl UpdateItem<Service> for Memory {
+impl<ID> UpdateItem<Service> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Update = Map;
     /// Updates an existing service's information
@@ -323,7 +373,10 @@ impl UpdateItem<Service> for Memory {
     }
 }
 
-impl DeleteItem<Service> for Memory {
+impl<ID> DeleteItem<Service> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     /// Deletes a service from the database
     /// 
@@ -335,7 +388,10 @@ impl DeleteItem<Service> for Memory {
 }
 
 /// User-related GetItems Operations
-impl GetItems<User, Organisation> for Memory {
+impl<ID> GetItems<User, Organisation> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Filter = bool;
 
@@ -378,7 +434,10 @@ impl GetItems<User, Organisation> for Memory {
 }
 
 /// Organisation-related GetItems Operations
-impl GetItems<Organisation, User> for Memory {
+impl<ID> GetItems<Organisation, User> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Filter = bool;
 
@@ -416,7 +475,10 @@ impl GetItems<Organisation, User> for Memory {
     }
 }
 
-impl GetItems<Organisation, (Member, User)> for Memory {
+impl<ID> GetItems<Organisation, (Member, User)> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Filter = bool;
 
@@ -455,7 +517,10 @@ impl GetItems<Organisation, (Member, User)> for Memory {
     }
 }
 
-impl GetItems<User, (Member, Organisation)> for Memory {
+impl<ID> GetItems<User, (Member, Organisation)> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     type Filter = bool;
 
@@ -495,22 +560,30 @@ impl GetItems<User, (Member, Organisation)> for Memory {
 }
 
 /// # Verification-related Database Operations
-impl CreateItem<Verification> for Memory {
+impl<ID> CreateItem<Verification<ID>> for Memory<ID>
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static,
+    Verifications<ID>: CreateItem<Verification<ID>, Error = Error>
+{
     type Error = Error;
     /// Creates a new verification in the in-memory database
-    async fn create_item(&self, verification: Verification) -> Result<Verification, Self::Error> {
+    async fn create_item(&self, verification: Verification<ID>) -> Result<Verification<ID>, Self::Error> {
         self.verifications.create_item(verification).await
     }
 }
 
-impl GetItem<Verification> for Memory {
+impl<ID> GetItem<Verification<ID>> for Memory<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static,
+    Verifications<ID>: GetItem<Verification<ID>, Error = Error>
+{
     type Error = Error;
     /// Retrieves a verification by primary key (contact) or secondary key (ID)
     /// 
     /// # Returns
     /// - The verification if found
     /// - Error if no matching verification exists
-    async fn get_item(&self, key: Key<&<Verification as Item>::PK, &<Verification as Item>::SK>) -> Result<Verification, Self::Error> {
+    async fn get_item(&self, key: Key<&<Verification<ID> as Item>::PK, &<Verification<ID> as Item>::SK>) -> Result<Verification<ID>, Self::Error> {
         self.verifications.get_item(key).await
     }
 }
@@ -562,7 +635,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user_organisations() {
-        let db = Memory::default();
+        let db = Memory::<Id>::default();
         let user = create_test_user();
         let org = create_test_organisation();
         let member = create_test_member(&org, &user);
@@ -584,7 +657,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_organisation_users() {
-        let db = Memory::default();
+        let db = Memory::<Id>::default();
         let user = create_test_user();
         let org = create_test_organisation();
         let member = create_test_member(&org, &user);
@@ -606,7 +679,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_organisation_members_and_users() {
-        let db = Memory::default();
+        let db = Memory::<Id>::default();
         let user = create_test_user();
         let org = create_test_organisation();
         let member = create_test_member(&org, &user);
@@ -630,7 +703,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user_members_and_organisations() {
-        let db = Memory::default();
+        let db = Memory::<Id>::default();
         let user = create_test_user();
         let org = create_test_organisation();
         let member = create_test_member(&org, &user);

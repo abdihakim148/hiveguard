@@ -37,6 +37,6 @@ phone = []
 twilio-phone = []
 twilio-email = []
 
-default = ["http", "memory", "smtp", "email", "twilio-email"]
+default = ["http", "memory", "smtp", "email"]
 [badges]
 travis-ci = { repository = "abdihakim148/beekeeper", branch = "main" }

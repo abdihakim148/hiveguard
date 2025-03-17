@@ -17,3 +17,13 @@ impl<L: Deref<Target=str>, R: Deref<Target=str>> Either<L, R> {
         }
     }
 }
+
+
+impl<'a, T, Y> From<&'a Either<T, Y>> for Either<&'a T, &'a Y> {
+    fn from(either: &'a Either<T, Y>) -> Self {
+        match either {
+            Either::Left(left) => Either::Left(left),
+            Either::Right(right) => Either::Right(right)
+        }
+    }
+}

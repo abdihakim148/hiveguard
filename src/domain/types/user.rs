@@ -1,4 +1,4 @@
-use super::{super::services::Paseto, Contact, Id, Token, Audience};
+use super::{super::services::Paseto, Contact, Id, Token, Audience, EmailAddress, Phone, Error};
 use crate::ports::outputs::database::Item;
 #[cfg(feature = "http")]
 use actix_web::{
@@ -38,8 +38,7 @@ impl User {
         let not_before = None;
         let expiration = issued_at + Duration::seconds(ttl);
         let claims = Default::default();
-        let signature = None;
-        Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims, signature}
+        Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims}
     }
 }
 

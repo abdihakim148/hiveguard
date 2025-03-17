@@ -194,7 +194,9 @@ impl UpdateItem<User> for Users {
         // Update contact info if provided
         if map.contains_key("email") || map.contains_key("phone") || 
            map.contains_key("email_verified") || map.contains_key("phone_verified") {
-            user.contact = map.try_into()?;
+            let contact = map.try_into()?;
+            // making sure that we are not completely replacing the value but instead updating it with the new values.
+            user.contact = user.contact + contact;
         }
 
         // Use update_item to handle indexes and storage

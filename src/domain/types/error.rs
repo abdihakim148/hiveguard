@@ -8,7 +8,7 @@ use actix_web::http::StatusCode;
 use crate::ports::ErrorTrait;
 use serde::Serialize;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub enum Error {
     // Authentication errors
     WrongPassword,
@@ -16,6 +16,8 @@ pub enum Error {
     InvalidPhone,
     TokenExpired,
     InvalidToken,
+    EmailAddressRequired,
+    PhoneNumberRequired,
     
     // Resource errors
     ResourceNotFound { resource: String },
@@ -35,13 +37,17 @@ pub enum Error {
     },
     
     // Internal errors (not serialized to user)
-    #[serde(skip)]
     Internal { 
         message: String,
-        #[serde(skip)]
         source: Option<Box<dyn StdError + Send + Sync>>
     },
+    New(Box<dyn ErrorTrait + Send + Sync>)
+}
 
+impl Error {
+    pub fn new<T: ErrorTrait + Send + Sync>(err: T) -> Self {
+        Error::New(Box::new(err))
+    }
 }
 
 // Email-related error conversions
@@ -120,6 +126,8 @@ impl Display for Error {
             Self::InvalidPhone => write!(f, "Invalid phone number format"),
             Self::TokenExpired => write!(f, "Token has expired"),
             Self::InvalidToken => write!(f, "Invalid token"),
+            Self::EmailAddressRequired => write!(f, "email address is required"),
+            Self::PhoneNumberRequired => write!(f, "phone number is required"),
             Self::ResourceNotFound { resource } => write!(f, "{} not found", resource),
             Self::DuplicateResource { resource } => write!(f, "{} already exists", resource),
             Self::ValidationError { field, message } => write!(f, "{}: {}", field, message),
@@ -131,6 +139,7 @@ impl Display for Error {
                 }
             },
             Self::Internal { message, .. } => write!(f, "{}", message),
+            Self::New(err) => Display::fmt(err, f)
         }
     }
 }
@@ -153,7 +162,8 @@ impl ErrorTrait for Error {
                 } else {
                     format!("Internal error: {}", message)
                 }
-            }
+            },
+            Self::New(err) => err.log_message(),
             _ => self.to_string()
         }
     }
@@ -161,6 +171,7 @@ impl ErrorTrait for Error {
     fn user_message(&self) -> String {
         match self {
             Self::Internal { .. } => "An internal error occurred".to_string(),
+            Self::New(err) => err.user_message(),
             _ => self.to_string()
         }
     }
@@ -174,10 +185,11 @@ impl ErrorTrait for Error {
             Self::InvalidEmail |
             Self::InvalidPhone |
             Self::ValidationError { .. } |
-            Self::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
+            Self::InvalidFormat { .. } | Self::PhoneNumberRequired | Self::EmailAddressRequired => StatusCode::BAD_REQUEST,
             Self::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
             Self::DuplicateResource { .. } => StatusCode::CONFLICT,
             Self::Internal { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::New(err) => err.status()
         }
     }
 }

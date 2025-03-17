@@ -5,12 +5,11 @@ use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use super::{Id, Either, Phone, EmailAddress};
 use chrono::{DateTime, Utc, Duration};
 use std::fmt::{Display, Formatter};
-use std::rc::Rc;
+use std::str::FromStr;
 
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub enum VerificationMedia {
-    #[default]
     Email,
     Whatsapp,
     SMS,
@@ -56,7 +55,7 @@ impl<ID: PartialEq + Clone + std::hash::Hash> Item for Verification<ID> {
 }
 
 #[cfg(feature = "email")]
-impl<ID: Serialize + DeserializeOwned> Code<EmailAddress, 6> for Verification<ID> {
+impl<ID: Serialize + DeserializeOwned + FromStr> Code<EmailAddress, 6> for Verification<ID> {
     type Id = ID;
     fn new(email: &EmailAddress, ttl: Option<i64>, id: Self::Id) -> Self {
         let seconds = match ttl {Some(secs) => secs, None => 60*5};
@@ -95,6 +94,32 @@ impl Display for VerificationMedia {
             Self::Email => write!(f, "email"),
             Self::SMS => write!(f, "sms"),
             Self::Whatsapp => write!(f, "whatsapp")
+        }
+    }
+}
+
+
+impl Default for VerificationMedia {
+    fn default() -> Self {
+        #[cfg(all(feature = "phone", feature = "email"))]
+        return VerificationMedia::SMS;
+        #[cfg(all(feature = "phone", not(feature = "email")))]
+        return VerificationMedia::SMS;
+        #[cfg(all(feature = "email", not(feature = "phone")))]
+        VerificationMedia::Email
+    }
+}
+
+
+impl From<String> for VerificationMedia {
+    fn from(value: String) -> Self {
+        let value = value.to_lowercase();
+        let value = value.as_str();
+        match value {
+            "sms" => VerificationMedia::SMS,
+            "whatsapp" => VerificationMedia::Whatsapp,
+            "email" => VerificationMedia::Email,
+            _ => Default::default()
         }
     }
 }

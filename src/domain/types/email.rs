@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use lettre::address::Address;
 use std::any::TypeId;
 use std::ops::Deref;
-use std::fmt;
+use std::fmt::{self, Display};
 
 /// An enum representing the state of an email.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -30,6 +30,18 @@ impl EmailAddress {
         Ok(EmailAddress::New(address))
     }
 }
+
+
+
+impl EmailAddress {
+    pub fn verified(&self) -> bool {
+        match &self {
+            EmailAddress::New(_) => false,
+            EmailAddress::Verified(_) => true,
+        }
+    }
+}
+
 
 impl Serialize for EmailAddress {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -158,6 +170,15 @@ impl Deref for EmailAddress {
         match self {
             Self::New(address) => address.as_ref(),
             Self::Verified(address) => address.as_ref()
+        }
+    }
+}
+
+impl Display for EmailAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New(address) => write!(f, "{}", address),
+            Self::Verified(address) => write!(f, "{}", address)
         }
     }
 }

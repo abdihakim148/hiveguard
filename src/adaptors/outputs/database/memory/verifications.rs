@@ -11,8 +11,13 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use super::error::Error;
 use std::thread;
+use std::hash::Hash;
+use std::fmt::Debug;
 
-/// Thread-safe storage for verification records
+/// Thread-safe storage for verification records with generic ID type
+/// 
+/// # Type Parameters
+/// * `ID` - The type of ID used for verifications, defaults to `Id`
 /// 
 /// # Indexes
 /// - Primary index: Contact (Either<Phone, EmailAddress>) -> Verification record
@@ -25,13 +30,16 @@ use std::thread;
 /// - Expired verifications are kept for 30 minutes after expiration
 /// - Cleanup is performed automatically during operations
 #[derive(Debug)]
-pub struct Verifications {
+pub struct Verifications<ID = Id> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     /// Primary storage of verifications, keyed by contact information
-    pub verifications: Lock<HashMap<<Verification as Item>::PK, Verification>>,
+    pub verifications: Lock<HashMap<<Verification<ID> as Item>::PK, Verification<ID>>>,
     
     /// Secondary index mapping verification IDs to contact information
     /// Enables lookups of verifications by their ID
-    pub ids_index: Lock<HashMap<Id, Either<Phone, EmailAddress>>>,
+    pub ids_index: Lock<HashMap<ID, Either<Phone, EmailAddress>>>,
     
     /// Tracks when expired verifications should be removed
     /// Maps contact information to the time when it should be removed
@@ -41,7 +49,10 @@ pub struct Verifications {
     cleanup_grace_period: Duration,
 }
 
-impl Default for Verifications {
+impl<ID> Default for Verifications<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     fn default() -> Self {
         let instance = Self {
             verifications: Lock::new(HashMap::new()),
@@ -57,7 +68,10 @@ impl Default for Verifications {
     }
 }
 
-impl Verifications {
+impl<ID> Verifications<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     /// Find the contact for a given verification ID
     /// 
     /// # Arguments
@@ -66,7 +80,7 @@ impl Verifications {
     /// # Returns
     /// * `Ok(Some(contact))` if a verification with this ID exists
     /// * `Ok(None)` if no verification with this ID exists
-    pub fn contact(&self, id: &Id) -> Result<Option<Either<Phone, EmailAddress>>, Error> {
+    pub fn contact(&self, id: &ID) -> Result<Option<Either<Phone, EmailAddress>>, Error> {
         Ok(self.ids_index.read()?.get(id).cloned())
     }
     
@@ -78,7 +92,7 @@ impl Verifications {
     /// # Returns
     /// * `true` if the verification has expired
     /// * `false` if the verification is still valid
-    fn is_expired(&self, verification: &Verification) -> bool {
+    fn is_expired(&self, verification: &Verification<ID>) -> bool {
         verification.expires < Utc::now()
     }
     
@@ -176,7 +190,10 @@ impl Verifications {
     }
 }
 
-impl Clone for Verifications {
+impl<ID> Clone for Verifications<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     fn clone(&self) -> Self {
         // Safe unwrap - if the lock is poisoned, we're in a bad state anyway
         let verifications = match self.verifications.read() {
@@ -203,10 +220,13 @@ impl Clone for Verifications {
     }
 }
 
-impl CreateItem<Verification> for Verifications {
+impl<ID> CreateItem<Verification<ID>> for Verifications<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     
-    async fn create_item(&self, verification: Verification) -> Result<Verification, Self::Error> {
+    async fn create_item(&self, verification: Verification<ID>) -> Result<Verification<ID>, Self::Error> {
         // Store the verification
         self.verifications.write()?.insert(
             verification.owner_contact.clone(), 
@@ -223,10 +243,13 @@ impl CreateItem<Verification> for Verifications {
     }
 }
 
-impl GetItem<Verification> for Verifications {
+impl<ID> GetItem<Verification<ID>> for Verifications<ID> 
+where
+    ID: Clone + Hash + PartialEq + Eq + Debug + Send + Sync + 'static
+{
     type Error = Error;
     
-    async fn get_item(&self, key: Key<&<Verification as Item>::PK, &<Verification as Item>::SK>) -> Result<Verification, Self::Error> {
+    async fn get_item(&self, key: Key<&<Verification<ID> as Item>::PK, &<Verification<ID> as Item>::SK>) -> Result<Verification<ID>, Self::Error> {
         // Run cleanup of expired verifications in the background
         let cleanup_verifications = self.clone();
         tokio::spawn(async move {
@@ -292,7 +315,7 @@ mod tests {
     use chrono::{Utc, Duration as ChronoDuration};
 
     /// Helper function to create a test verification for email
-    fn create_email_verification() -> Verification {
+    fn create_email_verification() -> Verification<Id> {
         let email = EmailAddress::New("test@example.com".parse().unwrap());
         let contact = Either::Right(email);
         Verification {
@@ -304,7 +327,7 @@ mod tests {
     }
 
     /// Helper function to create a test verification for phone
-    fn create_phone_verification() -> Verification {
+    fn create_phone_verification() -> Verification<Id> {
         let phone = Phone::New("1234567890".to_string());
         let contact = Either::Left(phone);
         Verification {
@@ -316,7 +339,7 @@ mod tests {
     }
     
     /// Helper function to create an expired verification
-    fn create_expired_verification() -> Verification {
+    fn create_expired_verification() -> Verification<Id> {
         let email = EmailAddress::New("expired@example.com".parse().unwrap());
         let contact = Either::Right(email);
         Verification {
@@ -329,7 +352,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_verification() {
-        let verifications = Verifications::default();
+        let verifications: Verifications<Id> = Verifications::default();
         let verification = create_email_verification();
         let result = verifications.create_item(verification.clone()).await;
         assert!(result.is_ok());
@@ -338,7 +361,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_verification_by_contact() {
-        let verifications = Verifications::default();
+        let verifications: Verifications<Id> = Verifications::default();
         let verification = create_email_verification();
         let _ = verifications.create_item(verification.clone()).await;
         
@@ -349,7 +372,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_verification_by_id() {
-        let verifications = Verifications::default();
+        let verifications: Verifications<Id> = Verifications::default();
         let verification = create_phone_verification();
         let _ = verifications.create_item(verification.clone()).await;
         
@@ -360,14 +383,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_nonexistent_verification() {
-        let verifications = Verifications::default();
+        let verifications: Verifications<Id> = Verifications::default();
         let result = verifications.get_item(Key::Pk(&Either::Right(EmailAddress::New("nonexistent@example.com".parse().unwrap())))).await;
         assert!(matches!(result, Err(Error::VerificationNotFound)));
     }
     
     #[tokio::test]
     async fn test_expired_verification() {
-        let verifications = Verifications::default();
+        let verifications: Verifications<Id> = Verifications::default();
         let verification = create_expired_verification();
         let _ = verifications.create_item(verification.clone()).await;
         
@@ -377,7 +400,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_cleanup_expired_verifications() {
-        let verifications = Verifications::default();
+        let verifications: Verifications<Id> = Verifications::default();
         
         // Create an expired verification
         let verification = create_expired_verification();

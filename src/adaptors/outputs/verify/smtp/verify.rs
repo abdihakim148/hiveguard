@@ -1,4 +1,4 @@
-use crate::domain::types::{EmailAddress, Verification, Either, Key, Id};
+use crate::domain::types::{EmailAddress, Verification, Either, Key, Id, VerificationMedia};
 use crate::ports::outputs::database::{CreateItem, GetItem};
 use crate::ports::{outputs::verify::{Verify, Code}};
 use lettre::message::Mailbox;
@@ -11,7 +11,7 @@ const SUBJECT: &'static str = "Verification";
 
 impl Verify<EmailAddress> for Smtp {
     type Error = Error;
-    type Channel = ();  // No channel selection needed for email
+    type Channel = VerificationMedia;  // No channel selection needed for email
     type Verification = Verification<Id>;
 
     async fn initiate<DB: CreateItem<Self::Verification>>(

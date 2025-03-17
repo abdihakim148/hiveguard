@@ -2,6 +2,7 @@ use crate::ports::outputs::database::{Item, GetItem, CreateItem, DeleteItem, Get
 use crate::domain::types::{EmailAddress, Phone, Either};
 use serde::{de::DeserializeOwned, Serialize};
 use crate::ports::ErrorTrait;
+use std::str::FromStr;
 use std::rc::Rc;
 
 /// A trait for verification services that support different contact types and verification methods.
@@ -61,7 +62,7 @@ pub trait Verify<T: Clone, const DIGITS: usize = 6>: DeserializeOwned + Sized {
 ///
 /// Provides methods for creating, accessing, and validating verification codes
 pub trait Code<T: Clone, const DIGITS: usize = 6>: Sized {
-    type Id: Serialize + DeserializeOwned;
+    type Id: Serialize + DeserializeOwned + FromStr;
     /// Creates a new verification code
     fn new(contact: &T, ttl: Option<i64>, id: Self::Id) -> Self;
 
@@ -72,11 +73,9 @@ pub trait Code<T: Clone, const DIGITS: usize = 6>: Sized {
     fn as_str(&self) -> String {
         let mut code = String::new();
         let string = self.code().to_string();
-        if code.len() < DIGITS {
-            let missing = DIGITS - code.len();
-            for _ in 0..missing {
-                code.push('0');
-            }
+        let missing = DIGITS - string.len();
+        for _ in 0..missing {
+            code.push('0');
         }
         code.push_str(&string);
         code
@@ -85,12 +84,18 @@ pub trait Code<T: Clone, const DIGITS: usize = 6>: Sized {
 
 
 
-pub trait Verifyer{}
+
+#[cfg(all(feature = "email", not(feature = "phone")))]
+pub trait Verifyer: Sized + Verify<EmailAddress> {}
 #[cfg(all(feature = "email", not(feature = "phone")))]
 impl<V: Verify<EmailAddress>> Verifyer for V {}
 
 #[cfg(all(feature = "phone", not(feature = "email")))]
+pub trait Verifyer: Sized + Verify<Phone> {}
+#[cfg(all(feature = "phone", not(feature = "email")))]
 impl<V: Verify<Phone>> Verifyer for V {}
 
+#[cfg(all(feature = "phone", feature = "email"))]
+pub trait Verifyer: Sized + Verify<Phone> + Verify<EmailAddress> {}
 #[cfg(all(feature = "phone", feature = "email"))]
 impl<V: Verify<EmailAddress> + Verify<Phone>> Verifyer for V {}

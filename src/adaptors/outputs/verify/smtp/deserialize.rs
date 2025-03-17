@@ -12,15 +12,15 @@ impl<'de> Deserialize<'de> for Smtp {
 
         #[derive(Deserialize)]
         struct Cred {
-            #[serde(alias = "user", alias = "user_name")]
-            name: String,
+            #[serde(alias = "user", alias = "user_name", alias = "name")]
+            username: String,
             #[serde(alias = "secret")]
             password: String
         }
 
         impl From<Cred> for Credentials {
             fn from(cred: Cred) -> Self {
-                (cred.name, cred.password).into()
+                (cred.username, cred.password).into()
             }
         }
 

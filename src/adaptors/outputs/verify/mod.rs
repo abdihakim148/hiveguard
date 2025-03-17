@@ -4,5 +4,11 @@ mod twilio;
 mod smtp;
 mod error;
 
-pub type Verifyer = twilio::Twilio;
+
 pub use error::*;
+
+
+#[cfg(any(feature = "twilio-email", feature = "twilio-phone"))]
+pub type Verifyer = twilio::Twilio;
+#[cfg(feature = "smtp")]
+pub type Verifyer = smtp::Smtp;

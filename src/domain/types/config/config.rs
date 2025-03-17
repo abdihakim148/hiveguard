@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 
 pub struct Config<DB, V> {
     pub name: String,
-    domain: String,
+    pub domain: String,
     database: DB,
     argon: Argon,
     paseto: Paseto,
@@ -121,7 +121,7 @@ impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
 impl<'de, DB, V> Deserialize<'de> for Config<DB, V> 
 where
     DB: Default + Deserialize<'de>,
-    V: Verifyer + Default + Deserialize<'de>,
+    V: Verifyer + Default + DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
@@ -134,7 +134,7 @@ where
         impl<'de, DB, V> Visitor<'de> for ConfigVisitor<DB, V> 
         where
             DB: Default + Deserialize<'de>,
-            V: Verifyer + Default + Deserialize<'de>,
+            V: Verifyer + Default + DeserializeOwned,
         {
             type Value = Config<DB, V>;
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -185,7 +185,7 @@ where
                         },
                         "verifyer" => {
                             if verifyer.is_some() {
-                                return Err(de::Error::duplicate_field("mailer"));
+                                return Err(de::Error::duplicate_field("verifyer"));
                             }
                             verifyer = map.next_value()?;
                         },

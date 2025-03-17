@@ -1,8 +1,9 @@
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
-use super::{Phone, EmailAddress, Value, Error};
+use super::{Phone, EmailAddress, Value, Error, Either};
 use serde::de::{self, Visitor, MapAccess};
 use serde::ser::SerializeStruct;
 use std::collections::HashMap;
+use std::ops::Add;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -10,6 +11,36 @@ pub enum Contact {
     Phone(Phone),
     Email(EmailAddress),
     Both(Phone, EmailAddress)
+}
+
+
+impl Contact {
+    #[cfg(all(feature = "email", not(feature = "phone")))]
+    pub fn contact(self) -> Result<EmailAddress, Error> {
+        match self {
+            Contact::Phone(_) => Err(Error::EmailAddressRequired),
+            Contact::Email(email) => Ok(email),
+            Contact::Both(_, email) => Ok(email)
+        }
+    }
+
+    #[cfg(all(feature = "phone", not(feature = "email")))]
+    pub fn contact(self) -> Result<Phone, Error> {
+        match self {
+            Contact::Email(_) => Err(Error::PhoneNumberRequired),
+            Contact::Phone(phone) => Ok(phone),
+            Contact::Both(phone, _) => Ok(phone)
+        }
+    }
+
+    #[cfg(all(feature = "phone", feature = "email"))]
+    pub fn contact(self) -> Result<Phone, Error> {
+        match self {
+            Contact::Email(_) => Err(Error::PhoneNumberRequired),
+            Contact::Phone(_) => Err(Error::EmailAddressRequired),
+            Contact::Both(phone, _) => Ok(phone)
+        }
+    }
 }
 
 impl Serialize for Contact {
@@ -72,6 +103,36 @@ impl<'de> Deserialize<'de> for Contact {
 }
 
 
+impl Add for Contact {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        match self {
+            Self::Phone(phone) => {
+                match rhs {
+                    Self::Phone(phone) => Self::Phone(phone),
+                    Self::Email(email) => Self::Both(phone, email),
+                    Self::Both(phone, email) => Self::Both(phone, email)
+                }
+            },
+            Self::Email(email) => {
+                match rhs {
+                    Self::Email(email) => Self::Email(email),
+                    Self::Phone(phone) => Self::Both(phone, email),
+                    Self::Both(phone, email) => Self::Both(phone, email)
+                }
+            },
+            Self::Both(phone, email) => {
+                match rhs {
+                    Self::Phone(phone) => Self::Both(phone, email),
+                    Self::Email(email) => Self::Both(phone, email),
+                    Self::Both(phone, email) => Self::Both(phone, email)
+                }
+            }
+        }
+    }
+}
+
+
 impl TryFrom<Value> for Contact {
     type Error = Error;
     fn try_from(value: Value) -> Result<Self, Self::Error> {
@@ -95,6 +156,16 @@ impl TryFrom<HashMap<String, Value>> for Contact {
     type Error = Error;
     fn try_from(map: HashMap<String, Value>) -> Result<Self, Self::Error> {
         Value::Object(map).try_into()
+    }
+}
+
+
+impl From<Either<Phone, EmailAddress>> for Contact {
+    fn from(either: Either<Phone, EmailAddress>) -> Self {
+        match either {
+            Either::Left(phone) => Contact::Phone(phone),
+            Either::Right(email) => Contact::Email(email)
+        }
     }
 }
 

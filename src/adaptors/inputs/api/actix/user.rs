@@ -1,10 +1,12 @@
-use actix_web::{post, get, patch, web::{Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest};
-use crate::domain::{services::{Get, Update}, types::{Audience, Config, Contact, User, Value}};
-use crate::domain::services::Authentication;
+use crate::domain::{services::{Get, Paseto, Update, Verification, Authentication}, types::{Audience, Config, Contact, Either as DomainEither, EmailAddress, Id, Key, User, Value, VerificationMedia, Phone}};
+use actix_web::{post, get, patch, web::{self, Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest, http::header};
+use crate::ports::outputs::database::GetItem;
 use super::{Response, DB, Verifyer};
 use std::collections::HashMap;
 use super::error::Error;
 use serde::Deserialize;
+use std::str::FromStr;
+use serde_json::json;
 use std::sync::Arc;
 
 
@@ -15,31 +17,99 @@ struct Credentials {
     pub password: String
 }
 
+#[derive(Deserialize)]
+struct QueryParam {
+    pub contact: DomainEither<Phone, EmailAddress>,
+}
+
 #[post("/signup")]
-async fn signup(json: Json<User>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
+async fn signup(req: HttpRequest, data: Either<Json<User>, Form<User>>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
+    // Extract user data
+    let user = match data {
+        Either::Left(json) => json.0,
+        Either::Right(form) => form.0,
+    };
+    
+    // Construct base URL for verification
+    let scheme_holder = req.connection_info();
+    let scheme = scheme_holder.scheme();
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.domain);
+    
+    // Get required components
     let db = config.db();
     let hasher = config.argon();
-    let issuer = config.name.clone();
-    let paseto = config.paseto();
-    let audience = Audience::None;
-    let user = json.0;
-    let token = user.register(db, hasher, paseto, issuer, audience).await?;
-    Ok(token)
+    let verifyer = config.verifyer();
+    
+    // Determine channel based on contact type
+    let channel = Default::default();
+    
+    // Register the user
+    user.register(db, hasher, channel, &base_url, verifyer).await?;
+    
+    // Return 202 Accepted
+    Ok(HttpResponse::Accepted().json(json!({
+        "message": "User registered. Please verify your contact information."
+    })))
 }
 
 
 #[post("/login")]
-async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
-    let credentials = creds.into_inner();
-    let issuer = config.name.clone();
-    let paseto = config.paseto();
-    let audience = Audience::None;
-    let verifier = config.argon();
+async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, req: HttpRequest, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
+    // Extract credentials
+    let is_json = matches!(creds, Either::Left(_));
+    let creds = match creds {
+        Either::Left(json) => json.0,
+        Either::Right(form) => form.0,
+    };
+    
+    // Construct base URL for verification
+    let scheme_holder = req.connection_info();
+    let scheme = scheme_holder.scheme();
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.domain);
+    
+    // Get required components
     let db = config.db();
-    let contact = &credentials.contact;
-    let password = credentials.password.as_str();
-    let token = User::authenticate(contact, password, db, verifier, paseto, issuer, audience).await?;
-    Ok(token)
+    let hasher = config.argon();
+    let paseto = config.paseto();
+    let verifyer = config.verifyer();
+    
+    // Determine channel based on contact type
+    let channel = Default::default();
+    
+    // Authenticate user
+    let result = User::authenticate(
+        &creds.contact, 
+        &creds.password, 
+        db, 
+        hasher,
+        paseto,
+        config.name.clone(), // issuer
+        Audience::None,      // audience
+        channel,
+        &base_url,
+        verifyer
+    ).await?;
+    
+    // Handle authentication result
+    match result {
+        None => {
+            // User needs verification
+            Ok(HttpResponse::Accepted().json(json!({
+                "message": "Verification required. Please check your contact for verification code."
+            })))
+        },
+        Some((user, token)) => {
+            let token = token.try_sign(&paseto.keys)?;
+            
+            if is_json {
+                // Return bearer token in JSON
+                Ok(HttpResponse::Ok().insert_header((header::AUTHORIZATION, format!("Bearer {token}"))).json(user))
+            } else {
+                // Set cookie and return user
+                Ok(HttpResponse::Ok().cookie(actix_web::cookie::Cookie::build("token", token).http_only(true).finish()).json(user))
+            }
+        }
+    }
 }
 
 
@@ -60,8 +130,9 @@ async fn user_info(req: HttpRequest, config: Data<Arc<Config<DB, Verifyer>>>) ->
     let token = &token.replace("Bearer ", "");
     let paseto = config.paseto();
     let db = config.db();
-    let id = &User::authorize(token, paseto).await?;
-    let user = User::get(id, db).await?;
+    let id = User::authorize(token, paseto).await?;
+    
+    let user = User::get(&id, db).await?;
     Ok(user)
 }
 
@@ -83,8 +154,88 @@ async fn patch_user(req: HttpRequest, item: Json<HashMap<String, Value>>, config
     let token = &token.replace("Bearer ", "");
     let paseto = config.paseto();
     let db = config.db();
-    let id = &User::authorize(token, paseto).await?;
+    let id = User::authorize(token, paseto).await?;
     let item = item.0;
-    let updated_user = User::update(id, db, item).await?;
+    let updated_user = User::update(&id, db, item).await?;
     Ok(updated_user)
+}
+
+
+#[post("/verify/request")]
+async fn request_verification(
+    req: HttpRequest,
+    json: Json<QueryParam>, 
+    config: Data<Arc<Config<DB, Verifyer>>>
+) -> Response<impl Responder> {
+    // Extract contact
+    let contact = Into::<Contact>::into(json.0.contact).contact()?;
+    
+    // Construct base URL
+    let scheme_holder = req.connection_info();
+    let scheme = scheme_holder.scheme();
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.domain);
+    
+    // Get required components
+    let db = config.db();
+    let verifyer = config.verifyer();
+    
+    // Determine channel
+    let channel = Default::default();
+    
+    // Initiate verification
+    verifyer.initiate_verification(contact, channel, &base_url, db).await?;
+    
+    // Return success response
+    Ok(HttpResponse::Accepted().json(json!({
+        "message": "Verification code sent. Please check your contact."
+    })))
+}
+
+
+
+#[get("/verify/confirm/{code}")]
+async fn confirm_verification(
+    req: HttpRequest,
+    path: web::Path<String>,
+    query: web::Query<QueryParam>, 
+    config: Data<Arc<Config<DB, Verifyer>>>
+) -> Response<impl Responder> {
+    // Extract code and contact
+    let code = path.into_inner();
+    let email = Into::<Contact>::into(query.0.contact).contact()?;
+    
+    // Get required components
+    let db = config.db();
+    let verifyer = config.verifyer();
+    let paseto = config.paseto();
+    let mut id = Id::default();
+    
+    // Determine if code is ID or string code
+    let code = if code.len() == 24 && code.chars().all(|c| c.is_ascii_hexdigit()) {
+        // Looks like an ObjectId
+        id = Id::from_str(&code)?;
+        DomainEither::Right(&id)
+    } else {
+        // Regular verification code
+        DomainEither::Left(code.as_str())
+    };
+    
+    // Verify the contact
+    let user = verifyer.confirm_verification(email, code, db).await?;
+    
+    // Generate token
+    let token = user.token(
+        config.name.clone(),
+        Audience::None,
+        paseto.ttl
+    ).try_sign(&paseto.keys)?;
+    
+    // Return user and token (both as cookie and in JSON)
+    Ok(
+        HttpResponse::Ok()
+        // return both a cookie and a bearer token
+        .insert_header((header::AUTHORIZATION, format!("Bearer {token}")))
+        .cookie(actix_web::cookie::Cookie::build("token", token).http_only(true).finish())
+        .json(json!(user))
+    )
 }

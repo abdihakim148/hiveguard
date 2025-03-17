@@ -5,13 +5,15 @@ use crate::ports::ErrorTrait;
 
 #[derive(Debug)]
 pub enum Error {
-    UnAuthorized
+    UnAuthorized,
+    InsufficientVerification
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnAuthorized => write!(f, "unauthorized request")
+            Self::UnAuthorized => write!(f, "unauthorized request"),
+            Self::InsufficientVerification => write!(f, "contact verification required")
         }
     }
 }
@@ -26,7 +28,10 @@ impl ErrorTrait for Error {
 
     #[cfg(feature = "http")]
     fn status(&self) -> StatusCode {
-        StatusCode::UNAUTHORIZED
+        match self {
+            Self::UnAuthorized => StatusCode::UNAUTHORIZED,
+            Self::InsufficientVerification => StatusCode::FORBIDDEN
+        }
     }
 
     fn user_message(&self) -> String {

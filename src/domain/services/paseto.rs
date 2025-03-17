@@ -26,7 +26,6 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
     ///
     /// * `bool` - Returns `true` if the token has expired, `false` otherwise.
     fn expired(&self) -> bool;
-    fn set_signature(&mut self, signature: String);
 
     /// Verifies a PASETO token signature and returns the deserialized token if valid.
     ///
@@ -108,7 +107,7 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
     /// # Returns
     ///
     /// * `Result<String>` - Returns the PASETO token string if successful, or an error if not.
-    fn try_sign(mut self, keys: &PasetoKeys) -> Result<Self> {
+    fn try_sign(&self, keys: &PasetoKeys) -> Result<String> {
         // For v4.public, we need to use a 64-byte key
         let mut combined_key = [0u8; 64];
         combined_key[..32].copy_from_slice(&keys.private_key);
@@ -129,10 +128,8 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
             .set_payload(payload)
             .try_sign(&private_key)?;
         
-        // Create a new token with the signature
-        self.set_signature(token);
         
-        Ok(self)
+        Ok(token)
     }
 }
 
@@ -140,9 +137,5 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
 impl Paseto for Token {
     fn expired(&self) -> bool {
         return Utc::now() >= self.expiration
-    }
-
-    fn set_signature(&mut self, signature: String) {
-        self.signature = Some(signature)
     }
 }

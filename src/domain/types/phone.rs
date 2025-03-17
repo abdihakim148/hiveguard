@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use super::{Value, Error};
 use std::any::TypeId;
 use std::ops::Deref;
-use std::fmt;
+use std::fmt::{self, Display};
 
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -81,6 +81,15 @@ impl<'de> Deserialize<'de> for Phone {
                 formatter.write_str("struct Phone")
             }
 
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: de::Error, {
+                if !Phone::valid(v) {
+                    return Err(de::Error::custom(Error::InvalidPhone));
+                }
+                Ok(Phone::New(v.into()))
+            }
+
             fn visit_map<V>(self, mut map: V) -> Result<Phone, V::Error>
             where
                 V: MapAccess<'de>,
@@ -119,9 +128,7 @@ impl<'de> Deserialize<'de> for Phone {
                 })
             }
         }
-
-        const FIELDS: &'static [&'static str] = &["phone", "phone_verified"];
-        deserializer.deserialize_struct("Phone", FIELDS, PhoneVisitor)
+        deserializer.deserialize_any(PhoneVisitor)
     }
 }
 
@@ -173,6 +180,15 @@ impl Deref for Phone {
         match self {
             Self::New(phone) => phone,
             Self::Verified(phone) => phone
+        }
+    }
+}
+
+impl Display for Phone {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::New(phone) => write!(f, "{}", phone),
+            Self::Verified(phone) => write!(f, "{}", phone)
         }
     }
 }

@@ -35,6 +35,8 @@ impl Actix {
             .service(user::login)
             .service(user::user_info)
             .service(user::patch_user)
+            .service(user::request_verification)
+            .service(user::confirm_verification)
         })
         .bind(("127.0.0.1", 8080))?
         .run()
