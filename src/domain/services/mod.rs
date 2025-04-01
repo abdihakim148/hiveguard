@@ -1,8 +1,9 @@
 mod authentication;
+mod verification;
 mod operations;
 mod password;
 mod paseto;
-mod verification;
+pub mod oauth;
 
 // pub use registration::Registration;
 pub use authentication::Authentication;

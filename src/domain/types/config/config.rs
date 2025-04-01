@@ -1,7 +1,7 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
-use crate::ports::inputs::config::Config as ConfigTrait;
+use crate::{domain::types::config::oauth, ports::inputs::config::Config as ConfigTrait};
+use super::{argon::Argon, Paseto, OAuthClient};
 use crate::ports::outputs::verify::Verifyer;
-use super::{argon::Argon, Paseto};
 use std::io::{Read, Write};
 
 
@@ -13,6 +13,7 @@ pub struct Config<DB, V> {
     argon: Argon,
     paseto: Paseto,
     verifyer: V,
+    oauth: OAuthClient
 }
 
 
@@ -31,6 +32,10 @@ impl<DB, V> Config<DB, V> {
 
     pub fn verifyer(&self) -> &V {
         &self.verifyer
+    }
+
+    pub fn oauth(&self) -> &OAuthClient {
+        &self.oauth
     }
 }
 
@@ -80,6 +85,7 @@ impl<DB: Serialize, V: Verifyer + Serialize> Serialize for Config<DB, V> {
         state.serialize_field("argon", &self.argon)?;
         state.serialize_field("paseto", &self.paseto)?;
         state.serialize_field("verifyer", &self.verifyer)?;
+        state.serialize_field("oauth", &self.oauth)?;
         state.end()
     }
 }
@@ -112,8 +118,9 @@ impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
         let argon = Default::default();
         let paseto = Default::default();
         let verifyer = Default::default();
+        let oauth = Default::default();
 
-        Self{name, domain, database, argon, paseto, verifyer}
+        Self{name, domain, database, argon, paseto, verifyer, oauth}
     }
 }
 
@@ -150,6 +157,7 @@ where
                 let mut argon = None;
                 let mut paseto = None;
                 let mut verifyer = None;
+                let mut oauth = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -189,6 +197,12 @@ where
                             }
                             verifyer = map.next_value()?;
                         },
+                        "oauth" => {
+                            if oauth.is_some() {
+                                return Err(de::Error::duplicate_field("oauth"));
+                            }
+                            oauth = map.next_value()?;
+                        },
                         _ => {
                             let _: de::IgnoredAny = map.next_value()?;
                         }
@@ -201,8 +215,9 @@ where
                 let argon = argon.unwrap_or_default();
                 let paseto = paseto.unwrap_or_default();
                 let verifyer = verifyer.unwrap_or_default();
+                let oauth = oauth.unwrap_or_default();
 
-                Ok(Config{name, domain, database, argon, paseto, verifyer})
+                Ok(Config{name, domain, database, argon, paseto, verifyer, oauth})
             }
         }
         let visitor = ConfigVisitor::<DB, V>{_t: std::marker::PhantomData::default()};

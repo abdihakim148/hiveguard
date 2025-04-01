@@ -24,6 +24,19 @@ pub enum Error {
     /// only phone and the current feature is phone.
     ContactFeatureConflict,
     
+    // Authentication method errors
+    IncorrectLoginMethod,
+    IncorrectSocialProvider { 
+        expected: String, 
+        found: String 
+    },
+    SocialProviderNotFound { 
+        provider: String 
+    },
+    
+    /// Returned when an invalid authorization code is provided
+    IncorrectCode,
+    
     // Resource errors
     ResourceNotFound { resource: String },
     DuplicateResource { resource: String },
@@ -99,11 +112,11 @@ impl From<serde_json::Error> for Error {
 impl Error {
     pub fn internal<E>(error: E) -> Self 
     where 
-        E: StdError + Send + Sync + 'static 
+        E: Into<Box<dyn StdError + Send + Sync + 'static>> 
     {
         Self::Internal { 
             message: "an internal error occurred".to_string(),
-            source: Some(Box::new(error))
+            source: Some(error.into())
         }
     }
 
@@ -135,6 +148,14 @@ impl Display for Error {
             Self::EmailAddressRequired => write!(f, "email address is required"),
             Self::PhoneNumberRequired => write!(f, "phone number is required"),
             Self::ContactAlreadyVerified => write!(f, "this contact is already verified"),
+            Self::IncorrectLoginMethod => 
+                write!(f, "Incorrect login method"),
+            Self::IncorrectSocialProvider { expected, found } => 
+                write!(f, "Incorrect social provider. Expected {}, found {}", expected, found),
+            Self::SocialProviderNotFound { provider } => 
+                write!(f, "Social provider {} not found", provider),
+            Self::IncorrectCode => 
+                write!(f, "Invalid authorization code"),
             Self::ResourceNotFound { resource } => write!(f, "{} not found", resource),
             Self::DuplicateResource { resource } => write!(f, "{} already exists", resource),
             Self::ValidationError { field, message } => write!(f, "{}: {}", field, message),
@@ -188,7 +209,11 @@ impl ErrorTrait for Error {
         match self {
             Self::WrongPassword |
             Self::TokenExpired | 
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
+            Self::InvalidToken |
+            Self::IncorrectLoginMethod |
+            Self::IncorrectSocialProvider { .. } |
+            Self::IncorrectCode => StatusCode::UNAUTHORIZED,
+            Self::SocialProviderNotFound { .. } => StatusCode::NOT_FOUND,
             Self::InvalidEmail |
             Self::InvalidPhone |
             Self::ValidationError { .. } |

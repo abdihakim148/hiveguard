@@ -1,5 +1,5 @@
-use super::super::types::{Token, User, Paseto, Key, Audience, Error as DomainError, Id};
-use crate::ports::{outputs::database::{CreateItem, GetItem, Item, UpdateItem}, Error};
+use super::super::types::{Token, User, Paseto, Key, Audience, Error as DomainError, Id, LoginMethod, Error};
+use crate::ports::{outputs::database::{CreateItem, GetItem, Item, UpdateItem}};
 use super::{Password, Paseto as PasetoTrait, Verification};
 use argon2::{PasswordHasher, PasswordVerifier};
 use crate::ports::outputs::verify::Verifyer;
@@ -54,7 +54,7 @@ impl Authentication for User {
         let contact = self.contact.clone().contact()?;
 
         self.password = self.password.hash(hasher)?;
-        let user = db.create_item(self).await?;
+        let user = db.create_item(self).await.map_err(Error::new)?;
 
 
         // send verification code to the user.
@@ -74,13 +74,17 @@ impl Authentication for User {
         verifyer: &V
     ) -> Result<Option<(Self, Token)>, Self::Error> {
         let key = Key::Sk(contact);
-        let mut user = db.get_item(key).await?;
+        let mut user = db.get_item(key).await.map_err(Error::new)?;
         
         let contact = user.contact.clone().contact()?;
         
         if !contact.verified() {
             verifyer.initiate_verification(contact, channel, base_url, db).await.map_err(Error::new)?;
             return Ok(None)
+        }
+
+        if user.login != LoginMethod::Password {
+            return Err(Error::IncorrectLoginMethod)
         }
 
         // verify that the provided password matches the stored password 

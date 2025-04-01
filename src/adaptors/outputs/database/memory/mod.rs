@@ -19,7 +19,7 @@ mod services;
 mod verifications;
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, GetItems, UpdateItem, DeleteItem, Map};
-use crate::domain::types::{User, Key, Value, Organisation, Member, Service, Verification, Id};
+use crate::domain::types::{User, Key, Value, Organisation, Member, Service, Verification, Id, LoginMethod};
 use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 use std::sync::RwLock as Lock;
@@ -609,7 +609,8 @@ mod tests {
             contact: Contact::Both(
                 Phone::New("1234567890".to_string()),
                 EmailAddress::New("test@example.com".parse().unwrap())
-            )
+            ),
+            login: LoginMethod::Password
         }
     }
 

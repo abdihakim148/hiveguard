@@ -4,7 +4,7 @@
 //! in memory with thread-safe access and index management.
 
 use crate::ports::outputs::database::{Item, CreateItem, GetItem, UpdateItem, DeleteItem, Map};
-use crate::domain::types::{User, Contact, Key, EmailAddress, Phone, Value};
+use crate::domain::types::{User, Contact, Key, EmailAddress, Phone, Value, LoginMethod};
 use std::collections::{HashMap, HashSet};
 use std::sync::RwLock as Lock;
 use super::error::Error;
@@ -295,7 +295,8 @@ mod tests {
             contact: Contact::Both(
                 Phone::New("1234567890".to_string()),
                 EmailAddress::New("test@example.com".parse().unwrap())
-            )
+            ),
+            login: LoginMethod::Password
         }
     }
 
@@ -411,7 +412,8 @@ mod tests {
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
             password: "hashedpassword".to_string(),
-            contact: Contact::Email(EmailAddress::New("test@example.com".parse().unwrap()))
+            contact: Contact::Email(EmailAddress::New("test@example.com".parse().unwrap())),
+            login: LoginMethod::Password
         };
         let _ = users.create_item(user.clone()).await;
         
@@ -431,7 +433,8 @@ mod tests {
             first_name: "Test".to_string(),
             last_name: "User".to_string(),
             password: "hashedpassword".to_string(),
-            contact: Contact::Phone(Phone::New("1234567890".to_string()))
+            contact: Contact::Phone(Phone::New("1234567890".to_string())),
+            login: LoginMethod::Password
         };
         let _ = users.create_item(user.clone()).await;
         

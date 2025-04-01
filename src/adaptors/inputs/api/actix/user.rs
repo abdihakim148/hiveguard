@@ -1,4 +1,4 @@
-use crate::domain::{services::{Get, Paseto, Update, Verification, Authentication}, types::{Audience, Config, Contact, Either as DomainEither, EmailAddress, Id, Key, User, Value, VerificationMedia, Phone}};
+use crate::domain::{services::{Get, Paseto, Update, Verification, Authentication, oauth::client::OAuth}, types::{Audience, Config, Contact, Either as DomainEither, EmailAddress, Id, Key, User, Value, VerificationMedia, Phone}};
 use actix_web::{post, get, patch, web::{self, Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest, http::header};
 use crate::ports::outputs::database::GetItem;
 use super::{Response, DB, Verifyer};
@@ -21,6 +21,13 @@ struct Credentials {
 struct QueryParam {
     pub contact: DomainEither<Phone, EmailAddress>,
 }
+
+
+#[derive(Deserialize)]
+struct Query {
+    pub code: String,
+}
+
 
 #[post("/signup")]
 async fn signup(req: HttpRequest, data: Either<Json<User>, Form<User>>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
@@ -238,4 +245,29 @@ async fn confirm_verification(
         .cookie(actix_web::cookie::Cookie::build("token", token).http_only(true).finish())
         .json(json!(user))
     )
+}
+
+
+#[get("/login/oauth/{provider}")]
+async fn oauth_login(req: HttpRequest, path: web::Path<String>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
+    let provider = path.as_str();
+    let oauth = config.oauth();
+    let scheme_holder = req.connection_info();
+    let scheme = scheme_holder.scheme();
+    let url = format!("{}://{}/login/oauth/{}/confirm", scheme, config.domain, provider);
+    let redirect_url = url::Url::parse(&url).expect("INVALID REDIRECT URL");
+    let url = oauth.authorization_url(provider, &redirect_url).await?;
+    let url = url.as_str();
+    let res = HttpResponse::TemporaryRedirect().insert_header((header::LOCATION, url)).finish();
+    Ok(res)
+}
+
+
+#[get("/login/oauth/{provider}/confirm")]
+async fn oauth_login_confirm(path: web::Path<String>, query: web::Query<Query>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
+    let code = &query.code;
+    let provider = path.as_str();
+    let oauth = config.oauth();
+    let user = oauth.authenticate(provider, code).await.unwrap();
+    Ok(HttpResponse::Ok().json(user))
 }
