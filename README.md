@@ -15,7 +15,9 @@
 
 Hiveguard is an open-source Authentication, Authorization, and User Management system built with Rust. It provides a robust, flexible, and secure solution for identity and access management using modern software design principles.
 
-> **Note:** Hiveguard is built with a modular Ports and Adapters architecture. We welcome contributions! Feel free to implement an adapter for any input or output interface (like a specific database, messaging queue, or API protocol), even if it's not listed in the planned features.
+> **Note:** Hiveguard is built with a modular **Ports and Adapters** architecture. We welcome contributions! Feel free to implement an adapter for any input or output interface (like a specific database, messaging queue, or API protocol), even if it's not listed in the planned features.
+
+---
 
 ## Core Technologies
 
@@ -27,12 +29,15 @@ Hiveguard is an open-source Authentication, Authorization, and User Management s
 
 *Specific technologies for interfaces like web frameworks, databases, hashing algorithms, and token formats are implemented as adapters. See the [Features](#features) section for details on currently supported and planned adapters.*
 
+---
+
 ## Architecture
 
-Hiveguard implements a Hexagonal (Ports and Adapters) Architecture, which provides:
-- **Clear Separation of Concerns**: Domain logic is isolated from application and infrastructure details.
-- **Flexibility**: Easily swap infrastructure components (like databases or email providers) by implementing corresponding ports.
-- **Testability**: Domain logic can be tested independently of external services.
+Hiveguard implements a **Hexagonal (Ports and Adapters) Architecture**, which provides:
+
+-   **Clear Separation of Concerns**: Domain logic is isolated from application and infrastructure details.
+-   **Flexibility**: Easily swap infrastructure components (like databases or email providers) by implementing corresponding ports.
+-   **Testability**: Domain logic can be tested independently of external services.
 
 **Key Architectural Components:**
 - **Domain (`src/domain`)**: Contains the core business logic, entities (User, Organisation, etc.), value objects, and domain services (Authentication, Verification, etc.). It is independent of any specific framework or infrastructure.
@@ -43,60 +48,67 @@ Hiveguard implements a Hexagonal (Ports and Adapters) Architecture, which provid
     - **Input Adapters**: Implement input ports (e.g., Actix Web controllers handling HTTP requests).
     - **Output Adapters**: Implement output ports (e.g., an in-memory database adapter, an SMTP email verification adapter).
 
+---
+
 ## Features
 
 **Legend:**
-*   `[x]` - Completed
-*   `[~]` - Partially Completed
-*   `[ ]` - Planned / Not Started
+
+*   `[x]` - **Completed**
+*   `[~]` - **Partially Completed**
+*   `[ ]` - **Planned / Not Started**
 
 ### Domain Features (`src/domain`)
 
-- **`[x]` Core Entities:** User, Organisation, Service, Member, Role, Resource, Scope, Grant, Permission defined with strong typing.
-- **`[x]` Value Objects:** Custom types for Id (ObjectId wrapper), EmailAddress, Phone, Contact (handles Email/Phone/Both), Number, Value (dynamic type), etc., with validation and Serde support.
-- **`[x]` Authentication Service:**
-    - Defines `Authentication` trait for user registration, password-based login, and token authorization.
-    - Includes `Password` trait for hashing and verification (abstracted from specific algorithm).
-    - Includes `Paseto` trait for token signing and verification (abstracted from specific token format/version).
-- **`[~]` Verification Service:**
-    - Defines `Verification` trait for initiating and confirming contact ownership (Email/Phone). Abstracted from the delivery method.
-- **`[~]` OAuth Client Service:**
-    - Defines `OAuth` trait for client-side OAuth2 flows (authorization URL generation, code exchange, user info retrieval).
-- **`[x]` Configuration Loading:** Defines `Config` trait for loading application settings.
-- **`[x]` Flexible Error Handling:** Domain-specific errors defined in `src/domain/types/error.rs`, implementing `ErrorTrait`.
-- **`[ ]` Authorization Logic:** RBAC based on Roles, Grants, Permissions, Scopes (types defined, but enforcement logic not fully implemented).
-- **`[ ]` JWT Support:** Planned alternative token format alongside PASETO.
+-   **`[x]` Core Entities:** `User`, `Organisation`, `Service`, `Member`, `Role`, `Resource`, `Scope`, `Grant`, `Permission` defined with strong typing.
+-   **`[x]` Value Objects:** Custom types for `Id` (ObjectId wrapper), `EmailAddress`, `Phone`, `Contact` (handles Email/Phone/Both), `Number`, `Value` (dynamic type), etc., with validation and Serde support.
+-   **`[x]` Authentication Service:**
+    -   Defines `Authentication` trait for user registration, password-based login, and token authorization.
+    -   Includes `Password` trait for hashing and verification (abstracted from specific algorithm).
+    -   Includes `Paseto` trait for token signing and verification (abstracted from specific token format/version).
+-   **`[~]` Verification Service:**
+    -   Defines `Verification` trait for initiating and confirming contact ownership (Email/Phone). Abstracted from the delivery method.
+-   **`[~]` OAuth Client Service:**
+    -   Defines `OAuth` trait for client-side OAuth2 flows (authorization URL generation, code exchange, user info retrieval).
+-   **`[x]` Configuration Loading:** Defines `Config` trait for loading application settings.
+-   **`[x]` Flexible Error Handling:** Domain-specific errors defined in `src/domain/types/error.rs`, implementing `ErrorTrait`.
+-   **`[ ]` Authorization Logic:** RBAC based on Roles, Grants, Permissions, Scopes (types defined, but enforcement logic not fully implemented).
+-   **`[ ]` JWT Support:** Planned alternative token format alongside PASETO.
+
+---
 
 ### Interface Ports & Adapters (`src/ports`, `src/adaptors`)
 
 #### Input Interfaces (Driving Adapters)
 
-- **Configuration Loading (`ports::inputs::config::Config`)**
-    - **`[x]` JSON File Adapter:** Implemented directly within the `Config` struct in `domain::types::config`, loads from `config.json` by default.
-- **API Protocols**
-    - **`[~]` HTTP API (`adaptors::inputs::api::actix`)**
-        - **Adapter:** Actix Web (v4)
-        - **Status:** Partially implemented. Provides endpoints for signup, login, user info/patching, verification request/confirm, OAuth initiation/callback. Requires `http` feature flag.
-    - **`[ ]` gRPC API**
-    - **`[ ]` GraphQL API**
-    - **`[ ]` Command Line Interface (CLI)**
+*   **Configuration Loading (`ports::inputs::config::Config`)**
+    *   **`[x]` JSON File Adapter:** Implemented directly within the `Config` struct in `domain::types::config`, loads from `config.json` by default.
+*   **API Protocols**
+    *   **`[~]` HTTP API (`adaptors::inputs::api::actix`)**
+        *   **Adapter:** Actix Web (v4)
+        *   **Status:** Partially implemented. Provides endpoints for signup, login, user info/patching, verification request/confirm, OAuth initiation/callback. Requires `http` feature flag.
+    *   **`[ ]` gRPC API**
+    *   **`[ ]` GraphQL API**
+    *   **`[ ]` Command Line Interface (CLI)**
 
 #### Output Interfaces (Driven Adapters)
 
-- **Database Operations (`ports::outputs::database`)**
-    - Defines traits for CRUD operations: `CreateItem`, `GetItem`, `GetItems`, `UpdateItem`, `DeleteItem`.
-    - **Adapters:**
-        - **`[x]` In-Memory Adapter (`adaptors::outputs::database::memory`)**: Thread-safe (`RwLock`) implementation with indexing. Requires `memory` feature flag.
-        - **`[ ]` PostgreSQL Adapter**
-        - **`[ ]` MySQL/MariaDB Adapter**
-        - **`[ ]` MongoDB Adapter**
-        - **`[ ]` SQLite Adapter**
-- **Contact Verification (`ports::outputs::verify::Verify`)**
-    - Defines trait for initiating and confirming contact verification via different channels (Email, SMS, Whatsapp).
-    - **Adapters:**
-        - **`[x]` SMTP Adapter (`adaptors::outputs::verify::smtp`)**: Sends verification emails using SMTP via Lettre. Requires `smtp` and `email` feature flags. Includes HTML template.
-        - **`[x]` Twilio Adapter (`adaptors::outputs::verify::twilio`)**: Sends verification via Twilio Verify API (SMS/Whatsapp/Email). Requires `twilio-phone` or `twilio-email` feature flags. Supports custom codes or Twilio-generated codes.
-        - **`[ ]` Other Providers (e.g., SendGrid, AWS SES/SNS)**
+*   **Database Operations (`ports::outputs::database`)**
+    *   Defines traits for CRUD operations: `CreateItem`, `GetItem`, `GetItems`, `UpdateItem`, `DeleteItem`.
+    *   **Adapters:**
+        *   **`[x]` In-Memory Adapter (`adaptors::outputs::database::memory`)**: Thread-safe (`RwLock`) implementation with indexing. Requires `memory` feature flag.
+        *   **`[ ]` PostgreSQL Adapter**
+        *   **`[ ]` MySQL/MariaDB Adapter**
+        *   **`[ ]` MongoDB Adapter**
+        *   **`[ ]` SQLite Adapter**
+*   **Contact Verification (`ports::outputs::verify::Verify`)**
+    *   Defines trait for initiating and confirming contact verification via different channels (Email, SMS, Whatsapp).
+    *   **Adapters:**
+        *   **`[x]` SMTP Adapter (`adaptors::outputs::verify::smtp`)**: Sends verification emails using SMTP via Lettre. Requires `smtp` and `email` feature flags. Includes HTML template.
+        *   **`[x]` Twilio Adapter (`adaptors::outputs::verify::twilio`)**: Sends verification via Twilio Verify API (SMS/Whatsapp/Email). Requires `twilio-phone` or `twilio-email` feature flags. Supports custom codes or Twilio-generated codes.
+        *   **`[ ]` Other Providers (e.g., SendGrid, AWS SES/SNS)**
+
+---
 
 ## Configuration
 
@@ -104,11 +116,11 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
 
 **Key Configuration Sections:**
 
-*   **`name`**: (String) The name of the application/issuer (e.g., "Hiveguard").
-*   **`domain`**: (String) The domain where the application is hosted (e.g., "auth.example.com"). Used for constructing verification links.
+*   **`name`**: (String) The name of the application/issuer (e.g., `"Hiveguard"`).
+*   **`domain`**: (String) The domain where the application is hosted (e.g., `"auth.example.com"`). Used for constructing verification links.
 *   **`database`**: (Object) Configuration for the database adapter. For the default `memory` adapter, this is an empty object `{}`.
 *   **`argon`**: (Object) Settings for password hashing:
-    *   `algorithm`: (String Enum) `Argon2d`, `Argon2i`, or `Argon2id` (default).
+    *   `algorithm`: (String Enum) `"Argon2d"`, `"Argon2i"`, or `"Argon2id"` (default).
     *   `version`: (Integer) `16` (for 0x10) or `19` (for 0x13 - default).
     *   `params`: (Object) Argon2 parameters:
         *   `memory_cost`: (Integer) Memory cost in KiB (e.g., `19456`).
@@ -139,7 +151,7 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
           // "base_url": "https://verify.twilio.com/v2" // Optional, defaults to Twilio Verify API
         }
         ```
-*   **`oauth`**: (Object) Configuration for OAuth clients (acting as a client to other providers). Keys are provider names (e.g., "google", "github").
+*   **`oauth`**: (Object) Configuration for OAuth clients (acting as a client to other providers). Keys are provider names (e.g., `"google"`, `"github"`).
     *   `<provider_name>`: (Object)
         *   `client_id`: (String) Client ID from the provider.
         *   `client_secret`: (String) Client secret from the provider (use env var: `"$GOOGLE_CLIENT_SECRET"`).
@@ -148,6 +160,8 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
         *   `userinfo_url`: (String) Provider's user info endpoint URL.
         *   `scopes`: (Array of Strings) OAuth scopes to request (e.g., `["openid", "email", "profile"]`).
         *   `fields`: (Array of Strings/Null) Mapping from provider fields to Hiveguard `User` fields (`id`, `username`, `first_name`, `last_name`, `email`, `email_verified`, `phone`, `phone_verified`, `password`). Use `null` to use Hiveguard's default field name. Length must match `User::FIELDS`.
+
+---
 
 **Example `config.json`:**
 
@@ -201,11 +215,14 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
 }
 ```
 
+---
+
 ## Installation & Setup
 
 **Prerequisites:**
-- Rust (stable toolchain recommended)
-- Cargo (comes with Rust)
+
+-   Rust (stable toolchain recommended)
+-   Cargo (comes with Rust)
 
 **Steps:**
 
@@ -221,6 +238,7 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
     ```bash
     # For development
     cargo build
+
     # For release
     cargo build --release
     ```
@@ -228,10 +246,13 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
     ```bash
     # Development
     cargo run
+
     # Release
     ./target/release/hiveguard
     ```
     The application will start, typically listening on `127.0.0.1:8080` (configurable via Actix/environment if needed, though not directly in `config.json` currently).
+
+---
 
 ## API Endpoints
 
@@ -246,21 +267,28 @@ Hiveguard uses a `config.json` file (by default) for its settings. If the file d
 - `GET /login/oauth/{provider}`: Initiate OAuth login flow.
 - `GET /login/oauth/{provider}/confirm`: Handle OAuth callback.
 
+---
+
 ## Contributing
 
 We welcome contributions! Please see our `CONTRIBUTING.md` (to be created) for details on how to get started, including code style, testing, and pull request processes.
 
-Key areas for contribution:
-- Implementing planned features (Database adapters, OAuth Server, RBAC).
-- Expanding API endpoints for managing Organisations, Services, Members, Roles.
-- Improving test coverage.
-- Enhancing documentation.
-- Adding examples.
+**Key areas for contribution:**
+
+-   Implementing planned features (Database adapters, OAuth Server, RBAC).
+-   Expanding API endpoints for managing Organisations, Services, Members, Roles.
+-   Improving test coverage.
+-   Enhancing documentation.
+-   Adding examples.
+
+---
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+---
+
 ## Contact & Support
 
-- **Issues:** For bug reports, feature requests, or questions, please use the [GitHub Issues](https://github.com/abdihakim148/hiveguard/issues) tracker.
+-   **Issues:** For bug reports, feature requests, or questions, please use the [GitHub Issues](https://github.com/abdihakim148/hiveguard/issues) tracker.
