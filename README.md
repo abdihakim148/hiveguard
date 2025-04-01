@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Contributors](https://img.shields.io/github/contributors/abdihakim148/hiveguard)](https://github.com/abdihakim148/hiveguard/graphs/contributors)
 [![Issues](https://img.shields.io/github/issues/abdihakim148/hiveguard)](https://github.com/abdihakim148/hiveguard/issues)
-[![Build Status](https://travis-ci.com/abdihakim148/hiveguard.svg?branch=main)](https://travis-ci.com/abdihakim148/hiveguard)
+[![Build Status](https://api.travis-ci.com/abdihakim148/hiveguard.svg?branch=main)](https://api.travis-ci.com/abdihakim148/hiveguard.svg)
 
 </div>
 
