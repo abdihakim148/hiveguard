@@ -383,32 +383,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
-name = "beekeeper"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "argon2",
- "base64 0.21.7",
- "bson",
- "chrono",
- "ed25519-dalek",
- "env_logger",
- "hex",
- "lettre",
- "log",
- "mockall",
- "rand 0.9.0",
- "reqwest",
- "rusty_paseto",
- "serde",
- "serde_json",
- "static_init",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1063,6 +1037,32 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hiveguard"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "argon2",
+ "base64 0.21.7",
+ "bson",
+ "chrono",
+ "ed25519-dalek",
+ "env_logger",
+ "hex",
+ "lettre",
+ "log",
+ "mockall",
+ "rand 0.9.0",
+ "reqwest",
+ "rusty_paseto",
+ "serde",
+ "serde_json",
+ "static_init",
+ "thiserror",
+ "tokio",
+ "url",
+]
 
 [[package]]
 name = "hostname"

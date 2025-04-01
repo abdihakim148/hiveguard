@@ -1,5 +1,5 @@
 [package]
-name = "beekeeper"
+name = "hiveguard"
 version = "0.1.0"
 edition = "2021"
 
@@ -40,4 +40,4 @@ twilio-email = []
 
 default = ["http", "memory", "smtp", "email"]
 [badges]
-travis-ci = { repository = "abdihakim148/beekeeper", branch = "main" }
+travis-ci = { repository = "abdihakim148/hiveguard", branch = "main" }
