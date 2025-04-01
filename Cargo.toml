@@ -39,5 +39,3 @@ twilio-phone = []
 twilio-email = []
 
 default = ["http", "memory", "smtp", "email"]
-[badges]
-# travis-ci = { repository = "abdihakim148/hiveguard", branch = "main" }
