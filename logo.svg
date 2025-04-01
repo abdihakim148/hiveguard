@@ -1,0 +1,103 @@
+<svg width="100%" height="100%" viewBox="0 0 1100 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+  <title>Hiveguard Logo</title>
+
+  <!-- Define reusable elements -->
+  <defs>
+    <!-- Honeycomb Pattern -->
+    <g id="honeycomb-pattern" fill="#FFC107" stroke="#FFA000" stroke-width="5.5"> <!-- Vibrant Yellow/Orange -->
+      <polygon points="82,218 82,248 56,263 30,248 30,218 56,203" />
+      <polygon points="108,263 108,293 82,308 56,293 56,263 82,248" />
+      <polygon points="134,308 134,338 108,353 82,338 82,308 108,293" />
+      <polygon points="160,353 160,383 134,398 108,383 108,353 134,338" />
+      <polygon points="186,398 186,428 160,443 134,428 134,398 160,383" />
+      <polygon points="108,173 108,203 82,218 56,203 56,173 82,158" />
+      <polygon points="134,218 134,248 108,263 82,248 82,218 108,203" />
+      <polygon points="160,263 160,293 134,308 108,293 108,263 134,248" />
+      <polygon points="186,308 186,338 160,353 134,338 134,308 160,293" />
+      <polygon points="212,353 212,383 186,398 160,383 160,353 186,338" />
+      <polygon points="238,398 238,428 212,443 186,428 186,398 212,383" />
+      <polygon points="134,128 134,158 108,173 82,158 82,128 108,113" />
+      <polygon points="160,173 160,203 134,218 108,203 108,173 134,158" />
+      <polygon points="186,218 186,248 160,263 134,248 134,218 160,203" />
+      <polygon points="212,263 212,293 186,308 160,293 160,263 186,248" />
+      <polygon points="238,308 238,338 212,353 186,338 186,308 212,293" />
+      <polygon points="264,353 264,383 238,398 212,383 212,353 238,338" />
+      <polygon points="290,398 290,428 264,443 238,428 238,398 264,383" />
+      <polygon points="160,83 160,113 134,128 108,113 108,83 134,68" />
+      <polygon points="186,128 186,158 160,173 134,158 134,128 160,113" />
+      <polygon points="212,173 212,203 186,218 160,203 160,173 186,158" />
+      <polygon points="238,218 238,248 212,263 186,248 186,218 212,203" />
+      <polygon points="264,263 264,293 238,308 212,293 212,263 238,248" />
+      <polygon points="290,308 290,338 264,353 238,338 238,308 264,293" />
+      <polygon points="316,353 316,383 290,398 264,383 264,353 290,338" />
+      <polygon points="342,398 342,428 316,443 290,428 290,398 316,383" />
+      <polygon points="186,38 186,68 160,83 134,68 134,38 160,23" />
+      <polygon points="212,83 212,113 186,128 160,113 160,83 186,68" />
+      <polygon points="238,128 238,158 212,173 186,158 186,128 212,113" />
+      <polygon points="264,173 264,203 238,218 212,203 212,173 238,158" />
+      <polygon points="290,218 290,248 264,263 238,248 238,218 264,203" />
+      <polygon points="316,263 316,293 290,308 264,293 264,263 290,248" />
+      <polygon points="342,308 342,338 316,353 290,338 290,308 316,293" />
+      <polygon points="368,353 368,383 342,398 316,383 316,353 342,338" />
+      <polygon points="394,398 394,428 368,443 342,428 342,398 368,383" />
+      <polygon points="238,38 238,68 212,83 186,68 186,38 212,23" />
+      <polygon points="264,83 264,113 238,128 212,113 212,83 238,68" />
+      <polygon points="290,128 290,158 264,173 238,158 238,128 264,113" />
+      <polygon points="316,173 316,203 290,218 264,203 264,173 290,158" />
+      <polygon points="342,218 342,248 316,263 290,248 290,218 316,203" />
+      <polygon points="368,263 368,293 342,308 316,293 316,263 342,248" />
+      <polygon points="394,308 394,338 368,353 342,338 342,308 368,293" />
+      <polygon points="420,353 420,383 394,398 368,383 368,353 394,338" />
+      <polygon points="290,38 290,68 264,83 238,68 238,38 264,23" />
+      <polygon points="316,83 316,113 290,128 264,113 264,83 290,68" />
+      <polygon points="342,128 342,158 316,173 290,158 290,128 316,113" />
+      <polygon points="368,173 368,203 342,218 316,203 316,173 342,158" />
+      <polygon points="394,218 394,248 368,263 342,248 342,218 368,203" />
+      <polygon points="420,263 420,293 394,308 368,293 368,263 394,248" />
+      <polygon points="446,308 446,338 420,353 394,338 394,308 420,293" />
+      <polygon points="342,38 342,68 316,83 290,68 290,38 316,23" />
+      <polygon points="368,83 368,113 342,128 316,113 316,83 342,68" />
+      <polygon points="394,128 394,158 368,173 342,158 342,128 368,113" />
+      <polygon points="420,173 420,203 394,218 368,203 368,173 394,158" />
+      <polygon points="446,218 446,248 420,263 394,248 394,218 420,203" />
+      <polygon points="472,263 472,293 446,308 420,293 420,263 446,248" />
+      <polygon points="394,38 394,68 368,83 342,68 342,38 368,23" />
+      <polygon points="420,83 420,113 394,128 368,113 368,83 394,68" />
+      <polygon points="446,128 446,158 420,173 394,158 394,128 420,113" />
+      <polygon points="472,173 472,203 446,218 420,203 420,173 446,158" />
+      <polygon points="498,218 498,248 472,263 446,248 446,218 472,203" />
+    </g>
+
+    <!-- Shield Path -->
+    <path id="shield-path" d="M480-81q-140-35-230-162.5T160-523v-238l320-120 320 120v238q0 152-90 279.5T480-81Z"/>
+
+    <!-- User Icon Path -->
+    <path id="user-icon-path" d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0-80Zm0 400Z"/>
+  </defs>
+
+  <!-- Symbol Group (Honeycomb + Shield + User Icon) -->
+  <g id="symbol" transform="translate(0, 35) scale(0.7)">
+    <!-- Use Honeycomb Pattern -->
+    <use href="#honeycomb-pattern"/>
+
+    <!-- Shield -->
+    <!-- Positioned relative to honeycomb center (approx 264, 232.5) -->
+    <!-- Scaled down significantly, adjusted for original viewBox offset -->
+    <g id="shield-group" transform="translate(264, 232.5) scale(0.35) translate(-480, 480)">
+       <use href="#shield-path" fill="#0000F5"/> <!-- Bright Blue -->
+    </g>
+
+    <!-- User Icon -->
+    <!-- Positioned relative to honeycomb center (approx 264, 232.5) -->
+    <!-- Scaled down even more, adjusted for original viewBox offset -->
+     <g id="user-icon-group" transform="translate(264, 232.5) scale(0.2) translate(-480, 480)">
+       <use href="#user-icon-path" fill="#FFFFFF"/> <!-- White -->
+     </g>
+  </g>
+
+  <!-- Text: Hiveguard -->
+  <!-- Positioned to the right of the symbol, vertically centered -->
+  <text id="text" x="420" y="200" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="#6A1B9A" dominant-baseline="middle" text-anchor="start"> <!-- Vibrant Purple -->
+    Hiveguard
+  </text>
+</svg>

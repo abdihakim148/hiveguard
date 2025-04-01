@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="logo.png" alt="Beekeeper Logo" width="200">
+    <img src="logo.svg" alt="Beekeeper Logo" width="100%">
 </div>
 
 <div align="center">
