@@ -1,6 +1,7 @@
-use crate::domain::{services::{Get, Paseto, Update, Verification, Authentication, oauth::client::OAuth}, types::{Audience, Config, Contact, Either as DomainEither, EmailAddress, Id, Key, User, Value, VerificationMedia, Phone}};
+use crate::domain::{services::{Get, Paseto, Update, Verification, Authentication}, types::{Audience, Config, Contact, Either as DomainEither, EmailAddress, Id, Key, User, Value, VerificationMedia, Phone}};
 use actix_web::{post, get, patch, web::{self, Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest, http::header};
 use crate::ports::outputs::database::GetItem;
+use crate::ports::outputs::oauth::OAuth; // Updated path for OAuth trait
 use super::{Response, DB, Verifyer};
 use std::collections::HashMap;
 use super::error::Error;
