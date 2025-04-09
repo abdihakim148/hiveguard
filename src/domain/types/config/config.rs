@@ -1,19 +1,20 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
-use crate::{domain::types::config::oauth, ports::inputs::config::Config as ConfigTrait};
-use super::{argon::Argon, Paseto, OAuthClient};
+use crate::{domain::types::config::provider, ports::inputs::config::Config as ConfigTrait};
+use super::{argon::Argon, Paseto, Provider};
 use crate::ports::outputs::verify::Verifyer;
 use std::io::{Read, Write};
+use url::Host;
 
 
 
 pub struct Config<DB, V> {
     pub name: String,
-    pub domain: String,
+    pub host: String,
     database: DB,
     argon: Argon,
     paseto: Paseto,
     verifyer: V,
-    oauth: OAuthClient
+    oauth: Provider
 }
 
 
@@ -34,7 +35,7 @@ impl<DB, V> Config<DB, V> {
         &self.verifyer
     }
 
-    pub fn oauth(&self) -> &OAuthClient {
+    pub fn oauth(&self) -> &Provider {
         &self.oauth
     }
 }
@@ -113,14 +114,14 @@ where
 impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
     fn default() -> Self {
         let name = String::from("Beekeeper");
-        let domain = Default::default();
+        let host = String::from("localhost");
         let database = Default::default();
         let argon = Default::default();
         let paseto = Default::default();
         let verifyer = Default::default();
         let oauth = Default::default();
 
-        Self{name, domain, database, argon, paseto, verifyer, oauth}
+        Self{name, host, database, argon, paseto, verifyer, oauth}
     }
 }
 
@@ -152,7 +153,8 @@ where
                 where
                     A: serde::de::MapAccess<'de>, {
                 let mut name = None;
-                let mut domain = None;
+                let mut host = None;
+                let mut port = Option::<u16>::None;
                 let mut database = None;
                 let mut argon = None;
                 let mut paseto = None;
@@ -167,11 +169,17 @@ where
                             }
                             name = map.next_value()?;
                         },
-                        "domain" => {
-                            if domain.is_some() {
-                                return Err(de::Error::duplicate_field("domain"));
+                        "host" => {
+                            if host.is_some() {
+                                return Err(de::Error::duplicate_field("host"));
                             }
-                            domain = map.next_value()?;
+                            host = map.next_value()?;
+                        },
+                        "port" => {
+                            if port.is_some() {
+                                return Err(de::Error::duplicate_field("port"));
+                            }
+                            port = map.next_value()?;
                         },
                         "database" => {
                             if database.is_some() {
@@ -210,14 +218,20 @@ where
                 }
 
                 let name = name.unwrap_or_default();
-                let domain = domain.unwrap_or_default();
+                let host = host.unwrap_or(Host::parse("localhost").expect("THIS SHOULD NEVER PANIC. `localhost` is a valid host name"));
                 let database = database.unwrap_or_default();
                 let argon = argon.unwrap_or_default();
                 let paseto = paseto.unwrap_or_default();
                 let verifyer = verifyer.unwrap_or_default();
                 let oauth = oauth.unwrap_or_default();
+                let host = match port {
+                    Some(port) => format!("{}:{}", host, port),
+                    None => format!("{}", host)
+                };
 
-                Ok(Config{name, domain, database, argon, paseto, verifyer, oauth})
+
+
+                Ok(Config{name, host, database, argon, paseto, verifyer, oauth})
             }
         }
         let visitor = ConfigVisitor::<DB, V>{_t: std::marker::PhantomData::default()};

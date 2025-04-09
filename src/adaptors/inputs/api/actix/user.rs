@@ -41,7 +41,7 @@ async fn signup(req: HttpRequest, data: Either<Json<User>, Form<User>>, config: 
     // Construct base URL for verification
     let scheme_holder = req.connection_info();
     let scheme = scheme_holder.scheme();
-    let base_url = format!("{}://{}/verify/confirm", scheme, config.domain);
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.host);
     
     // Get required components
     let db = config.db();
@@ -73,7 +73,7 @@ async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, req: HttpReq
     // Construct base URL for verification
     let scheme_holder = req.connection_info();
     let scheme = scheme_holder.scheme();
-    let base_url = format!("{}://{}/verify/confirm", scheme, config.domain);
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.host);
     
     // Get required components
     let db = config.db();
@@ -181,7 +181,7 @@ async fn request_verification(
     // Construct base URL
     let scheme_holder = req.connection_info();
     let scheme = scheme_holder.scheme();
-    let base_url = format!("{}://{}/verify/confirm", scheme, config.domain);
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.host);
     
     // Get required components
     let db = config.db();
@@ -255,9 +255,10 @@ async fn oauth_login(req: HttpRequest, path: web::Path<String>, config: Data<Arc
     let oauth = config.oauth();
     let scheme_holder = req.connection_info();
     let scheme = scheme_holder.scheme();
-    let url = format!("{}://{}/login/oauth/{}/confirm", scheme, config.domain, provider);
-    let redirect_url = url::Url::parse(&url).expect("INVALID REDIRECT URL");
-    let url = oauth.authorization_url(provider, &redirect_url).await?;
+    let url = format!("{}://{}/login/oauth/{}/confirm", scheme, config.host, provider);
+    // an error to be handled.
+    let redirect_url = oauth2::RedirectUrl::new(url).expect("THIS SHOULD NEVER HAPPEN: Invalid RedirectUrl");
+    let url = oauth.authorization_url(provider, &redirect_url)?;
     let url = url.as_str();
     let res = HttpResponse::TemporaryRedirect().insert_header((header::LOCATION, url)).finish();
     Ok(res)
@@ -269,6 +270,6 @@ async fn oauth_login_confirm(path: web::Path<String>, query: web::Query<Query>, 
     let code = &query.code;
     let provider = path.as_str();
     let oauth = config.oauth();
-    let user = oauth.authenticate(provider, code).await.unwrap();
-    Ok(HttpResponse::Ok().json(user))
+    // let user = oauth.authenticate(provider, code).await.unwrap();
+    Ok(HttpResponse::Ok())
 }
