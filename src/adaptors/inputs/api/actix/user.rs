@@ -9,6 +9,7 @@ use serde::Deserialize;
 use std::str::FromStr;
 use serde_json::json;
 use std::sync::Arc;
+use url::Url;
 
 
 #[derive(Deserialize)]
@@ -257,7 +258,7 @@ async fn oauth_login(req: HttpRequest, path: web::Path<String>, config: Data<Arc
     let scheme = scheme_holder.scheme();
     let url = format!("{}://{}/login/oauth/{}/confirm", scheme, config.host, provider);
     // an error to be handled.
-    let redirect_url = oauth2::RedirectUrl::new(url).expect("THIS SHOULD NEVER HAPPEN: Invalid RedirectUrl");
+    let redirect_url = Url::parse(&url).expect("THIS SHOULD NEVER HAPPEN: Invalid RedirectUrl");
     let url = oauth.authorization_url(provider, &redirect_url)?;
     let url = url.as_str();
     let res = HttpResponse::TemporaryRedirect().insert_header((header::LOCATION, url)).finish();
@@ -266,10 +267,16 @@ async fn oauth_login(req: HttpRequest, path: web::Path<String>, config: Data<Arc
 
 
 #[get("/login/oauth/{provider}/confirm")]
-async fn oauth_login_confirm(path: web::Path<String>, query: web::Query<Query>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
+async fn oauth_login_confirm(req: HttpRequest, path: web::Path<String>, query: web::Query<Query>, config: Data<Arc<Config<DB, Verifyer>>>) -> Response<impl Responder> {
     let code = &query.code;
     let provider = path.as_str();
     let oauth = config.oauth();
-    // let user = oauth.authenticate(provider, code).await.unwrap();
-    Ok(HttpResponse::Ok())
+
+    let scheme_holder = req.connection_info();
+    let scheme = scheme_holder.scheme();
+    let url = format!("{}://{}/login/oauth/{}/confirm", scheme, config.host, provider);
+    let redirect_url = Url::parse(&url).expect("THIS SHOULD NEVER HAPPEN: Invalid RedirectUrl");
+
+    let user = oauth.authorize(provider, code, &redirect_url).await?;
+    Ok(HttpResponse::Ok().json(user))
 }

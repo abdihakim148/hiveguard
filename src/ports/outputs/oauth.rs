@@ -1,47 +1,65 @@
-use oauth2::{basic, AuthUrl, ClientId, ClientSecret, EndpointNotSet, EndpointSet, Scope, TokenUrl, RedirectUrl, CsrfToken, AuthorizationCode, TokenResponse};
+use reqwest::{Client, RequestBuilder, Method};
+use serde::{Deserialize, Serialize};
 use crate::domain::types::Error;
+use std::collections::HashMap;
 use crate::ports::ErrorTrait;
 use static_init::dynamic;
-use std::borrow::Cow;
+use chrono::Duration;
 use url::Url;
 
-pub type BasicClient<T1 = EndpointNotSet, T2 = EndpointNotSet, T3 = EndpointNotSet> = basic::BasicClient<EndpointSet, T1, T2, T3, EndpointSet>;
 #[dynamic]
-pub static CLIENT: reqwest::Client = reqwest::Client::new();
+pub static CLIENT: Client = Client::new();
 
 /// Trait defining OAuth authentication flow
 pub trait OAuth {
-    fn oauth_client(&self) -> &BasicClient;
-    fn scopes(&self) -> Vec<Scope>;
+    fn client_id(&self) -> &str;
+    fn client_secret(&self) -> &str;
+    fn auth_url(&self) -> &Url;
+    fn token_url(&self) -> &Url;
+    fn scope(&self) -> Option<&str>;
 
-    fn client(&self) -> &reqwest::Client {
+    fn client(&self) -> &Client {
         &CLIENT
     }
 
     /// Generate authorization URL for initiating OAuth flow
-    fn authorization_url(&self, redirect_url: &RedirectUrl) -> Url {
-        let redirect_url = Cow::Borrowed(redirect_url);
-        let client = self.client();
-        let scopes = self.scopes();
-        let basic_client = self.oauth_client();
-        let (url, _) = basic_client
-            .authorize_url(CsrfToken::new_random)
-            .add_scopes(scopes)
-            .set_redirect_uri(redirect_url)
-            .url();
+    fn authorization_url(&self, redirect_url: &Url) -> Url {
+        let mut url = self.auth_url().clone();
+        url.query_pairs_mut().append_pair("client_id", self.client_id());
+        url.query_pairs_mut().append_pair("redirect_uri", redirect_url.as_str());
+        url.query_pairs_mut().append_pair("response_type", "code");
+        url.query_pairs_mut().append_pair("access_type", "offline");
+        if let Some(scope) = self.scope() {
+            url.query_pairs_mut().append_pair("scope", scope);
+        }
         url
     }
 
     /// exchange code with a token
-    async fn authorize(&self, code: String) -> Result<impl TokenResponse, impl ErrorTrait + Send + Sync> {
+    async fn authorize(&self, code: &str, redirect_url: &Url) -> Result<TokenResponse, impl ErrorTrait + Send + Sync> {
         let client = self.client();
-        let basic_client = self.oauth_client();
-        let token = basic_client
-            .exchange_code(AuthorizationCode::new(code))
-            .request_async(client) // Pass the reqwest client here
-            .await
-            .map_err(|e| Error::internal(e))?;
-
-        Ok::<_, Error>(token)
+        let form: HashMap<&str, &str> = [
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("redirect_uri", redirect_url.as_str()),
+            ("client_id", self.client_id()),
+            ("client_secret", self.client_secret())
+        ].into();
+        let res = client.post(self.token_url().clone())
+        .header("Accept", "application/json")
+        .form(&form).send().await.map_err(Error::internal)?
+        .json().await.map_err(Error::internal)?;
+        Ok::<_, Error>(res)
     }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TokenResponse {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: Option<Duration>,
+    pub scope: Option<String>,
+    pub id_token: Option<String>,
+    pub refresh_token: Option<String>
 }

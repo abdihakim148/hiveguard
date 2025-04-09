@@ -1,18 +1,29 @@
-use crate::domain::types::Github; // Use re-exported path
-use crate::domain::types::Error;
 use crate::ports::outputs::oauth::OAuth;
-use crate::ports::ErrorTrait; // Required by the OAuth trait definition
-use oauth2::{AuthorizationCode, CsrfToken, TokenResponse, RedirectUrl};
-use reqwest::Client; // Needed for request_async
+use crate::domain::types::Github;
 use url::Url;
-use std::borrow::Cow;
+
 
 impl OAuth for Github {
-    fn oauth_client(&self) -> &crate::ports::outputs::oauth::BasicClient {
-        &self.client
+    fn client_id(&self) -> &str {
+        &self.client_id
     }
 
-    fn scopes(&self) -> Vec<oauth2::Scope> {
-        self.scopes.clone()
+    fn client_secret(&self) -> &str {
+        &self.client_secret
+    }
+
+    fn auth_url(&self) -> &Url {
+        &self.auth_url
+    }
+
+    fn token_url(&self) -> &Url {
+        &self.token_url
+    }
+
+    fn scope(&self) -> Option<&str> {
+        match &self.scope {
+            Some(scope) => Some(scope),
+            _ => None
+        }
     }
 }

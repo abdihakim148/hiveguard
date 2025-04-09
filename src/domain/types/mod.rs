@@ -32,7 +32,6 @@ pub use grant_type::*;
 pub use id::*;
 pub use key::*;
 pub use member::*;
-/// Re-exporting types for external access.
 pub use organisation::*;
 pub use paseto_keys::*;
 pub use permission::*;
