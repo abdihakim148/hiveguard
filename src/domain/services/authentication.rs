@@ -18,12 +18,12 @@ pub trait Authentication: Sized + Item {
     ) -> Result<(), Self::Error>;
     
     async fn authenticate<DB: GetItem<Self> + CreateItem<V::Verification> + UpdateItem<Self>, H: PasswordVerifier, V: Verifyer>(
-        query_key: &Self::QueryKey, 
+        query_key: &Self::QueryKey,
         password: &str, 
         db: &DB, 
         hasher: &H,
         paseto: &Paseto,
-        issuer: String, 
+        issuer: String,
         audience: Audience,
         channel: V::Channel,
         base_url: &str,
@@ -67,14 +67,14 @@ impl Authentication for User {
         db: &DB, 
         hasher: &H, 
         paseto: &Paseto,
-        issuer: String, 
+        issuer: String,
         audience: Audience,
         channel: V::Channel,
         base_url: &str,
         verifyer: &V
     ) -> Result<Option<(Self, Token)>, Self::Error> {
         let key = Key::Sk(contact);
-        let mut user = db.get_item(key).await.map_err(Error::new)?;
+        let mut user = db.get_item(key).await.map_err(Error::new)?.ok_or(Error::item_not_found(User::NAME))?;
         
         let contact = user.contact.clone().contact()?;
         

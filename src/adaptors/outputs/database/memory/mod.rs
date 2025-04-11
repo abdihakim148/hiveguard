@@ -109,9 +109,10 @@ where
     /// Retrieves a user by primary key (ID) or secondary key (email/phone)
     /// 
     /// # Returns
-    /// - `Some(User)` if found
-    /// - `None` if no matching user exists
-    async fn get_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>) -> Result<User, Self::Error> {
+    /// - `Ok(Some(User))` if found
+    /// - `Ok(None)` if no matching user exists
+    /// - `Err(Error)` on internal error
+    async fn get_item(&self, key: Key<&<User as Item>::PK, &<User as Item>::SK>) -> Result<Option<User>, Self::Error> {
         self.users.get_item(key).await
     }
 }
@@ -186,9 +187,10 @@ where
     /// Retrieves an organisation by primary key (ID) or secondary key (name)
     /// 
     /// # Returns
-    /// - `Some(Organisation)` if found
-    /// - `None` if no matching organisation exists
-    async fn get_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>) -> Result<Organisation, Self::Error> {
+    /// - `Ok(Some(Organisation))` if found
+    /// - `Ok(None)` if no matching organisation exists
+    /// - `Err(Error)` on internal error
+    async fn get_item(&self, key: Key<&<Organisation as Item>::PK, &<Organisation as Item>::SK>) -> Result<Option<Organisation>, Self::Error> {
         self.organisations.get_item(key).await
     }
 }
@@ -258,9 +260,10 @@ where
     /// Retrieves a member by organisation ID, user ID, or both
     /// 
     /// # Returns
-    /// - `Some(Member)` if found
-    /// - `None` if no matching member exists
-    async fn get_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>) -> Result<Member, Self::Error> {
+    /// - `Ok(Some(Member))` if found
+    /// - `Ok(None)` if no matching member exists
+    /// - `Err(Error)` on internal error
+    async fn get_item(&self, key: Key<&<(Organisation, User) as Item>::PK, &<(Organisation, User) as Item>::SK>) -> Result<Option<Member>, Self::Error> {
         self.members.get_item(key).await
     }
 }
@@ -332,9 +335,10 @@ where
     /// Retrieves a service by primary key (ID) or secondary key (owner ID)
     /// 
     /// # Returns
-    /// - `Some(Service)` if found
-    /// - `None` if no matching service exists
-    async fn get_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>) -> Result<Service, Self::Error> {
+    /// - `Ok(Some(Service))` if found
+    /// - `Ok(None)` if no matching service exists
+    /// - `Err(Error)` on internal error
+    async fn get_item(&self, key: Key<&<Service as Item>::PK, &<Service as Item>::SK>) -> Result<Option<Service>, Self::Error> {
         self.services.get_item(key).await
     }
 }
@@ -399,11 +403,14 @@ where
         // Find the user ID based on the key
         let user_id = match key {
             Key::Pk(pk) => *pk,
-            Key::Sk(sk) => self.users.pk(sk)?.ok_or(Error::UserNotFound)?,
+            Key::Sk(sk) => match self.users.pk(sk)? {
+                Some(pk) => pk,
+                None => return Ok(Vec::new()) // User not found, return empty list
+            },
             Key::Both((pk, _)) => *pk
         };
 
-        // Collect organisation IDs and member information in a single read lock
+        // Collect organisation IDs and member information
         let (org_ids, members_map) = {
             
             let org_ids = self.members.user_index.read()?.get(&user_id).cloned().unwrap_or_default();
@@ -447,7 +454,7 @@ where
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => match self.organisations.pk(sk)? {
                 Some(pk) => pk,
-                None => return Err(Error::OrganisationNotFound)
+                None => return Ok(Vec::new()) // Organisation not found, return empty list
             },
             Key::Both((pk, _)) => *pk
         };
@@ -488,7 +495,7 @@ where
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => match self.organisations.pk(sk)? {
                 Some(pk) => pk,
-                None => return Err(Error::OrganisationNotFound)
+                None => return Ok(Vec::new()) // Organisation not found, return empty list
             },
             Key::Both((pk, _)) => *pk
         };
@@ -530,7 +537,7 @@ where
             Key::Pk(pk) => *pk,
             Key::Sk(sk) => match self.users.pk(sk)? {
                 Some(pk) => pk,
-                None => return Err(Error::UserNotFound)
+                None => return Ok(Vec::new()) // User not found, return empty list
             },
             Key::Both((pk, _)) => *pk
         };
@@ -581,9 +588,11 @@ where
     /// Retrieves a verification by primary key (contact) or secondary key (ID)
     /// 
     /// # Returns
-    /// - The verification if found
-    /// - Error if no matching verification exists
-    async fn get_item(&self, key: Key<&<Verification<ID> as Item>::PK, &<Verification<ID> as Item>::SK>) -> Result<Verification<ID>, Self::Error> {
+    /// - `Ok(Some(Verification))` if found and valid
+    /// - `Ok(None)` if not found
+    /// - `Err(Error::VerificationExpired)` if found but expired
+    /// - `Err(Error)` on internal error
+    async fn get_item(&self, key: Key<&<Verification<ID> as Item>::PK, &<Verification<ID> as Item>::SK>) -> Result<Option<Verification<ID>>, Self::Error> {
         self.verifications.get_item(key).await
     }
 }
@@ -603,13 +612,13 @@ mod tests {
         User {
             id: Id(ObjectId::new()),
             username: "testuser".to_string(),
-            first_name: "Test".to_string(),
-            last_name: "User".to_string(),
+            name: "Test User".to_string(),
             password: "hashedpassword".to_string(),
             contact: Contact::Both(
                 Phone::New("1234567890".to_string()),
                 EmailAddress::New("test@example.com".parse().unwrap())
             ),
+            profile: None,
             login: LoginMethod::Password
         }
     }
@@ -647,12 +656,17 @@ mod tests {
         db.create_item(member).await.unwrap();
 
         // Test getting all organisations
-        let orgs: Vec<Organisation> = GetItems::<User, Organisation>::get_items(&db, Key::Pk(&user.id), false).await.unwrap();
+        let orgs_result: Result<Vec<Organisation>, Error> = GetItems::<User, Organisation>::get_items(&db, Key::Pk(&user.id), false).await;
+        assert!(orgs_result.is_ok());
+        let orgs = orgs_result.unwrap();
         assert!(!orgs.is_empty());
         assert_eq!(orgs.len(), 1);
+        // assert_eq!(orgs[0], org); // Direct comparison might fail if internal state differs
 
         // Test getting owned organisations only (should be empty as member.owner = false)
-        let owned_orgs: Vec<Organisation> = GetItems::<User, Organisation>::get_items(&db, Key::Pk(&user.id), true).await.unwrap();
+        let owned_orgs_result: Result<Vec<Organisation>, Error> = GetItems::<User, Organisation>::get_items(&db, Key::Pk(&user.id), true).await;
+        assert!(owned_orgs_result.is_ok());
+        let owned_orgs = owned_orgs_result.unwrap();
         assert!(owned_orgs.is_empty());
     }
 
@@ -669,12 +683,17 @@ mod tests {
         db.create_item(member).await.unwrap();
 
         // Test getting all users
-        let users: Vec<User> = GetItems::<Organisation, User>::get_items(&db, Key::Pk(&org.id), false).await.unwrap();
+        let users_result: Result<Vec<User>, Error> = GetItems::<Organisation, User>::get_items(&db, Key::Pk(&org.id), false).await;
+        assert!(users_result.is_ok());
+        let users = users_result.unwrap();
         assert!(!users.is_empty());
         assert_eq!(users.len(), 1);
+        // assert_eq!(users[0], user); // Direct comparison might fail if internal state differs
 
         // Test getting owners only (should be empty as member.owner = false)
-        let owners: Vec<User> = GetItems::<Organisation, User>::get_items(&db, Key::Pk(&org.id), true).await.unwrap();
+        let owners_result: Result<Vec<User>, Error> = GetItems::<Organisation, User>::get_items(&db, Key::Pk(&org.id), true).await;
+        assert!(owners_result.is_ok());
+        let owners = owners_result.unwrap();
         assert!(owners.is_empty());
     }
 
@@ -691,14 +710,18 @@ mod tests {
         db.create_item(member.clone()).await.unwrap();
 
         // Test getting all members and users
-        let members: Vec<(Member, User)> = GetItems::<Organisation, (Member, User)>::get_items(&db, Key::Pk(&org.id), false).await.unwrap();
+        let members_result: Result<Vec<(Member, User)>, Error> = GetItems::<Organisation, (Member, User)>::get_items(&db, Key::Pk(&org.id), false).await;
+        assert!(members_result.is_ok());
+        let members = members_result.unwrap();
         assert!(!members.is_empty());
         assert_eq!(members.len(), 1);
         assert_eq!(members[0].0, member);
         assert_eq!(members[0].1, user);
 
         // Test getting owner members only (should be empty as member.owner = false)
-        let owners: Vec<(Member, User)> = GetItems::<Organisation, (Member, User)>::get_items(&db, Key::Pk(&org.id), true).await.unwrap();
+        let owners_result: Result<Vec<(Member, User)>, Error> = GetItems::<Organisation, (Member, User)>::get_items(&db, Key::Pk(&org.id), true).await;
+        assert!(owners_result.is_ok());
+        let owners = owners_result.unwrap();
         assert!(owners.is_empty());
     }
 
@@ -715,14 +738,18 @@ mod tests {
         db.create_item(member.clone()).await.unwrap();
 
         // Test getting all members and organisations
-        let members: Vec<(Member, Organisation)> = GetItems::<User, (Member, Organisation)>::get_items(&db, Key::Pk(&user.id), false).await.unwrap();
+        let members_result: Result<Vec<(Member, Organisation)>, Error> = GetItems::<User, (Member, Organisation)>::get_items(&db, Key::Pk(&user.id), false).await;
+        assert!(members_result.is_ok());
+        let members = members_result.unwrap();
         assert!(!members.is_empty());
         assert_eq!(members.len(), 1);
         assert_eq!(members[0].0, member);
         assert_eq!(members[0].1, org);
 
         // Test getting owner memberships only (should be empty as member.owner = false)
-        let owners: Vec<(Member, Organisation)> = GetItems::<User, (Member, Organisation)>::get_items(&db, Key::Pk(&user.id), true).await.unwrap();
+        let owners_result: Result<Vec<(Member, Organisation)>, Error> = GetItems::<User, (Member, Organisation)>::get_items(&db, Key::Pk(&user.id), true).await;
+        assert!(owners_result.is_ok());
+        let owners = owners_result.unwrap();
         assert!(owners.is_empty());
     }
 }

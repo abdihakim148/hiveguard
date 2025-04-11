@@ -48,6 +48,7 @@ impl Responder for Verification {
 
 
 impl<ID: PartialEq + Clone + std::hash::Hash> Item for Verification<ID> {
+    const NAME: &'static str = "verification";
     /// This is the owner id
     type PK = Either<Phone, EmailAddress>;
     /// This is the verification id

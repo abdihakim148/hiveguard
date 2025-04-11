@@ -1,6 +1,6 @@
-use crate::domain::types::Error;
 use std::convert::{TryFrom, TryInto};
 use serde::{Serialize, Deserialize};
+use crate::domain::types::Error;
 use std::collections::HashMap;
 use super::number::Number;
 use bson::oid::ObjectId;
@@ -18,6 +18,16 @@ pub enum Value {
     String(String),
     Object(HashMap<String, Value>),
     Vec(Vec<Value>),
+}
+
+
+impl Value {
+    pub fn option<T: TryFrom<Value, Error = Error>>(self) -> Result<Option<T>, Error> {
+        match self {
+            Self::None => Ok(None),
+            _ => Ok(Some(self.try_into()?))
+        }
+    }
 }
 
 /// Converts a `bool` into a `Value`.

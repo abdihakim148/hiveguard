@@ -33,11 +33,15 @@ pub enum Error {
     SocialProviderNotFound { 
         provider: String 
     },
+    CouldNotGetEmail(Box<dyn StdError + Send + Sync + 'static>),
+    CouldNotGetPhone(Box<dyn StdError + Send + Sync + 'static>),
+    CouldNotGetNecessaryInfo(Box<dyn StdError + Send + Sync + 'static>),
     
     /// Returned when an invalid authorization code is provided
     IncorrectCode,
     
     // Resource errors
+    ItemNotFound(&'static str),
     ResourceNotFound { resource: String },
     DuplicateResource { resource: String },
     
@@ -119,6 +123,31 @@ impl Error {
             source: Some(error.into())
         }
     }
+    
+    pub fn could_not_get_email<E>(error: E) -> Self 
+    where 
+        E: Into<Box<dyn StdError + Send + Sync + 'static>> 
+    {
+        Self::CouldNotGetEmail(error.into())
+    }
+
+    pub fn could_not_get_phone<E>(error: E) -> Self 
+    where 
+        E: Into<Box<dyn StdError + Send + Sync + 'static>> 
+    {
+        Self::CouldNotGetPhone(error.into())
+    }
+
+    pub fn could_not_get_necessary_info<E>(error: E) -> Self 
+    where 
+        E: Into<Box<dyn StdError + Send + Sync + 'static>> 
+    {
+        Self::CouldNotGetNecessaryInfo(error.into())
+    }
+
+    pub fn item_not_found(item_name: &'static str) -> Self {
+        Self::ItemNotFound(item_name)
+    }
 
     pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ValidationError {
@@ -154,8 +183,15 @@ impl Display for Error {
                 write!(f, "Incorrect social provider. Expected {}, found {}", expected, found),
             Self::SocialProviderNotFound { provider } => 
                 write!(f, "Social provider {} not found", provider),
+            Self::CouldNotGetEmail(_) =>
+                write!(f, "Failed to retrieve email from the provider. Please ensure the account has a verified email accessible to us, or try another login method."),
+            Self::CouldNotGetPhone(_) =>
+                write!(f, "Failed to retrieve phone number from the provider. Please ensure the account has a verified phone number accessible to us, or try another login method."),
+            Self::CouldNotGetNecessaryInfo(_) =>
+                write!(f, "Failed to retrieve necessary information from the provider. Please ensure the account profile is complete and accessible, or try another login method."),
             Self::IncorrectCode => 
                 write!(f, "Invalid authorization code"),
+            Self::ItemNotFound(item_name) => write!(f, "{} not found", item_name),
             Self::ResourceNotFound { resource } => write!(f, "{} not found", resource),
             Self::DuplicateResource { resource } => write!(f, "{} already exists", resource),
             Self::ValidationError { field, message } => write!(f, "{}: {}", field, message),
@@ -176,6 +212,7 @@ impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::Internal { source, .. } => source.as_ref().map(|e| e.as_ref() as &(dyn StdError + 'static)),
+            Self::CouldNotGetEmail(err) | Self::CouldNotGetPhone(err) | Self::CouldNotGetNecessaryInfo(err) => Some(err.as_ref()),
             _ => None
         }
     }
@@ -191,6 +228,9 @@ impl ErrorTrait for Error {
                     format!("Internal error: {}", message)
                 }
             },
+            Self::CouldNotGetEmail(err) => format!("Could not get email from provider: {}", err),
+            Self::CouldNotGetPhone(err) => format!("Could not get phone from provider: {}", err),
+            Self::CouldNotGetNecessaryInfo(err) => format!("Could not get necessary info from provider: {}", err),
             Self::New(err) => err.log_message(),
             _ => self.to_string()
         }
@@ -198,8 +238,13 @@ impl ErrorTrait for Error {
 
     fn user_message(&self) -> String {
         match self {
+            // Cases returning generic internal error message
             Self::Internal { .. } | Self::ContactFeatureConflict => "An internal error occurred".to_string(),
+            // Cases returning specific, user-friendly messages from Display impl (which now includes suggestion)
+            Self::CouldNotGetEmail(_) | Self::CouldNotGetPhone(_) | Self::CouldNotGetNecessaryInfo(_) => self.to_string(),
+            // Delegate to wrapped error
             Self::New(err) => err.user_message(),
+            // Default: use Display impl
             _ => self.to_string()
         }
     }
@@ -218,9 +263,10 @@ impl ErrorTrait for Error {
             Self::InvalidPhone |
             Self::ValidationError { .. } |
             Self::InvalidFormat { .. } | Self::PhoneNumberRequired | Self::EmailAddressRequired | Self::ContactAlreadyVerified => StatusCode::BAD_REQUEST,
-            Self::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
+            Self::ItemNotFound(_) | Self::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
             Self::DuplicateResource { .. } => StatusCode::CONFLICT,
             Self::Internal { .. } | Self::ContactFeatureConflict => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::CouldNotGetEmail(_) | Self::CouldNotGetPhone(_) | Self::CouldNotGetNecessaryInfo(_) => StatusCode::BAD_GATEWAY,
             Self::New(err) => err.status()
         }
     }

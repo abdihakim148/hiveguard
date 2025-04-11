@@ -36,6 +36,7 @@ impl Responder for Organisation {
 }
 
 impl Item for Organisation {
+    const NAME: &'static str = "organisation";
     /// This is the Organisation id.
     type PK = Id;
     /// This is the name of the organisation.

@@ -35,6 +35,7 @@ impl Responder for Resource {
 }
 
 impl Item for Resource {
+    const NAME: &'static str = "resource";
     /// This is the resource's owner_id
     type PK = Id;
     /// This is the resource id

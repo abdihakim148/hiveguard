@@ -35,6 +35,7 @@ impl Responder for Role {
 }
 
 impl Item for Role {
+    const NAME: &'static str = "role";
     /// This is the Role's owner_id
     type PK = Id;
     /// This is the role id

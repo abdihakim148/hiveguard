@@ -16,19 +16,13 @@ use std::any::type_name;
 /// Represents errors that can occur during memory database operations
 #[derive(Debug)]
 pub enum Error {
-    /// User was not found in the database
-    UserNotFound,
     /// User already exists with the given email address
     UserWithEmailExists,
     /// User already exists with the given phone number
     UserWithPhoneExists,
-    OrganisationNotFound,
     OrganisationWithNameExists,
-    MemberNotFound,
     MemberAlreadyExists,
-    ServiceNotFound,
     ServiceAlreadyExists,
-    VerificationNotFound,
     VerificationExpired,
     CannotDeleteFields(HashSet<String>),
     CannotDeleteContact,
@@ -41,16 +35,11 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UserNotFound => write!(f, "User not found"),
             Self::UserWithEmailExists => write!(f, "User with this email already exists"),
             Self::UserWithPhoneExists => write!(f, "User with this phone number already exists"),
-            Self::OrganisationNotFound => write!(f, "Organisation not found"),
             Self::OrganisationWithNameExists => write!(f, "Organisation with this name already exists"),
-            Self::MemberNotFound => write!(f, "Member not found"),
             Self::MemberAlreadyExists => write!(f, "Member already exists in the organisation"),
-            Self::ServiceNotFound => write!(f, "service not found"),
             Self::ServiceAlreadyExists => write!(f, "Service with this name already exists"),
-            Self::VerificationNotFound => write!(f, "Verification code not found"),
             Self::VerificationExpired => write!(f, "Verification code has expired"),
             Self::CannotDeleteFields(fields) => {
                 if fields.len() == 1 {
@@ -91,13 +80,9 @@ impl ErrorTrait for Error {
     #[cfg(feature = "http")]
     fn status(&self) -> StatusCode {
         match self {
-            Self::UserWithEmailExists | 
+            Self::UserWithEmailExists |
             Self::UserWithPhoneExists | Self::MemberAlreadyExists |
-            Self::OrganisationWithNameExists | Self::ServiceAlreadyExists | Self::ServiceAlreadyExists => StatusCode::CONFLICT,
-            Self::UserNotFound |
-            Self::OrganisationNotFound | Self::ServiceNotFound |
-            Self::MemberNotFound | Self::ServiceNotFound | 
-            Self::VerificationNotFound => StatusCode::NOT_FOUND,
+            Self::OrganisationWithNameExists | Self::ServiceAlreadyExists => StatusCode::CONFLICT,
             Self::VerificationExpired => StatusCode::GONE,
             Self::CannotDeleteFields(_) | Self::CannotDeleteContact | Self::UnsupportedOperation => StatusCode::BAD_REQUEST,
             Self::PoisonedLock(_) => StatusCode::INTERNAL_SERVER_ERROR,

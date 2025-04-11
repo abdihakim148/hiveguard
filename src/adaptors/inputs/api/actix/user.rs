@@ -1,7 +1,6 @@
 use crate::domain::{services::{Get, Paseto, Update, Verification, Authentication}, types::{Audience, Config, Contact, Either as DomainEither, EmailAddress, Id, Key, User, Value, VerificationMedia, Phone}};
 use actix_web::{post, get, patch, web::{self, Json, Data, Either, Form}, Responder, HttpResponse, HttpRequest, http::header};
 use crate::ports::outputs::database::GetItem;
-use crate::ports::outputs::oauth::OAuth; // Updated path for OAuth trait
 use super::{Response, DB, Verifyer};
 use std::collections::HashMap;
 use super::error::Error;
@@ -277,6 +276,27 @@ async fn oauth_login_confirm(req: HttpRequest, path: web::Path<String>, query: w
     let url = format!("{}://{}/login/oauth/{}/confirm", scheme, config.host, provider);
     let redirect_url = Url::parse(&url).expect("THIS SHOULD NEVER HAPPEN: Invalid RedirectUrl");
 
-    let user = oauth.authorize(provider, code, &redirect_url).await?;
-    Ok(HttpResponse::Ok().json(user))
+    let scheme_holder = req.connection_info();
+    let scheme = scheme_holder.scheme();
+    let base_url = format!("{}://{}/verify/confirm", scheme, config.host);
+
+    let channel = Default::default();
+
+    let db = config.db();
+    let paseto = config.paseto();
+    let verifyer = config.verifyer();
+    let issuer = config.name.clone();
+    let audience = Audience::None;
+
+    let result = oauth.authenticate(provider, &redirect_url, db, verifyer, code, &base_url, channel, paseto, issuer, audience).await?;
+
+    if let Some((user, token)) = result {
+        let token = token.try_sign(&paseto.keys)?;
+        // Return bearer token in JSON
+        return Ok(HttpResponse::Ok().insert_header((header::AUTHORIZATION, format!("Bearer {token}"))).json(user))
+    }
+
+    Ok(HttpResponse::Accepted().json(json!({
+        "message": "User registered. contact info is not verified. we have sent a verification code to your contact. Please verify your contact information."
+    })))
 }

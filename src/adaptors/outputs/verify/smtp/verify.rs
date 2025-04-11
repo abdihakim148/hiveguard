@@ -51,7 +51,7 @@ impl Verify<EmailAddress> for Smtp {
         // Retrieve the verification from the database
         let contact = Either::Right(email.clone());
         let key = Key::Pk(&contact);
-        let verification = db.get_item(key).await.map_err(Self::Error::err)?;
+        let verification = db.get_item(key).await.map_err(Self::Error::err)?.ok_or(Error::InvalidCode)?;
 
         let valid = match code {
             Either::Left(code) => {

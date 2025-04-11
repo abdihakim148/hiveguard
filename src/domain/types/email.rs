@@ -25,15 +25,14 @@ impl EmailAddress {
     /// # Returns
     ///
     /// * `Result<Self>` - Returns `Ok(Self)` if the email is valid, `Err(Error)` otherwise.
-    pub fn new(email: &str) -> Result<Self, Error> {
+    pub fn new(email: &str, verified: bool) -> Result<Self, Error> {
         let address: Address = email.parse().map_err(|_| Error::InvalidEmail)?;
-        Ok(EmailAddress::New(address))
+        match verified {
+            true => Ok(EmailAddress::Verified(address)),
+            false => Ok(EmailAddress::New(address))
+        }
     }
-}
 
-
-
-impl EmailAddress {
     pub fn verified(&self) -> bool {
         match &self {
             EmailAddress::New(_) => false,
@@ -81,7 +80,7 @@ impl<'de> Deserialize<'de> for EmailAddress {
             where
                 E: de::Error,
             {
-                EmailAddress::new(value).map_err(de::Error::custom)
+                EmailAddress::new(value, false).map_err(de::Error::custom)
             }
 
             fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -110,13 +109,8 @@ impl<'de> Deserialize<'de> for EmailAddress {
                     }
                 }
                 let email: String = email.ok_or_else(|| de::Error::missing_field("email"))?;
-                let email_verified: bool = email_verified.unwrap_or(false);
-                let address: Address = email.parse().map_err(de::Error::custom)?;
-                if email_verified {
-                    Ok(EmailAddress::Verified(address))
-                } else {
-                    Ok(EmailAddress::New(address))
-                }
+                let verified: bool = email_verified.unwrap_or(false);
+                EmailAddress::new(&email, verified).map_err(de::Error::custom)
             }
         }
 
@@ -131,9 +125,8 @@ impl TryFrom<Value> for EmailAddress {
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
-            Value::String(string) => {
-                let address: Address = string.parse().map_err(|_| Error::InvalidEmail)?;
-                Ok(EmailAddress::New(address))
+            Value::String(email) => {
+                EmailAddress::new(&email, false)
             }
             Value::Object(map) => Ok(map.try_into()?),
             _ => Err(Error::invalid_format("EmailAddress", format!("{:?}", value), None)),
@@ -146,16 +139,12 @@ impl TryFrom<HashMap<String, Value>> for EmailAddress {
     type Error = Error;
     fn try_from(mut map: HashMap<String, Value>) -> Result<Self, Self::Error> {
         if let Some(email) = map.remove("email") {
-            let email_verified = match map.remove("email_verified") {
+            let verified = match map.remove("email_verified") {
                 Some(value) => value.try_into()?,
                 None => false,
             };
-            let email_str: String = email.try_into()?;
-            let address: Address = email_str.parse()?;
-            return match email_verified {
-                true => Ok(EmailAddress::Verified(address)),
-                false => Ok(EmailAddress::New(address)),
-            };
+            let email: String = email.try_into()?;
+            return EmailAddress::new(&email, verified)
         }
         let value = Value::Object(map);
         Err(Error::invalid_format("EmailAddress", format!("{:?}", value), None))
@@ -203,7 +192,7 @@ mod tests {
     #[test]
     fn test_email_new_valid() {
         let email = "test@example.com";
-        let result = EmailAddress::new(email);
+        let result = EmailAddress::new(email, false);
         assert!(result.is_ok());
     }
 
@@ -217,13 +206,13 @@ mod tests {
     #[test]
     fn test_email_new_invalid() {
         let email = "invalid-email";
-        let result = EmailAddress::new(email);
+        let result = EmailAddress::new(email, false);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_serialize_new_email() {
-        let email = EmailAddress::new("test@example.com").unwrap();
+        let email = EmailAddress::new("test@example.com", false).unwrap();
         let serialized = serde_json::to_string(&email).unwrap();
         assert_eq!(serialized, "{\"email\":\"test@example.com\",\"email_verified\":false}");
     }
@@ -239,7 +228,7 @@ mod tests {
     fn test_deserialize_new_email() {
         let data = "\"test@example.com\"";
         let email: EmailAddress = serde_json::from_str(data).unwrap();
-        assert_eq!(email, EmailAddress::new("test@example.com").unwrap());
+        assert_eq!(email, EmailAddress::new("test@example.com", false).unwrap());
     }
 
     #[test]

@@ -21,7 +21,7 @@ impl<V: Verify<EmailAddress>> Verification<EmailAddress, User> for V {
         };
         let key = Key::Sk(&contact);
         // just making sure that a user with the provided contact exists.
-        let user = db.get_item(key).await.map_err(Error::new)?;
+        let user = db.get_item(key).await.map_err(Error::new)?.ok_or(Error::item_not_found(User::NAME))?;
         if user.contact.verified()? {
             return Err(Error::ContactAlreadyVerified)
         }

@@ -106,10 +106,10 @@ impl GetItem<Service> for Services {
     async fn get_item(
         &self,
         key: Key<&<Service as Item>::PK, &<Service as Item>::SK>,
-    ) -> Result<Service, Self::Error> {
+    ) -> Result<Option<Service>, Self::Error> {
         let option = match key {
             Key::Pk(pk) | Key::Both((pk, _)) => self.services.read().map(|services| services.get(pk).cloned())?,
-            Key::Sk(sk) => {
+            Key::Sk(sk) => { // Look up by name across all owners
                 let owner_index = self.owner_index.read()?;
                 owner_index
                     .iter()
@@ -117,11 +117,11 @@ impl GetItem<Service> for Services {
                         owner_services.get(sk)
                             .and_then(|service_id| self.services.read().map(|services| services.get(service_id).cloned()).ok())
                     )
-                    .flatten()
+                    .flatten() // Flatten Option<Option<Service>> to Option<Service>
             }
         };
 
-        option.ok_or(Error::ServiceNotFound)
+        Ok(option)
     }
 }
 
@@ -157,18 +157,28 @@ impl UpdateItem<Service> for Services {
         map: Map,
     ) -> Result<Service, Self::Error> {
         // First, retrieve the existing service
-        let mut service = self.get_item(key.clone()).await?;
+        let mut service = self.get_item(key.clone()).await?.ok_or(Error::UnsupportedOperation)?; // Cannot patch non-existent service
         
         // Update basic fields
         if let Some(value) = map.get("new_name") {
             let new_name: String = value.clone().try_into()?;
 
             // Validate old_name matches the current service name
+            // Validate old_name matches the current service name if provided
             if let Some(old_name_value) = map.get("old_name") {
                 let old_name: String = old_name_value.clone().try_into()?;
                 if old_name != service.name {
-                    return Err(Error::ServiceNotFound);
+                    // If old_name is provided but doesn't match, treat as error
+                    return Err(Error::UnsupportedOperation); 
                 }
+            }
+            
+            // Check if the new name already exists for the owner before changing
+            self.does_not_exist(&service.owner_id, &new_name)?;
+            
+            // Remove old name from index before updating service name
+            if let Some(owner_services) = self.owner_index.write()?.get_mut(&service.owner_id) {
+                owner_services.remove(&service.name);
             }
 
             service.name = new_name;
@@ -209,33 +219,16 @@ impl DeleteItem<Service> for Services {
         &self,
         key: Key<&<Service as Item>::PK, &<Service as Item>::SK>,
     ) -> Result<(), Self::Error> {
-        let service_id = match key {
-            Key::Pk(pk) => *pk,
-            Key::Both((pk, sk)) => {
-                let owner_index = self.owner_index.read()?;
-                if let Some(owner_services) = owner_index.get(pk) {
-                    if let Some(service_id) = owner_services.get(sk) {
-                        service_id.clone()
-                    } else {
-                        return Err(Error::ServiceNotFound);
-                    }
-                } else {
-                    return Err(Error::ServiceNotFound);
-                }
-            }
-            Key::Sk(sk) => {
-                let owner_index = self.owner_index.read()?;
-                let service_id = owner_index
-                    .iter()
-                    .find_map(|(_, owner_services)| owner_services.get(sk).cloned())
-                    .ok_or(Error::ServiceNotFound)?;
-                service_id
-            }
+        // Retrieve the service first to get its details for index removal
+        let service = match self.get_item(key).await? {
+            Some(service) => service,
+            None => return Ok(()) // Service not found, deletion is idempotent
         };
 
-        // Remove from services
-        let mut services = self.services.write()?;
-        let service = services.remove(&service_id).ok_or(Error::ServiceNotFound)?;
+        // Remove from primary services map
+        if self.services.write()?.remove(&service.id).is_none() {
+             return Ok(()); // Already removed by another thread, idempotent
+        }
 
         // Remove from owner index
         let mut owner_index = self.owner_index.write()?;
@@ -315,15 +308,26 @@ mod tests {
         let services = Services::default();
         let service = create_test_service();
         let _ = services.create_item(service.clone()).await;
+        let original_name = service.name.clone();
 
         let patch_map = HashMap::from([
             ("new_name".to_string(), Value::String("Updated Service".to_string())),
-            ("old_name".to_string(), Value::String(service.name.clone()))
+            ("old_name".to_string(), Value::String(original_name.clone())) // Provide correct old name
         ]);
 
         let result = services.patch_item(Key::Pk(&service.id), patch_map).await;
-        assert!(result.is_ok(), "Patching service name should succeed");
-        assert_eq!(result.unwrap().name, "Updated Service", "Service name should be updated");
+        assert!(result.is_ok(), "Patching service name should succeed: {:?}", result.err());
+        let updated_service = result.unwrap();
+        assert_eq!(updated_service.name, "Updated Service", "Service name should be updated");
+
+        // Verify old name is gone from index
+        let old_pk = services.pk(&service.owner_id, &original_name).unwrap();
+        assert!(old_pk.is_none(), "Old service name should not exist in index");
+
+        // Verify new name exists in index
+        let new_pk = services.pk(&service.owner_id, "Updated Service").unwrap();
+        assert!(new_pk.is_some(), "New service name should exist in index");
+        assert_eq!(new_pk.unwrap(), service.id);
     }
 
     #[tokio::test]

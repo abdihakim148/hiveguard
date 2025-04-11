@@ -56,6 +56,7 @@ impl Responder for Scope {
 
 
 impl Item for Scope {
+    const NAME: &'static str = "scope";
     /// This is the id of the Owner of the scope.
     type PK = Id;
     /// This is the name of the scope.

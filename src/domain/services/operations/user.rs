@@ -1,5 +1,5 @@
-use crate::ports::{Error, outputs::database::{GetItem, UpdateItem, Map}};
-use crate::domain::types::{User, Id, Key, Value};
+use crate::ports::outputs::database::{GetItem, Item, Map, UpdateItem};
+use crate::domain::types::{User, Id, Key, Value, Error};
 use std::collections::HashMap;
 use super::{Get, Update};
 
@@ -10,7 +10,7 @@ impl Get for User {
 
     async fn get<DB: GetItem<Self>>(id: &Self::Filter, db: &DB) -> Result<Self, Self::Error> {
         let key = Key::Pk(id);
-        let mut user = db.get_item(key).await?;
+        let mut user = db.get_item(key).await.map_err(Error::new)?.ok_or(Error::item_not_found(User::NAME))?;
         user.password = Default::default();
         Ok(user)
     }
@@ -38,10 +38,10 @@ impl Update for User {
 
         let key = Key::Pk(id);
         if update.is_empty() {
-            return Ok(db.get_item(key).await?)
+            return Ok(db.get_item(key).await.map_err(Error::new)?.ok_or(Error::item_not_found(User::NAME))?)
         }
 
-        let mut user = db.patch_item(key, update).await?;
+        let mut user = db.patch_item(key, update).await.map_err(Error::new)?;
         user.password = Default::default();
         Ok(user)
     }

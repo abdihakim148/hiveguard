@@ -8,7 +8,9 @@ use chrono::Duration;
 use url::Url;
 
 #[dynamic]
-pub static CLIENT: Client = Client::new();
+pub static CLIENT: Client = client();
+
+const USER_AGENT: &'static str = "Hiveguard/0.1";
 
 /// Trait defining OAuth authentication flow
 pub trait OAuth {
@@ -36,7 +38,7 @@ pub trait OAuth {
     }
 
     /// exchange code with a token
-    async fn authorize(&self, code: &str, redirect_url: &Url) -> Result<TokenResponse, impl ErrorTrait + Send + Sync> {
+    async fn authorize(&self, code: &str, redirect_url: &Url) -> Result<TokenResponse, Error> {
         let client = self.client();
         let form: HashMap<&str, &str> = [
             ("grant_type", "authorization_code"),
@@ -49,7 +51,7 @@ pub trait OAuth {
         .header("Accept", "application/json")
         .form(&form).send().await.map_err(Error::internal)?
         .json().await.map_err(Error::internal)?;
-        Ok::<_, Error>(res)
+        Ok(res)
     }
 }
 
@@ -62,4 +64,9 @@ pub struct TokenResponse {
     pub scope: Option<String>,
     pub id_token: Option<String>,
     pub refresh_token: Option<String>
+}
+
+
+fn client() -> Client {
+    Client::builder().user_agent(USER_AGENT).build().expect("COULD NOT CREATE A HTTP CLIENT WITH A USER AGENT")
 }

@@ -29,13 +29,9 @@ pub struct User {
     #[serde(default)]
     pub id: Id,
     /// The username of the user.
-    #[serde(alias = "user_name")]
     pub username: String,
-    /// The first name of the user.
-    pub first_name: String,
-    /// The last name of the user.
-    pub last_name: String,
-    /// The email address of the user.
+    pub name: String,
+    /// The email address or phone or both.
     #[serde(flatten)]
     pub contact: Contact,
     /// Authentication method used by the user
@@ -43,10 +39,10 @@ pub struct User {
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]
     pub password: String,
+    pub profile: Option<String>
 }
 
 impl User {
-    pub const FIELDS: [&str; 9] = ["id", "username", "first_name", "last_name", "email", "email_verified", "phone", "phone_verified", "password"];
     pub fn token(&self, issuer: String, audience: Audience, ttl: i64) -> Token {
         let id = Default::default();
         let subject = self.id;
@@ -55,29 +51,6 @@ impl User {
         let expiration = issued_at + Duration::seconds(ttl);
         let claims = Default::default();
         Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims}
-    }
-
-    pub fn from_provider(mut map: HashMap<String, Value>, fields: &[Option<String>; Self::FIELDS.len()], provider_name: &str) -> Result<User, Error> {
-        let fields = fields.into_iter().enumerate().map(|(index, field)|{
-            match field {
-                Some(field) => field.as_str(),
-                None => Self::FIELDS[index]
-            }
-        }).collect::<Box<[&str]>>();
-        let id = Default::default();
-        let username = map.remove(fields[1]).ok_or(Error::internal::<Box<dyn StdError + Send + Sync>>(format!("the provider {provider_name} hasn't provided the username field which was expected as {}", fields[1]).into()))?.try_into()?;
-        let first_name = map.remove(fields[2]).ok_or(Error::internal::<Box<dyn StdError + Send + Sync>>(format!("the provider {provider_name} hasn't provided the first_name field which was expected as {}", fields[2]).into()))?.try_into()?;
-        let last_name = map.remove(fields[3]).ok_or(Error::internal::<Box<dyn StdError + Send + Sync>>(format!("the provider {provider_name} hasn't provided the last_name field which was expected as {}", fields[3]).into()))?.try_into()?;
-        // change contact field names for easier conversion.
-        for index in 4..=7 {
-            if let Some(value) = map.remove(fields[index]) {
-                map.insert(Self::FIELDS[index].to_string(), value);
-            }
-        }
-        let contact = map.try_into().map_err(|err|Error::internal::<Box<dyn StdError + Send + Sync>>(format!("the provider {provider_name} has'nt provided contact details as supposed with error: {err}").into()))?;
-        let login = LoginMethod::Social(provider_name.to_string());
-        let password = Default::default();
-        Ok(Self{id, username, first_name, last_name, contact, login, password})
     }
 }
 
@@ -101,6 +74,7 @@ fn is_default<T: Default + PartialEq>(value: &T) -> bool {
 }
 
 impl Item for User {
+    const NAME: &'static str = "user";
     type PK = Id;
     type SK = Contact;
 }

@@ -7,6 +7,7 @@ use std::fmt;
 
 /// Enum representing various numerical types.
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Number {
     U8(u8),
     I8(i8),

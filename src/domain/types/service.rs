@@ -37,6 +37,7 @@ impl Responder for Service {
 
 
 impl Item for Service {
+    const NAME: &'static str = "service";
     /// This is the id.
     type PK = Id;
     /// This is the service name.

@@ -36,6 +36,7 @@ impl Responder for Member {
 }
 
 impl Item for Member {
+    const NAME: &'static str = "member";
     /// This is the org_id
     type PK = (Id, Id);
     /// This is the user_id
