@@ -54,7 +54,7 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
         
         
         // Attempt to verify the signature using the current public key.
-        let json = match PasetoBuilder::try_verify(signature, &public_key, footer, implicit_assertion) {
+        let json = match PasetoBuilder::<V4, Public>::try_verify(signature, &public_key, footer, implicit_assertion) {
             Ok(value) => {
                 value
             },
@@ -72,7 +72,7 @@ pub trait Paseto: Serialize + DeserializeOwned + 'static {
                         // Create a public key from the previous key.
                         let public_key = From::from(&key);
 
-                        match PasetoBuilder::try_verify(signature, &public_key, footer, implicit_assertion) {
+                        match PasetoBuilder::<V4, Public>::try_verify(signature, &public_key, footer, implicit_assertion) {
                             Ok(value) => {
                                 value
                             },

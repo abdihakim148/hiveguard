@@ -1,3 +1,4 @@
+mod tokenizer;
 mod provider;
 mod secret;
 mod github;
@@ -6,6 +7,7 @@ mod paseto;
 mod argon;
 mod serde;
 
+pub use tokenizer::*;
 pub use provider::*;
 pub use secret::*;
 pub use github::*;
