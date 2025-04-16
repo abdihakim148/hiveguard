@@ -1,6 +1,6 @@
 use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
+use super::{argon::Argon, Paseto as DepPaseto, Provider, Tokenizer, paseto::Paseto, jwt::Jwt};
 use crate::{domain::types::config::provider, ports::inputs::config::Config as ConfigTrait};
-use super::{argon::Argon, Paseto, Provider};
 use crate::ports::outputs::verify::Verifyer;
 use std::io::{Read, Write};
 use url::Host;
@@ -12,9 +12,10 @@ pub struct Config<DB, V> {
     pub host: String,
     database: DB,
     argon: Argon,
-    paseto: Paseto,
+    paseto: DepPaseto,
     verifyer: V,
-    oauth: Provider
+    oauth: Provider,
+    tokenizer: Tokenizer
 }
 
 
@@ -27,7 +28,7 @@ impl<DB, V> Config<DB, V> {
         &self.argon
     }
 
-    pub fn paseto(&self) -> &Paseto {
+    pub fn paseto(&self) -> &DepPaseto {
         &self.paseto
     }
 
@@ -37,6 +38,10 @@ impl<DB, V> Config<DB, V> {
 
     pub fn oauth(&self) -> &Provider {
         &self.oauth
+    }
+
+    pub fn tokenizer(&self) -> &Tokenizer {
+        &self.tokenizer
     }
 }
 
@@ -84,9 +89,13 @@ impl<DB: Serialize, V: Verifyer + Serialize> Serialize for Config<DB, V> {
         let mut state = serializer.serialize_struct("Config", 4)?;
         state.serialize_field("database", &self.database)?;
         state.serialize_field("argon", &self.argon)?;
-        state.serialize_field("paseto", &self.paseto)?;
+        state.serialize_field("dep_paseto", &self.paseto)?;
         state.serialize_field("verifyer", &self.verifyer)?;
         state.serialize_field("oauth", &self.oauth)?;
+        match &self.tokenizer {
+            Tokenizer::Jwt(jwt) => state.serialize_field("jwt", jwt)?,
+            Tokenizer::Paseto(paseto) => state.serialize_field("paseto", paseto)?
+        }
         state.end()
     }
 }
@@ -120,8 +129,9 @@ impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
         let paseto = Default::default();
         let verifyer = Default::default();
         let oauth = Default::default();
+        let tokenizer = Default::default();
 
-        Self{name, host, database, argon, paseto, verifyer, oauth}
+        Self{name, host, database, argon, paseto, verifyer, oauth, tokenizer}
     }
 }
 
@@ -160,6 +170,7 @@ where
                 let mut paseto = None;
                 let mut verifyer = None;
                 let mut oauth = None;
+                let mut tokenizer = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -193,9 +204,9 @@ where
                             }
                             argon = map.next_value()?;
                         },
-                        "paseto" => {
+                        "dep_paseto" => {
                             if paseto.is_some() {
-                                return Err(de::Error::duplicate_field("paseto"));
+                                return Err(de::Error::duplicate_field("dep_paseto"));
                             }
                             paseto = map.next_value()?;
                         },
@@ -211,6 +222,24 @@ where
                             }
                             oauth = map.next_value()?;
                         },
+                        "jwt" => {
+                            if let Some(tokenizer) = &mut tokenizer {
+                                match tokenizer {
+                                    Tokenizer::Jwt(_) => return Err(de::Error::duplicate_field("jwt")),
+                                    Tokenizer::Paseto(_) => return Err(de::Error::custom("cannot use both fields of `jwt` and `paseto` at the same time. you have to choose one"))
+                                }
+                            }
+                            tokenizer = Some(Tokenizer::Jwt(map.next_value()?));
+                        },
+                        "paseto" => {
+                            if let Some(tokenizer) = &mut tokenizer {
+                                match tokenizer {
+                                    Tokenizer::Jwt(_) => return Err(de::Error::custom("cannot use both fields of `paseto` and `jwt` at the same time. you have to choose one")),
+                                    Tokenizer::Paseto(_) => return Err(de::Error::duplicate_field("paseto")),
+                                }
+                            }
+                            tokenizer = Some(Tokenizer::Paseto(map.next_value()?));
+                        }
                         _ => {
                             let _: de::IgnoredAny = map.next_value()?;
                         }
@@ -224,6 +253,7 @@ where
                 let paseto = paseto.unwrap_or_default();
                 let verifyer = verifyer.unwrap_or_default();
                 let oauth = oauth.unwrap_or_default();
+                let tokenizer = tokenizer.unwrap_or_default();
                 let host = match port {
                     Some(port) => format!("{}:{}", host, port),
                     None => format!("{}", host)
@@ -231,7 +261,7 @@ where
 
 
 
-                Ok(Config{name, host, database, argon, paseto, verifyer, oauth})
+                Ok(Config{name, host, database, argon, paseto, verifyer, oauth, tokenizer})
             }
         }
         let visitor = ConfigVisitor::<DB, V>{_t: std::marker::PhantomData::default()};
