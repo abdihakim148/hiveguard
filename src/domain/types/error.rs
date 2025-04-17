@@ -2,7 +2,12 @@ use argon2::password_hash::Error as HashError;
 use rusty_paseto::core::PasetoError;
 use std::fmt::{self, Display, Debug};
 use std::error::Error as StdError;
+use std::sync::Arc;
+use std::string::FromUtf8Error;
+use base64::DecodeError;
 use lettre::address::AddressError;
+use jsonwebtoken::errors::{Error as JwtLibError, ErrorKind as JwtLibErrorKind};
+// Removed unnecessary ring import
 #[cfg(feature = "http")]
 use actix_web::http::StatusCode;
 use crate::ports::ErrorTrait;
@@ -23,7 +28,9 @@ pub enum Error {
     /// only email and the current feature is phone or
     /// only phone and the current feature is phone.
     ContactFeatureConflict,
-    
+    UnknownAlgorithm, // Added for unknown JWT algorithm
+    JwtError(JwtLibError), // Added for JWT library errors
+
     // Authentication method errors
     IncorrectLoginMethod,
     IncorrectSocialProvider { 
@@ -97,6 +104,13 @@ impl From<PasetoError> for Error {
             // PasetoError::FooterInvalid | PasetoError::WrongHeader,
             _ => Error::internal(err),
         }
+    }
+}
+
+// JWT error conversion
+impl From<JwtLibError> for Error {
+    fn from(err: JwtLibError) -> Self {
+        Error::JwtError(err)
     }
 }
 
@@ -177,11 +191,13 @@ impl Display for Error {
             Self::EmailAddressRequired => write!(f, "email address is required"),
             Self::PhoneNumberRequired => write!(f, "phone number is required"),
             Self::ContactAlreadyVerified => write!(f, "this contact is already verified"),
-            Self::IncorrectLoginMethod => 
+            Self::UnknownAlgorithm => write!(f, "Unknown or unsupported algorithm specified"), // Added arm
+            Self::JwtError(err) => write!(f, "JWT Error: {}", err), // Added arm
+            Self::IncorrectLoginMethod =>
                 write!(f, "Incorrect login method"),
-            Self::IncorrectSocialProvider { expected, found } => 
+            Self::IncorrectSocialProvider { expected, found } =>
                 write!(f, "Incorrect social provider. Expected {}, found {}", expected, found),
-            Self::SocialProviderNotFound { provider } => 
+            Self::SocialProviderNotFound { provider } =>
                 write!(f, "Social provider {} not found", provider),
             Self::CouldNotGetEmail(_) =>
                 write!(f, "Failed to retrieve email from the provider. Please ensure the account has a verified email accessible to us, or try another login method."),
@@ -189,7 +205,7 @@ impl Display for Error {
                 write!(f, "Failed to retrieve phone number from the provider. Please ensure the account has a verified phone number accessible to us, or try another login method."),
             Self::CouldNotGetNecessaryInfo(_) =>
                 write!(f, "Failed to retrieve necessary information from the provider. Please ensure the account profile is complete and accessible, or try another login method."),
-            Self::IncorrectCode => 
+            Self::IncorrectCode =>
                 write!(f, "Invalid authorization code"),
             Self::ItemNotFound(item_name) => write!(f, "{} not found", item_name),
             Self::ResourceNotFound { resource } => write!(f, "{} not found", resource),
@@ -213,7 +229,8 @@ impl StdError for Error {
         match self {
             Self::Internal { source, .. } => source.as_ref().map(|e| e.as_ref() as &(dyn StdError + 'static)),
             Self::CouldNotGetEmail(err) | Self::CouldNotGetPhone(err) | Self::CouldNotGetNecessaryInfo(err) => Some(err.as_ref()),
-            _ => None
+            Self::JwtError(err) => Some(err as &(dyn StdError + 'static)), // Added arm
+            _ => None // UnknownAlgorithm has no source
         }
     }
 }
@@ -232,16 +249,31 @@ impl ErrorTrait for Error {
             Self::CouldNotGetPhone(err) => format!("Could not get phone from provider: {}", err),
             Self::CouldNotGetNecessaryInfo(err) => format!("Could not get necessary info from provider: {}", err),
             Self::New(err) => err.log_message(),
-            _ => self.to_string()
+            Self::JwtError(err) => format!("JWT processing error: {}", err), // Added arm
+            Self::UnknownAlgorithm => "JWT verification failed due to unknown algorithm".to_string(), // Added arm
+            _ => self.to_string() // Other errors use Display impl
         }
     }
 
     fn user_message(&self) -> String {
         match self {
             // Cases returning generic internal error message
-            Self::Internal { .. } | Self::ContactFeatureConflict => "An internal error occurred".to_string(),
+            Self::Internal { .. } | Self::ContactFeatureConflict | Self::UnknownAlgorithm => "An internal error occurred".to_string(), // Added UnknownAlgorithm
             // Cases returning specific, user-friendly messages from Display impl (which now includes suggestion)
             Self::CouldNotGetEmail(_) | Self::CouldNotGetPhone(_) | Self::CouldNotGetNecessaryInfo(_) => self.to_string(),
+            // Handle JWT errors based on kind
+            Self::JwtError(err) => match err.kind() { // Added arm for JwtError
+                JwtLibErrorKind::InvalidToken | JwtLibErrorKind::InvalidSignature | JwtLibErrorKind::MissingAlgorithm => "Invalid or malformed token provided.".to_string(),
+                JwtLibErrorKind::ExpiredSignature => "The provided token has expired.".to_string(),
+                JwtLibErrorKind::InvalidIssuer => "The token issuer is invalid.".to_string(),
+                JwtLibErrorKind::InvalidAudience => "The token audience is invalid.".to_string(),
+                JwtLibErrorKind::InvalidSubject => "The token subject is invalid.".to_string(),
+                JwtLibErrorKind::ImmatureSignature => "The token is not yet valid.".to_string(),
+                JwtLibErrorKind::InvalidAlgorithm => "The token algorithm is invalid or not supported.".to_string(),
+                JwtLibErrorKind::MissingRequiredClaim(claim) => format!("Missing required claim: {}", claim),
+                // Internal/unexpected JWT errors
+                _ => "An internal error occurred while processing the token.".to_string(),
+            },
             // Delegate to wrapped error
             Self::New(err) => err.user_message(),
             // Default: use Display impl
@@ -253,11 +285,24 @@ impl ErrorTrait for Error {
     fn status(&self) -> StatusCode {
         match self {
             Self::WrongPassword |
-            Self::TokenExpired | 
+            Self::TokenExpired |
             Self::InvalidToken |
             Self::IncorrectLoginMethod |
             Self::IncorrectSocialProvider { .. } |
             Self::IncorrectCode => StatusCode::UNAUTHORIZED,
+            Self::JwtError(err) => match err.kind() { // Added arm for JwtError
+                JwtLibErrorKind::InvalidToken |
+                JwtLibErrorKind::InvalidSignature |
+                JwtLibErrorKind::ExpiredSignature |
+                JwtLibErrorKind::InvalidIssuer |
+                JwtLibErrorKind::InvalidAudience |
+                JwtLibErrorKind::InvalidSubject |
+                JwtLibErrorKind::ImmatureSignature |
+                JwtLibErrorKind::InvalidAlgorithm |
+                JwtLibErrorKind::MissingAlgorithm => StatusCode::UNAUTHORIZED,
+                JwtLibErrorKind::MissingRequiredClaim(_) => StatusCode::BAD_REQUEST,
+                _ => StatusCode::INTERNAL_SERVER_ERROR, // Treat other JWT errors as internal
+            },
             Self::SocialProviderNotFound { .. } => StatusCode::NOT_FOUND,
             Self::InvalidEmail |
             Self::InvalidPhone |
@@ -265,7 +310,7 @@ impl ErrorTrait for Error {
             Self::InvalidFormat { .. } | Self::PhoneNumberRequired | Self::EmailAddressRequired | Self::ContactAlreadyVerified => StatusCode::BAD_REQUEST,
             Self::ItemNotFound(_) | Self::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
             Self::DuplicateResource { .. } => StatusCode::CONFLICT,
-            Self::Internal { .. } | Self::ContactFeatureConflict => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Internal { .. } | Self::ContactFeatureConflict | Self::UnknownAlgorithm => StatusCode::INTERNAL_SERVER_ERROR, // Added UnknownAlgorithm
             Self::CouldNotGetEmail(_) | Self::CouldNotGetPhone(_) | Self::CouldNotGetNecessaryInfo(_) => StatusCode::BAD_GATEWAY,
             Self::New(err) => err.status()
         }

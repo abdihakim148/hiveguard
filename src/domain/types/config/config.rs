@@ -1,4 +1,4 @@
-use serde::{de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
+use serde::{ser, de::{self, DeserializeOwned, Visitor}, ser::SerializeStruct, Deserialize, Serialize};
 use super::{argon::Argon, Paseto as DepPaseto, Provider, Tokenizer, paseto::Paseto, jwt::Jwt};
 use crate::{domain::types::config::provider, ports::inputs::config::Config as ConfigTrait};
 use crate::ports::outputs::verify::Verifyer;
@@ -87,6 +87,13 @@ impl<DB: Serialize, V: Verifyer + Serialize> Serialize for Config<DB, V> {
         where
             S: serde::Serializer {
         let mut state = serializer.serialize_struct("Config", 4)?;
+        state.serialize_field("name", &self.name)?;
+        if let Some((host, port)) = self.host.split_once(':') {
+            let host = Host::parse(host).map_err(ser::Error::custom)?;
+            let port: u16 = port.parse().map_err(ser::Error::custom)?;
+            state.serialize_field("host", &host.to_string())?;
+            state.serialize_field("port", &port)?;
+        }
         state.serialize_field("database", &self.database)?;
         state.serialize_field("argon", &self.argon)?;
         state.serialize_field("dep_paseto", &self.paseto)?;
@@ -123,7 +130,7 @@ where
 impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
     fn default() -> Self {
         let name = String::from("Beekeeper");
-        let host = String::from("localhost");
+        let host = String::from("localhost:8080");
         let database = Default::default();
         let argon = Default::default();
         let paseto = Default::default();

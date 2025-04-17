@@ -8,7 +8,7 @@ pub mod jwt;
 use paseto::*;
 use jwt::*;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Tokenizer {
     Jwt(Jwt),
     Paseto(Paseto)

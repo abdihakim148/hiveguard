@@ -26,7 +26,9 @@ impl Actix {
     pub async fn start() -> Result<()> {
         std::env::set_var("RUST_LOG", "debug");
         env_logger::init();
-        let state = Arc::new(<Config<Memory, Verifyer> as Conf>::load(None, ()).await?);
+        let config = <Config<Memory, Verifyer> as Conf>::load(None, ()).await?;
+        let host = config.host.clone();
+        let state = Arc::new(config);
         let data = Data::new(state);
         HttpServer::new(move|| {
             App::new()
@@ -40,7 +42,7 @@ impl Actix {
             .service(user::oauth_login)
             .service(user::oauth_login_confirm)
         })
-        .bind(("127.0.0.1", 8080))?
+        .bind(host)?
         .run()
         .await?;
         Ok(())

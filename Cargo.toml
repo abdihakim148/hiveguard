@@ -12,10 +12,9 @@ chrono = { version = "0.4.39", features = ["serde"] }
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 env_logger = "0.11.6"
 hex = "0.4"
-jwt = "0.16.0"
+jsonwebtoken = "9.3.1"
 lettre = { version = "0.11.11", features = ["smtp-transport", "tokio1", "tokio1-native-tls", "serde"] }
 log = "0.4.25"
-oauth2 = "5.0.0"
 rand = { version = "0.9.0", features = ["thread_rng", "os_rng"] }
 reqwest = { version = "0.12.8", features = ["json"] }
 rusty_paseto = { git = "https://github.com/abdihakim148/rusty_paseto.git", default-features = false, features = ["core", "v4_local", "v3_local", "v2_local", "v1_local", "v4_public", "v3_public", "v2_public", "v1_public"] }

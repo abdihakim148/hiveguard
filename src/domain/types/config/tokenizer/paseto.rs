@@ -8,8 +8,12 @@ use sha2::{Sha256, Digest};
 
 
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Paseto {
+    issuer: String,
+    audience: String,
+    token_ttl_seconds: i64,
+    refresh_token_ttl_seconds: i64,
     current: Key,
     previous: Option<Key>
 }
@@ -28,6 +32,19 @@ pub enum Version {
     V4,
     V2,
     V1,
+}
+
+
+impl Default for Paseto {
+    fn default() -> Self {
+        let issuer = String::from(crate::NAME);
+        let audience = String::from(crate::NAME);
+        let token_ttl_seconds = 15*60;
+        let refresh_token_ttl_seconds = 10;
+        let current = Key::default();
+        let previous = None;
+        Self{issuer, audience, token_ttl_seconds, refresh_token_ttl_seconds, current, previous}
+    }
 }
 
 
