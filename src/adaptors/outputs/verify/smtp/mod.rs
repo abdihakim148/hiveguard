@@ -63,7 +63,7 @@ impl Default for Smtp {
     fn default() -> Self {
         let url = String::from("smtp://localhost:25");
         let credentials = None;
-        let email = Address::new("noreply", "example.com").expect("Failed to create default email address");
+        let email = Address::new("verification", "example.com").expect("Failed to create default email address");
         let sender = Mailbox::new(Some(String::from("Verification")), email);
         let client = Client::from_url(&url)
             .expect("Failed to create default SMTP client")

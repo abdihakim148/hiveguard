@@ -12,7 +12,7 @@ impl<'de> Deserialize<'de> for Smtp {
 
         #[derive(Deserialize)]
         struct Cred {
-            #[serde(alias = "user", alias = "user_name", alias = "name")]
+            #[serde(alias = "user", alias = "user_name", alias = "name", alias = "authentication_identity")]
             username: String,
             #[serde(alias = "secret")]
             password: String

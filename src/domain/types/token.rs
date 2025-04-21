@@ -2,7 +2,7 @@ use actix_web::http::StatusCode;
 use serde::{Serialize, Deserialize};
 use std::{collections::HashMap, slice::Windows};
 use super::{Id, Value};
-use chrono::{Utc, DateTime};
+use chrono::{Utc, DateTime, Duration};
 
 #[cfg(feature = "http")]
 use actix_web::{
@@ -22,6 +22,7 @@ use crate::{
     domain::services::Paseto
 };
 use serde_json::json;
+use super::User;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
@@ -64,5 +65,24 @@ impl Audience {
             Audience::One(aud) => aud.is_empty(),
             Audience::Many(aud) => aud.is_empty()
         }
+    }
+}
+
+
+impl From<Audience> for Token {
+    fn from(audience: Audience) -> Self {
+        Self{audience, ..Default::default()}
+    }
+}
+
+impl From<(&User, Audience, String)> for Token {
+    fn from((user, audience, issuer): (&User, Audience, String)) -> Self {
+        let id = Default::default();
+        let subject = user.id;
+        let issued_at = Utc::now();
+        let not_before = None;
+        let expiration = issued_at + Duration::seconds(15*60);
+        let claims = Default::default();
+        Token{id, issuer, subject, audience, expiration, not_before, issued_at, claims}
     }
 }

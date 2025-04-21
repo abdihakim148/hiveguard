@@ -34,9 +34,7 @@ impl Verify<EmailAddress> for Smtp {
         let body = self.create_verification_email(&code, &link);
         
         // Send the email
-        self.send_email(to, subject, body).await?;
-        
-        // Store the verification in the database
+        self.send_email(to, subject, body).await?;        // Store the verification in the database
         db.create_item(verification).await.map_err(Error::err)?;
         
         Ok(())

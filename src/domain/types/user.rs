@@ -34,7 +34,8 @@ pub struct User {
     /// The email address or phone or both.
     #[serde(flatten)]
     pub contact: Contact,
-    /// Authentication method used by the user
+    /// Authentication method used by the username
+    #[serde(default, skip_serializing_if = "is_default")]
     pub login: LoginMethod,
     /// The password of the user.
     #[serde(skip_serializing_if = "is_default")]

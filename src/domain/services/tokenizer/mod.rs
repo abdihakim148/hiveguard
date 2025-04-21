@@ -5,7 +5,7 @@ use crate::domain::types::Error;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Generic trait for token signing and verification operations.
-pub trait Tokenizer<Payload, Purpose = ()>
+pub trait Tokenizer<Payload>
 where
     Payload: Serialize + DeserializeOwned + Send + Sync + 'static, // Payload constraints
 {

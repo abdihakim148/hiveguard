@@ -91,7 +91,7 @@ impl<DB: Serialize, V: Verifyer + Serialize> Serialize for Config<DB, V> {
         if let Some((host, port)) = self.host.split_once(':') {
             let host = Host::parse(host).map_err(ser::Error::custom)?;
             let port: u16 = port.parse().map_err(ser::Error::custom)?;
-            state.serialize_field("host", &host.to_string())?;
+            state.serialize_field("host", &host)?;
             state.serialize_field("port", &port)?;
         }
         state.serialize_field("database", &self.database)?;
@@ -129,7 +129,7 @@ where
 
 impl<DB: Default , V: Verifyer + Default> Default for Config<DB, V> {
     fn default() -> Self {
-        let name = String::from("Beekeeper");
+        let name = String::from("Hiveguard");
         let host = String::from("localhost:8080");
         let database = Default::default();
         let argon = Default::default();

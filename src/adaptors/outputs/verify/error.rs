@@ -60,7 +60,7 @@ impl StdError for Error {}
 impl ErrorTrait for Error {
     fn log_message(&self) -> String {
         match self {
-            Error::InvalidCode => format!("invlid code"),
+            Error::InvalidCode => String::from("invlid code"),
             Error::Internal(err) => format!("internal error: {}", err),
             Error::Err(err) => err.log_message()
         }
@@ -68,8 +68,8 @@ impl ErrorTrait for Error {
 
     fn user_message(&self) -> String {
         match self {
-            Error::InvalidCode => format!("invlid code"),
-            Error::Internal(_) => format!("internal server error occured"),
+            Error::InvalidCode => String::from("invlid code"),
+            Error::Internal(_) => String::from("internal server error occured"),
             Error::Err(err) => err.user_message()
         }
     }

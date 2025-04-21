@@ -15,9 +15,9 @@ hex = "0.4"
 jsonwebtoken = "9.3.1"
 lettre = { version = "0.11.11", features = ["smtp-transport", "tokio1", "tokio1-native-tls", "serde"] }
 log = "0.4.25"
-rand = { version = "0.9.0", features = ["thread_rng", "os_rng"] }
+rand = { version = "0.9.1", features = ["thread_rng", "os_rng"] }
 reqwest = { version = "0.12.8", features = ["json"] }
-rusty_paseto = { git = "https://github.com/abdihakim148/rusty_paseto.git", default-features = false, features = ["core", "v4_local", "v3_local", "v2_local", "v1_local", "v4_public", "v3_public", "v2_public", "v1_public"] }
+rusty_paseto = { git = "https://github.com/abdihakim148/rusty_paseto.git", default-features = true, features = ["core", "v4_local", "v3_local", "v2_local", "v1_local", "v4_public", "v3_public", "v2_public", "v1_public"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.128"
 sha2 = "0.10.8"

@@ -7,7 +7,6 @@ use std::string::FromUtf8Error;
 use base64::DecodeError;
 use lettre::address::AddressError;
 use jsonwebtoken::errors::{Error as JwtLibError, ErrorKind as JwtLibErrorKind};
-// Removed unnecessary ring import
 #[cfg(feature = "http")]
 use actix_web::http::StatusCode;
 use crate::ports::ErrorTrait;
@@ -30,7 +29,6 @@ pub enum Error {
     ContactFeatureConflict,
     UnknownAlgorithm, // Added for unknown JWT algorithm
     JwtError(JwtLibError), // Added for JWT library errors
-
     // Authentication method errors
     IncorrectLoginMethod,
     IncorrectSocialProvider { 

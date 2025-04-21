@@ -259,10 +259,7 @@ mod tests {
         let patch_map = HashMap::from([
             ("name".to_string(), Value::String("Updated Organisation".to_string()))
         ]);
-        println!("Pass1");
         let result = organisations.patch_item(Key::Pk(&organisation.id), patch_map).await.expect("Patching organisation name should succeed");
-        println!("Pass2");
-        
         assert_eq!(result.name, "Updated Organisation", "Organisation name should be updated");
     }
 

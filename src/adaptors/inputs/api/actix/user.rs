@@ -78,7 +78,7 @@ async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, req: HttpReq
     // Get required components
     let db = config.db();
     let hasher = config.argon();
-    let paseto = config.paseto();
+    let tokenizer = config.tokenizer();
     let verifyer = config.verifyer();
     
     // Determine channel based on contact type
@@ -87,10 +87,10 @@ async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, req: HttpReq
     // Authenticate user
     let result = User::authenticate(
         &creds.contact, 
-        &creds.password, 
+        &creds.password,
         db, 
         hasher,
-        paseto,
+        tokenizer,
         config.name.clone(), // issuer
         Audience::None,      // audience
         channel,
@@ -107,8 +107,6 @@ async fn login(creds: Either<Json<Credentials>, Form<Credentials>>, req: HttpReq
             })))
         },
         Some((user, token)) => {
-            let token = token.try_sign(&paseto.keys)?;
-            
             if is_json {
                 // Return bearer token in JSON
                 Ok(HttpResponse::Ok().insert_header((header::AUTHORIZATION, format!("Bearer {token}"))).json(user))
@@ -136,9 +134,9 @@ async fn user_info(req: HttpRequest, config: Data<Arc<Config<DB, Verifyer>>>) ->
         }
     };
     let token = &token.replace("Bearer ", "");
-    let paseto = config.paseto();
+    let tokenizer = config.tokenizer();
     let db = config.db();
-    let id = User::authorize(token, paseto).await?;
+    let id = User::authorize(token, tokenizer).await?;
     
     let user = User::get(&id, db).await?;
     Ok(user)
@@ -160,9 +158,9 @@ async fn patch_user(req: HttpRequest, item: Json<HashMap<String, Value>>, config
         }
     };
     let token = &token.replace("Bearer ", "");
-    let paseto = config.paseto();
+    let tokenizer = config.tokenizer();
     let db = config.db();
-    let id = User::authorize(token, paseto).await?;
+    let id = User::authorize(token, tokenizer).await?;
     let item = item.0;
     let updated_user = User::update(&id, db, item).await?;
     Ok(updated_user)
@@ -208,43 +206,46 @@ async fn confirm_verification(
     query: web::Query<QueryParam>, 
     config: Data<Arc<Config<DB, Verifyer>>>
 ) -> Response<impl Responder> {
-    // Extract code and contact
-    let code = path.into_inner();
-    let email = Into::<Contact>::into(query.0.contact).contact()?;
-    
-    // Get required components
+    // Extract code string from path and contact from query
+    let code_str = path.into_inner();
+    let contact = Into::<Contact>::into(query.0.contact).contact()?;
+
+    // Get required components from config
     let db = config.db();
     let verifyer = config.verifyer();
-    let paseto = config.paseto();
-    let mut id = Id::default();
-    
-    // Determine if code is ID or string code
-    let code = if code.len() == 24 && code.chars().all(|c| c.is_ascii_hexdigit()) {
-        // Looks like an ObjectId
-        id = Id::from_str(&code)?;
-        DomainEither::Right(&id)
+    let tokenizer = config.tokenizer();
+    let issuer = config.name.clone();
+    let audience = Audience::None; // Default audience
+
+    // Determine if the code from the path is an ID or a string code
+    let mut id_holder = Id::default(); // Holder for potential ID
+    let code_either = if code_str.len() == 24 && code_str.chars().all(|c| c.is_ascii_hexdigit()) {
+        // Looks like an ObjectId (Verification ID)
+        id_holder = Id::from_str(&code_str)?;
+        DomainEither::Right(&id_holder)
     } else {
-        // Regular verification code
-        DomainEither::Left(code.as_str())
+        // Regular verification code string
+        DomainEither::Left(code_str.as_str())
     };
-    
-    // Verify the contact
-    let user = verifyer.confirm_verification(email, code, db).await?;
-    
-    // Generate token
-    let token = user.token(
-        config.name.clone(),
-        Audience::None,
-        paseto.ttl
-    ).try_sign(&paseto.keys)?;
-    
+
+    // Call the Authentication trait's confirm_verification method
+    let (user, token) = User::confirm_verification(
+        tokenizer,
+        db,
+        verifyer,
+        contact, // Pass the extracted contact directly
+        code_either,
+        issuer,
+        audience,
+    ).await?;
+
     // Return user and token (both as cookie and in JSON)
     Ok(
         HttpResponse::Ok()
         // return both a cookie and a bearer token
-        .insert_header((header::AUTHORIZATION, format!("Bearer {token}")))
+        .insert_header((header::AUTHORIZATION, format!("Bearer {}", token)))
         .cookie(actix_web::cookie::Cookie::build("token", token).http_only(true).finish())
-        .json(json!(user))
+        .json(user) // Return the user struct directly
     )
 }
 
