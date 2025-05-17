@@ -438,6 +438,7 @@ dependencies = [
  "lettre",
  "reqwest",
  "serde",
+ "serde_json",
  "tokio",
  "url",
 ]
