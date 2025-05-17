@@ -4,3 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bson = "2.0"
+chrono = { version = "0.4.39", features = ["serde"]}
+lettre = { version = "0.11.11", features = ["smtp-transport", "tokio1", "tokio1-native-tls", "serde"]}
+reqwest = { version = "0.12.8", features = ["json"]}
+serde = { version = "1.0", features = ["derive"]}
+tokio = { version = "1", features = ["full"]}
+url = { version = "2.5.4", features = ["serde"]}
