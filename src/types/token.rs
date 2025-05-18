@@ -6,6 +6,7 @@ use super::Id;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
 pub struct Token<CLAIMS = Map<String, Value>> {
+    pub session_id: Id,
     #[serde(rename = "jti")]
     pub id: Id,
     #[serde(rename = "iss")]

@@ -1,5 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
-use super::{Email, Phone};
+#[cfg(feature = "dynamodb")]
+use aws_sdk_dynamodb::types::AttributeValue;
+use super::{ConversionError, Email, Phone};
+use std::collections::HashMap;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,6 +46,40 @@ impl Serialize for Contact {
         };
 
         data.serialize(serializer)
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl From<Contact> for HashMap<String, AttributeValue> {
+    fn from(contact: Contact) -> Self {
+        match contact {
+            Contact::Phone(phone) => phone.into(),
+            Contact::Email(email) => email.into(),
+            Contact::Both(phone, email) => {
+                let mut map: HashMap<String, AttributeValue> = phone.into();
+                map.extend::<HashMap<String, AttributeValue>>(email.into());
+                map
+            }
+        }
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl TryFrom<&mut HashMap<String, AttributeValue>> for Contact {
+    type Error = ConversionError;
+
+    fn try_from(map: &mut HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+        let email = Email::try_from(&mut *map);
+        let phone = Phone::try_from(map);
+
+        match (phone, email) {
+            (Ok(phone), Ok(email)) => Ok(Contact::Both(phone, email)),
+            (Ok(phone), Err(_)) => Ok(Contact::Phone(phone)),
+            (Err(_), Ok(email)) => Ok(Contact::Email(email)),
+            (Err(_), Err(_)) => Err(ConversionError::MissingFields(&["phone", "email"])),
+        }
     }
 }
 

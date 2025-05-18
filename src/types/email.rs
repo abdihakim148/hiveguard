@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize, Serializer};
+#[cfg(feature = "dynamodb")]
+use aws_sdk_dynamodb::types::AttributeValue;
+use std::fmt::{Display, Formatter};
+use std::collections::HashMap;
+use super::ConversionError;
 use lettre::Address;
-use super::Error;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,10 +39,10 @@ impl<'a> From<&'a Email> for EmailData<'a> {
 
 
 impl<'a> TryFrom<EmailData<'a>> for Email {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(data: EmailData<'a>) -> Result<Self, Self::Error> {
-        let address: Address = data.email.parse().map_err(|_| Error::InvalidEmailAddress)?;
+        let address: Address = data.email.parse().map_err(|_| ConversionError::InvalidEmailAddress)?;
         if data.email_verified {
             Ok(Email::Verified(address))
         } else {
@@ -48,10 +52,10 @@ impl<'a> TryFrom<EmailData<'a>> for Email {
 }
 
 impl TryFrom<&str> for Email {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(email: &str) -> Result<Self, Self::Error> {
-        let address: Address = email.parse().map_err(|_| Error::InvalidEmailAddress)?;
+        let address: Address = email.parse().map_err(|_| ConversionError::InvalidEmailAddress)?;
         Ok(Email::New(address))
     }
 }
@@ -84,6 +88,65 @@ impl<'de> Deserialize<'de> for Email {
     {
         let data = EmailData::deserialize(deserializer)?;
         Email::try_from(data).map_err(serde::de::Error::custom)
+    }
+}
+
+
+impl TryFrom<String> for Email {
+    type Error = ConversionError;
+
+    fn try_from(email: String) -> Result<Self, Self::Error> {
+        let address: Address = email.parse().map_err(|_| ConversionError::InvalidEmailAddress)?;
+        Ok(Email::New(address))
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl From<Email> for HashMap<String, AttributeValue> {
+    fn from(email: Email) -> Self {
+        let data = EmailData::from(&email);
+        let mut map = HashMap::new();
+        map.insert("email".to_string(), AttributeValue::S(data.email.to_string()));
+        map.insert("email_verified".to_string(), AttributeValue::Bool(data.email_verified));
+        map
+    }
+}
+
+impl Display for Email {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Email::New(address) => write!(f, "{address}"),
+            Email::Verified(address) => write!(f, "{address}"),
+        }
+    }
+}
+
+#[cfg(feature = "dynamodb")]
+impl TryFrom<&mut HashMap<String, AttributeValue>> for Email {
+    type Error = ConversionError;
+
+    fn try_from(map: &mut HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+        let email = map.get("email").ok_or(ConversionError::MissingField("email"))?;
+        let email = email.as_s().map_err(|_| ConversionError::UnexpectedDataType("email"))?;
+        let email_verified = match map.get("email_verified") {
+            Some(value) => *value.as_bool().map_err(|_| ConversionError::UnexpectedDataType("email_verified"))?,
+            None => false,
+        };
+        let email_data = EmailData {
+            email,
+            email_verified,
+        };
+        Email::try_from(email_data)
+    }
+}
+
+#[cfg(feature = "dynamodb")]
+impl TryFrom<HashMap<String, AttributeValue>> for Email {
+    type Error = ConversionError;
+
+    fn try_from(mut map: HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+        Email::try_from(&mut map)
     }
 }
 

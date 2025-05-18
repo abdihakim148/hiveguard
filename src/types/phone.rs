@@ -1,6 +1,10 @@
+#[cfg(feature = "dynamodb")]
+use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
+use std::collections::HashMap;
+use super::ConversionError;
 use std::borrow::Cow;
-use super::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Phone {
@@ -57,11 +61,11 @@ impl<'a> From<&'a Phone> for PhoneData<'a> {
 
 
 impl<'a> TryFrom<PhoneData<'a>> for Phone {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(data: PhoneData<'a>) -> Result<Self, Self::Error> {
         if !Self::valid(&data.phone) {
-            return Err(Error::InvalidPhoneNumber);
+            return Err(ConversionError::InvalidPhoneNumber);
         }
         if data.phone_verified {
             Ok(Phone::Verified(data.phone.into_owned()))
@@ -72,13 +76,63 @@ impl<'a> TryFrom<PhoneData<'a>> for Phone {
 }
 
 impl TryFrom<String> for Phone {
-    type Error = Error;
+    type Error = ConversionError;
 
     fn try_from(phone: String) -> Result<Self, Self::Error> {
         if !Self::valid(&phone) {
-            return Err(Error::InvalidPhoneNumber);
+            return Err(ConversionError::InvalidPhoneNumber);
         }
         Ok(Phone::New(phone))
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl From<Phone> for HashMap<String, AttributeValue> {
+    fn from(phone: Phone) -> Self {
+        let data = PhoneData::from(&phone);
+        let mut map = HashMap::new();
+        map.insert(
+            "phone".to_string(),
+            AttributeValue::S(data.phone.into_owned()),
+        );
+        map.insert(
+            "phone_verified".to_string(),
+            AttributeValue::Bool(data.phone_verified),
+        );
+        map
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl TryFrom<&mut HashMap<String, AttributeValue>> for Phone {
+    type Error = ConversionError;
+
+    fn try_from(map: &mut HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+        let phone = match map.remove("phone") {
+            Some(value) => {
+                match value {
+                    AttributeValue::S(phone) => phone,
+                    _ => return Err(ConversionError::UnexpectedDataType("phone"))
+                }
+            },
+            None => return Err(ConversionError::MissingField("phone"))
+        };
+        let phone_verified = match map.remove("phone_verified") {
+            Some(value) => {
+                match value {
+                    AttributeValue::Bool(value) => value,
+                    _ => return Err(ConversionError::UnexpectedDataType("phone_verified"))
+                }
+            },
+            None => false,
+        };
+        let data = PhoneData {
+            phone: Cow::Owned(phone),
+            phone_verified,
+        };
+        data.try_into()
     }
 }
 
@@ -110,6 +164,16 @@ impl AsRef<str> for Phone {
         match self {
             Phone::New(phone) => phone.as_ref(),
             Phone::Verified(phone) => phone.as_ref(),
+        }
+    }
+}
+
+
+impl Display for Phone {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Phone::New(address) => write!(f, "{address}"),
+            Phone::Verified(address) => write!(f, "{address}"),
         }
     }
 }
@@ -157,6 +221,6 @@ mod tests {
         };
         let result = Phone::try_from(invalid_phone_data);
         assert!(result.is_err());
-        assert_eq!(result.err(), Some(Error::InvalidPhoneNumber));
+        assert_eq!(result.err(), Some(ConversionError::InvalidPhoneNumber));
     }
 }

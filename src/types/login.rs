@@ -1,5 +1,8 @@
+#[cfg(feature = "dynamodb")]
+use aws_sdk_dynamodb::types::AttributeValue;
+use super::{OAuthProvider, ConversionError};
 use serde::{Serialize, Deserialize};
-use super::OAuthProvider;
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum Login {
@@ -21,6 +24,53 @@ impl Login {
             Login::Password(ref password) => password.is_empty(),
             Login::OAuth(_) => false,
         }
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl From<Login> for HashMap<String, AttributeValue> {
+    fn from(login: Login) -> Self {
+        let mut map = HashMap::new();
+        match login {
+            Login::Password(password) => {
+                map.insert("password".to_string(), AttributeValue::S(password));
+            },
+            Login::OAuth(oauth) => {
+                map.insert("oauth".to_string(), AttributeValue::S(oauth.into()));
+            },
+        }
+        map
+    }
+}
+
+
+#[cfg(feature = "dynamodb")]
+impl TryFrom<&mut HashMap<String, AttributeValue>> for Login {
+    type Error = ConversionError;
+
+    fn try_from(map: &mut HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+        match map.remove("password") {
+            Some(password) => {
+                match password {
+                    AttributeValue::S(password) => Ok(Login::Password(password)),
+                    _ => Err(ConversionError::UnexpectedDataType("password"))
+                }
+            },
+            None => match map.remove("oauth") {
+                Some(oauth) => {
+                    match oauth {
+                        AttributeValue::S(oauth) => {
+                            let oauth_provider: OAuthProvider = oauth.try_into()?;
+                            Ok(Login::OAuth(oauth_provider))
+                        },
+                        _ => Err(ConversionError::UnexpectedDataType("oauth"))
+                    }
+                },
+                None => Err(ConversionError::MissingFields(&["password", "oauth"]))
+            }
+        }
+        
     }
 }
 
