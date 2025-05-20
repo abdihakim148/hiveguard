@@ -1,8 +1,9 @@
 use crate::ports::outputs::database::tables::UsersTable as Table;
 use crate::types::{User, Id, DatabaseError, Phone, Email};
-use aws_sdk_dynamodb::types::AttributeValue;
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
 use aws_sdk_dynamodb::Client;
 use serde_json::{Map, Value};
+use super::map_to_hash_map;
 
 
 pub struct UsersTable{
@@ -45,10 +46,30 @@ impl Table<Client> for UsersTable {
     }
 
     async fn update_user(&self, id: Id, update: Map<String, Value>, client: &Client) -> Result<User, Self::Error> {
-        todo!("not yet implemented")
+        let (k, v) = ("id", id.into());
+        if update.is_empty() {
+            let output = client.get_item().table_name(&self.name).key(k, v).send().await?;
+            match output.item {
+                Some(item) => return Ok(item.try_into()?),
+                None => return Err(DatabaseError::UserNotFound)
+            }
+        }
+        let map = map_to_hash_map(update)?;
+        let mut builder = client.update_item().table_name(&self.name).key(k, v);
+        for (k, v) in map {
+            builder = builder.update_expression(format!("SET {} = :{}", k, k));
+            builder = builder.expression_attribute_values(format!(":{}", k), v);
+        }
+        let output = builder.return_values(ReturnValue::AllNew).send().await?;
+        match output.attributes {
+            Some(item) => return Ok(item.try_into()?),
+            None => return Err(DatabaseError::UserNotFound)
+        }
     }
 
     async fn delete_user(&self, id: Id, client: &Client) -> Result<(), Self::Error> {
-        todo!("not yet implemented")
+        let (k, v) = ("id", id.into());
+        client.delete_item().table_name(&self.name).key(k, v).send().await?;
+        Ok(())
     }
 }

@@ -1,5 +1,5 @@
 #[cfg(feature = "dynamodb")]
-use aws_sdk_dynamodb::error::SdkError;
+use aws_sdk_dynamodb::error::{SdkError, BuildError};
 use std::fmt::{Display, Formatter};
 use std::error::Error as StdError;
 use super::ConversionError;
@@ -46,6 +46,13 @@ impl PartialEq for DatabaseError {
 #[cfg(feature = "dynamodb")]
 impl<E: StdError + 'static + Send + Sync, R: std::fmt::Debug + Send + Sync + 'static> From<SdkError<E, R>> for DatabaseError {
     fn from(err: SdkError<E, R>) -> Self {
+        DatabaseError::Internal(Box::new(err))
+    }
+}
+
+#[cfg(feature = "dynamodb")]
+impl From<BuildError> for DatabaseError {
+    fn from(err: BuildError) -> Self {
         DatabaseError::Internal(Box::new(err))
     }
 }

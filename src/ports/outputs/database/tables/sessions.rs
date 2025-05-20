@@ -9,8 +9,7 @@ pub trait SessionsTable<Client> {
         &self,
         id: Id,
         new_refresh_token_id: Id,
-        previous_refresh_token_id: Id,
         client: &Client
-    ) -> Result<Session, Self::Error>;
+    ) -> Result<(), Self::Error>;
     async fn delete_session(&self, id: Id, client: &Client) -> Result<(), Self::Error>;
 }

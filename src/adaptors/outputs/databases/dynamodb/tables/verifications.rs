@@ -35,7 +35,9 @@ impl Table<Client> for VerificationsTable {
         }
     }
 
-    async fn delete_verification(&self, id: Id, client: &Client) -> Result<(), Self::Error> {
-        todo!("not yet implemented")
+    async fn delete_verification(&self, user_id: Id, client: &Client) -> Result<(), Self::Error> {
+        let (k, v) = ("user_id", user_id.into());
+        client.delete_item().table_name(&self.name).key(k, v).send().await?;
+        Ok(())
     }
 }
