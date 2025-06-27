@@ -1,4 +1,4 @@
-use super::{Contact, ConversionError, Id, Login};
+use super::{ConversionError, Id, Login};
 #[cfg(feature = "dynamodb")]
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
@@ -11,8 +11,10 @@ pub struct User {
     pub id: Id,
     pub username: String,
     pub fullname: String,
-    #[serde(flatten)]
-    pub contact: Contact,
+    #[cfg(feature = "email")]
+    pub email: super::Email,
+    #[cfg(feature = "phone")]
+    pub phone: super::Phone,
     #[serde(flatten, skip_serializing_if = "Login::is_empty")]
     pub login: Login,
     #[serde(default)]
@@ -23,7 +25,10 @@ pub struct User {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Email, Phone};
+    #[cfg(feature = "email")]
+    use super::super::Email;
+    #[cfg(feature = "phone")]
+    use super::super::Phone;
     use super::*;
 
     #[test]
@@ -31,9 +36,10 @@ mod tests {
         let id = Id::try_from(String::from("000000000000000000000000")).unwrap();
         let username = String::from("username");
         let fullname = String::from("fullname");
+        #[cfg(feature = "email")]
         let email = Email::try_from("user@example.com").unwrap();
+        #[cfg(feature = "phone")]
         let phone = Phone::try_from(String::from("+25478965439")).unwrap();
-        let contact = Contact::Both(phone, email);
         let password = String::from("password");
         let login = Login::Password(password);
         let profile = None;
@@ -42,7 +48,10 @@ mod tests {
             id,
             username,
             fullname,
-            contact,
+            #[cfg(feature = "email")]
+            email,
+            #[cfg(feature = "phone")]
+            phone,
             login,
             profile,
             created_at,
@@ -62,8 +71,16 @@ impl From<User> for HashMap<String, AttributeValue> {
         map.insert("id".into(), user.id.into());
         map.insert("username".into(), AttributeValue::S(user.username));
         map.insert("fullname".into(), AttributeValue::S(user.fullname));
-        let iter = user.contact.into();
-        map.extend::<HashMap<String, AttributeValue>>(iter);
+        #[cfg(feature = "email")]
+        {
+            let iter = user.email.into();
+            map.extend::<HashMap<String, AttributeValue>>(iter);
+        }
+        #[cfg(feature = "phone")]
+        {
+            let iter = user.phone.into();
+            map.extend::<HashMap<String, AttributeValue>>(iter);
+        }
         let iter = user.login.into();
         map.extend::<HashMap<String, AttributeValue>>(iter);
         if let Some(profile) = user.profile {
@@ -98,7 +115,10 @@ impl TryFrom<HashMap<String, AttributeValue>> for User {
                 AttributeValue::S(string) => Ok(string),
                 _ => Ok::<_, ConversionError>(String::new()),
             })?;
-        let contact = Contact::try_from(&mut map)?;
+        #[cfg(feature = "email")]
+        let email = Email::try_from(&mut map)?;
+        #[cfg(feature = "phone")]
+        let phone = Phone::try_from(&mut map)?;
         let login = Login::try_from(&mut map)?;
         let profile = match map.remove("profile") {
             None => None,
@@ -108,7 +128,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for User {
             },
         };
         let created_at = created_at_date_from_map(&mut map)?;
-        Ok(User{id,username,fullname,contact,login,profile,created_at,})
+        Ok(User{id,username,fullname,#[cfg(feature = "email")]email,#[cfg(feature = "phone")]phone,login,profile,created_at,})
     }
 }
 

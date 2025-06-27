@@ -3,7 +3,6 @@ mod token_bundle;
 mod verification;
 mod functions;
 mod session;
-mod contact;
 mod either;
 mod token;
 mod error;
@@ -14,11 +13,10 @@ mod user;
 mod id;
 
 
-pub use error::{Error, DatabaseError, ConversionError};
+pub use error::{DatabaseError, ConversionError};
 pub use oauth_provider::OAuthProvider;
 pub use verification::Verification;
 pub use session::Session;
-pub use contact::Contact;
 pub use either::Either;
 pub use login::Login;
 pub use email::Email;
