@@ -1,18 +1,22 @@
 pub mod tables;
 
-use crate::types::{User, Email, Phone, Id, Session};
+use crate::types::{Id, Session, User, Email, Phone, Verification};
+use macros::{client, database};
 use serde_json::{Map, Value};
 use tables::*;
 
-
+#[database]
 pub trait Database {
     type Client;
-    type UsersTable: UsersTable<Self::Client>;
-    type SessionsTable: SessionsTable<Self::Client>;
-    type VerificationsTable: VerificationsTable<Self::Client>;
+    type Error;
+    type UsersTable: UsersTable<Self::Client, Error = Self::Error>;
+    type SessionsTable: SessionsTable<Self::Client, Error = Self::Error>;
+    type VerificationsTable: VerificationsTable<Self::Client, Error = Self::Error>;
 
-    /// These are function written on hand by the developer.
+    
     fn users_table(&self) -> &Self::UsersTable;
     fn sessions_table(&self) -> &Self::SessionsTable;
     fn verifications_table(&self) -> &Self::VerificationsTable;
+    #[client]
+    fn client(&self) -> &Self::Client;
 }

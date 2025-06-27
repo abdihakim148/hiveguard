@@ -1,8 +1,10 @@
-use crate::types::{User, Id, Email, Phone, Error};
+use crate::types::{User, Id, Email, Phone};
 use serde_json::{Map, Value};
+use macros::table;
 
+#[table]
 pub trait UsersTable<Client> {
-    type Error: Into<Error>;
+    type Error;
     async fn create_user(&self, user: User, client: &Client) -> Result<(), Self::Error>;
     async fn get_user_by_id(&self, id: Id, client: &Client) -> Result<Option<User>, Self::Error>;
     async fn get_user_by_email(&self, email: Email, client: &Client) -> Result<Option<User>, Self::Error>;
