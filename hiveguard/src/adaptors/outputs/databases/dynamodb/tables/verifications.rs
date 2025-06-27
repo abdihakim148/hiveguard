@@ -11,7 +11,7 @@ pub struct VerificationsTable {
 
 impl Table<Client> for VerificationsTable {
     type Error = DatabaseError;
-    async fn create_verification(&self, verification: Verification, client: &Client) -> Result<(), Self::Error> {
+    async fn create_verification(&self, verification: Verification<Id>, client: &Client) -> Result<(), Self::Error> {
         let input = Some(verification.into());
         let _ = client.put_item().table_name(&self.name).set_item(input).send().await?;
         Ok(())
