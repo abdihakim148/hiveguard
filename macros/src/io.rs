@@ -11,11 +11,12 @@ pub struct Method {
     pub future: bool,
     pub name: String,
     pub args: Vec<String>,
+    pub generics: String,
     pub outputs: String,
 }
 
 
-fn read_tables() -> std::io::Result<Option<HashMap<String, Vec<Method>>>> {
+fn read_tables() -> std::io::Result<Option<HashMap<String, String>>> {
     if !std::path::Path::new(TABLES_FILE).exists() {
         return Ok(None);
     }
@@ -26,23 +27,23 @@ fn read_tables() -> std::io::Result<Option<HashMap<String, Vec<Method>>>> {
 }
 
 
-fn write_tables(tables: &HashMap<String, Vec<Method>>) -> std::io::Result<()> {
+fn write_tables(tables: &HashMap<String, String>) -> std::io::Result<()> {
     let json = serde_json::to_string(tables)?;
     let mut file = File::create(TABLES_FILE)?;
     file.write_all(json.as_bytes())?;
     Ok(())
 }
 
-pub fn add_table(trait_name: String, methods: Vec<Method>) {
+pub fn add_table(trait_name: String, value: String) {
     let mut all_tables = HashMap::new();
     if let Ok(Some(contents)) = read_tables() {
         all_tables = contents;
     }
-    all_tables.insert(trait_name, methods);
+    all_tables.insert(trait_name, value);
     write_tables(&all_tables).expect("could not write tables to a file")
 }
 
-pub fn get_tables() -> HashMap<String, Vec<Method>> {
+pub fn get_tables() -> HashMap<String, String> {
     if let Some(contents) = read_tables().unwrap() {
         return contents;
     }
