@@ -12,6 +12,7 @@ pub enum Error {
     ConversionError(ConversionError),
     DatabaseError(DatabaseError),
     HashError(HashError),
+    InvalidCredentials,
     WrongPassword,
 }
 
@@ -22,6 +23,7 @@ impl Display for Error {
             Error::ConversionError(err) => write!(f, "conversion error: {}", err),
             Error::DatabaseError(err) => write!(f, "database error: {}", err),
             Error::HashError(err) => write!(f, "hash error: {}", err),
+            Error::InvalidCredentials => write!(f, "invalid credentials"),
             Error::WrongPassword => write!(f, "wrong password"),
         }
     }
