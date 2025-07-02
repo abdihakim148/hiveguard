@@ -5,19 +5,20 @@ use aws_sdk_dynamodb::Client;
 
 
 pub struct VerificationsTable {
-    pub name: String
+    pub name: String,
 }
 
 
 impl Table<Client> for VerificationsTable {
     type Error = DatabaseError;
-    async fn create_verification(&self, verification: Verification<Id>, client: &Client) -> Result<(), Self::Error> {
+    type Item = Verification<Id>;
+    async fn create_verification_code(&self, verification: Self::Item, client: &Client) -> Result<(), Self::Error> {
         let input = Some(verification.into());
         let _ = client.put_item().table_name(&self.name).set_item(input).send().await?;
         Ok(())
     }
 
-    async fn get_verification_by_email(&self, email: crate::types::Email, client: &Client) -> Result<Option<Verification<Id>>, Self::Error> {
+    async fn get_verification_by_email(&self, email: crate::types::Email, client: &Client) -> Result<Option<Self::Item>, Self::Error> {
         let (k, v) = ("email", AttributeValue::S(email.to_string()));
         let output = client.get_item().table_name(&self.name).key(k, v).send().await?;
         match output.item {
@@ -26,7 +27,7 @@ impl Table<Client> for VerificationsTable {
         }
     }
 
-    async fn get_verification_by_phone(&self, phone: crate::types::Phone, client: &Client) -> Result<Option<Verification<Id>>, Self::Error> {
+    async fn get_verification_by_phone(&self, phone: crate::types::Phone, client: &Client) -> Result<Option<Self::Item>, Self::Error> {
         let (k, v) = ("phone", AttributeValue::S(phone.to_string()));
         let output = client.get_item().table_name(&self.name).key(k, v).send().await?;
         match output.item {

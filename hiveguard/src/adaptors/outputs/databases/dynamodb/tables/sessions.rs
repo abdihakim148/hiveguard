@@ -17,13 +17,14 @@ impl SessionsTable {
 
 impl Table<Client> for SessionsTable {
     type Error = DatabaseError;
-    async fn create_session(&self, session: Session, client: &Client) -> Result<(), Self::Error> {
+    type Item = Session;
+    async fn create_session(&self, session: Self::Item, client: &Client) -> Result<(), Self::Error> {
         let input = Some(session.into());
         let _ = client.put_item().table_name(&self.name).set_item(input).send().await?;
         Ok(())
     }
 
-    async fn get_session_by_id(&self, id: Id, client: &Client) -> Result<Option<Session>, Self::Error> {
+    async fn get_session_by_id(&self, id: Id, client: &Client) -> Result<Option<Self::Item>, Self::Error> {
         let (k, v) = ("id", id.into());
         let output = client.get_item().table_name(&self.name).key(k, v).send().await?;
         match output.item {
@@ -32,7 +33,7 @@ impl Table<Client> for SessionsTable {
         }
     }
 
-    async fn get_sessions_by_user_id(&self, user_id: Id, client: &Client) -> Result<Vec<Session>, Self::Error> {
+    async fn get_sessions_by_user_id(&self, user_id: Id, client: &Client) -> Result<Vec<Self::Item>, Self::Error> {
         let (key, value) = ("user_id".into(), user_id.into());
         let keys = Self::keys_and_attributes(key, value)?;
         let output = client.batch_get_item().request_items(&self.name, keys).send().await?;
