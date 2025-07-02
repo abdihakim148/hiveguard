@@ -1,7 +1,7 @@
 [package]
 name = "hiveguard"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 aws-config = {version = "1.6.3", optional = true, features = ["behavior-version-latest"]}
@@ -18,6 +18,7 @@ url = { version = "2.5.4", features = ["serde"]}
 macros = {path = "../macros"}
 argon2 = { version = "0.5.3", optional = true}
 password-hash = { version = "0.5.0", features = ["getrandom"] }
+rand = { version = "0.9.1", features = ["thread_rng"] }
 
 
 [features]

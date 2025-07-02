@@ -1048,6 +1048,7 @@ dependencies = [
  "lettre",
  "macros",
  "password-hash",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
