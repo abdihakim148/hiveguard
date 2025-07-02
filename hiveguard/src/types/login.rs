@@ -14,7 +14,7 @@ pub enum Login {
 
 impl Login {
     pub fn password(&self) -> Option<&String> {
-        if let Login::Password(ref password) = self {
+        if let Login::Password(password) = self {
             Some(password)
         } else {
             None
@@ -22,20 +22,14 @@ impl Login {
     }
 
     pub fn set_hash(&mut self, hash: String) {
-        if let Login::Password(ref mut password) = self {
+        if let Login::Password(password) = self {
             *password = hash;
-        }
-    }
-
-    pub fn clear_password(&mut self) {
-        if let Login::Password(ref mut password) = self {
-            *password = String::new();
         }
     }
 
     pub fn is_empty(&self) -> bool {
         match self {
-            Login::Password(ref password) => password.is_empty(),
+            Login::Password(password) => password.is_empty(),
             Login::OAuth(_) => false,
         }
     }
