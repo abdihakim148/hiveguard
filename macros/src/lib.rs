@@ -11,6 +11,12 @@ mod database;
 
 
 #[proc_macro_attribute]
+pub fn skip(_: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+
+#[proc_macro_attribute]
 pub fn client(_: TokenStream, input: TokenStream) -> TokenStream {
     input
 }

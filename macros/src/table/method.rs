@@ -1,7 +1,8 @@
-use syn::{FnArg, ReturnType, Ident, Generics, TraitItem, TraitItemFn, Type, TypePath, parse2, Pat, PathArguments};
+use syn::{FnArg, ReturnType, Ident, Generics, TraitItem, TraitItemFn, Type, TypePath, parse2, Pat, PathArguments, Attribute, Meta};
 use proc_macro2::TokenStream;
 use super::{transform_type_path_in_place, Result};
 use quote::quote;
+use std::collections::HashSet;
 
 
 pub struct Method {
@@ -16,7 +17,9 @@ pub struct Method {
     generics: Generics,
     /// The return type of the method, e.g., `Result<(), Self::Error>`
     outputs: ReturnType,
-    fields: Vec<Pat>
+    fields: Vec<Pat>,
+    /// Identifiers to skip during transformation
+    skip: HashSet<String>
 }
 
 impl Method {
@@ -33,15 +36,15 @@ impl Method {
         });
     }
 
-    fn update_type(ty: &mut Type, type_ident: Ident, (trait_ident, trait_args): (&Ident, &PathArguments)) {
+    fn update_type(ty: &mut Type, type_ident: Ident, (trait_ident, trait_args): (&Ident, &PathArguments), skip: &HashSet<String>) {
         if let Type::Path(type_path) = ty {
-            transform_type_path_in_place(type_path, type_ident, (trait_ident, trait_args));
+            transform_type_path_in_place(type_path, type_ident, (trait_ident, trait_args), skip);
         }
     }
 
     fn update_return(&mut self, type_name: Ident, (trait_ident, trait_args): (&Ident, &PathArguments)) {
         if let ReturnType::Type(_, ty) = &mut self.outputs {
-            Method::update_type(ty, type_name, (trait_ident, trait_args));
+            Method::update_type(ty, type_name, (trait_ident, trait_args), &self.skip);
         }
     }
 
@@ -50,7 +53,7 @@ impl Method {
         for arg in &mut self.args {
             if let FnArg::Typed(pat_type) = arg {
                 if let Some(type_path) = get_path_from_type(&mut pat_type.ty) {
-                    transform_type_path_in_place(type_path, type_ident.clone(), (trait_ident, trait_args));
+                    transform_type_path_in_place(type_path, type_ident.clone(), (trait_ident, trait_args), &self.skip);
                 }
             }
         }
@@ -83,6 +86,26 @@ impl Method {
         }).cloned().collect()
     }
 
+    /// Parse skip attribute to extract identifiers to skip during transformation
+    fn parse_skip_attribute(attrs: &[Attribute]) -> HashSet<String> {
+        let mut skip_set = HashSet::new();
+        
+        for attr in attrs {
+            if attr.path().is_ident("skip") {
+                if let Meta::List(meta_list) = &attr.meta {
+                    for token in meta_list.tokens.clone() {
+                        // Parse each token as an identifier
+                        if let Ok(ident) = syn::parse2::<Ident>(token.into()) {
+                            skip_set.insert(ident.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        
+        skip_set
+    }
+
     pub fn to_tokens(&mut self, table_method_name: &Ident, client_name: &Ident, table_type_name: &Ident, (trait_name, trait_args): (&Ident, &PathArguments)) -> Result<TraitItem> {
         // Remove the client argument from the method arguments
         self.remove_arg(&client_name);
@@ -105,7 +128,7 @@ impl Method {
             #async_kw fn #name #generics(#(#args),*) #outputs {
                 let #client_name = self.#client_name();
                 let table = self.#table_method_name();
-                Ok(table.#name(#(#fields),*)#await_kw?)
+                table.#name(#(#fields),*)#await_kw.map_err(Into::into)
             }
         };
         let method = parse2(method)?;
@@ -122,8 +145,9 @@ impl From<TraitItemFn> for Method {
         let generics = method_item.sig.generics.clone();
         let outputs = method_item.sig.output.clone();
         let fields = Method::fields_from_args(&args);
+        let skip = Method::parse_skip_attribute(&method_item.attrs);
 
-        Self { name, future, args, generics, outputs, fields }
+        Self { name, future, args, generics, outputs, fields, skip }
     }
 }
 
