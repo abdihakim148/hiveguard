@@ -1,6 +1,6 @@
+use super::{OAuthProvider, ConversionError, Error};
 #[cfg(feature = "dynamodb")]
 use aws_sdk_dynamodb::types::AttributeValue;
-use super::{OAuthProvider, ConversionError};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
@@ -13,11 +13,11 @@ pub enum Login {
 }
 
 impl Login {
-    pub fn password(&self) -> Option<&String> {
+    pub fn password(&self) -> Result<&String, Error> {
         if let Login::Password(password) = self {
-            Some(password)
+            Ok(password)
         } else {
-            None
+            Err(Error::InvalidCredentials)
         }
     }
 
