@@ -19,6 +19,7 @@ macros = {path = "../macros"}
 argon2 = { version = "0.5.3", optional = true}
 password-hash = { version = "0.5.0", features = ["getrandom"] }
 rand = { version = "0.9.1", features = ["thread_rng"] }
+rusty_paseto = { version = "0.7.0", features = ["core"] }
 
 
 [features]
